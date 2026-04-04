@@ -187,10 +187,11 @@ struct FilterSidebar: View {
     }
 
     private func threadColor(_ idx: Int) -> Color {
-        let colors: [Color] = [
-            .red, .blue, .green, .orange, .purple,
-            .cyan, .pink, .mint, .indigo, .brown
+        let colors: [NSColor] = [
+            .systemRed, .systemBlue, .systemGreen, .systemOrange, .systemPurple,
+            .systemTeal, .systemPink, .systemMint, .systemIndigo, .systemBrown,
+            .systemCyan, .systemYellow
         ]
-        return colors[idx % colors.count]
+        return Color(nsColor: colors[idx % colors.count])
     }
 }
