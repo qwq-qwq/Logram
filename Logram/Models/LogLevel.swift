@@ -1,4 +1,4 @@
-import SwiftUI
+import Foundation
 
 /// All 32 UB log levels with display metadata
 enum LogLevel: Int, CaseIterable, Identifiable, Sendable {
@@ -89,22 +89,6 @@ enum LogLevel: Int, CaseIterable, Identifiable, Sendable {
         case .dddER:   return "DDDErr"
         case .dddIN:   return "DDDIn"
         case .mon:     return "Monitor"
-        }
-    }
-
-    var bgColor: Color {
-        switch self {
-        case .warn, .cust2:                    return Color(red: 0.75, green: 0.50, blue: 0.50)
-        case .error, .exc:                     return Color(red: 1.00, green: 0.50, blue: 0.50)
-        case .osErr, .excOs, .fail:            return Color(red: 0.94, green: 0.50, blue: 0.75)
-        case .enter:                           return Color(red: 0.75, green: 0.86, blue: 0.75)
-        case .leave:                           return Color(red: 0.75, green: 0.86, blue: 0.86)
-        case .sql, .cust1:                     return Color(red: 0.78, green: 0.78, blue: 1.00)
-        case .db:                              return Color(red: 0.50, green: 0.86, blue: 0.50)
-        case .http:                            return Color(red: 0.50, green: 0.50, blue: 0.86)
-        case .srvr:                            return Color(red: 0.00, green: 0.82, blue: 0.86)
-        case .debug, .trace, .auth:            return Color(red: 0.86, green: 0.86, blue: 0.86)
-        default:                               return Color(red: 0.75, green: 0.75, blue: 0.86)
         }
     }
 

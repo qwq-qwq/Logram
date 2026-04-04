@@ -2,6 +2,7 @@ import SwiftUI
 
 struct FilterSidebar: View {
     @Bindable var document: LogDocument
+    let theme: ColorTheme
 
     @State private var showAllLevels = true
     @State private var showAllThreads = true
@@ -99,7 +100,7 @@ struct FilterSidebar: View {
             )) {
                 HStack(spacing: 4) {
                     RoundedRectangle(cornerRadius: 2)
-                        .fill(level.bgColor)
+                        .fill(theme.levelBadgeColor(for: level))
                         .frame(width: 12, height: 12)
                     Text(level.label)
                         .font(.system(size: 11, design: .monospaced))
@@ -173,7 +174,7 @@ struct FilterSidebar: View {
                 HStack(spacing: 4) {
                     Text(String(ch))
                         .font(.system(size: 12, weight: .bold, design: .monospaced))
-                        .foregroundStyle(threadColor(th))
+                        .foregroundStyle(theme.threadSwiftUIColor(th))
                     Text("Thread \(th)")
                         .font(.system(size: 11))
                     Spacer()
@@ -186,12 +187,4 @@ struct FilterSidebar: View {
         }
     }
 
-    private func threadColor(_ idx: Int) -> Color {
-        let colors: [NSColor] = [
-            .systemRed, .systemBlue, .systemGreen, .systemOrange, .systemPurple,
-            .systemTeal, .systemPink, .systemMint, .systemIndigo, .systemBrown,
-            .systemCyan, .systemYellow
-        ]
-        return Color(nsColor: colors[idx % colors.count])
-    }
 }

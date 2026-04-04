@@ -2,15 +2,20 @@ import SwiftUI
 
 struct ContentView: View {
     @Bindable var document: LogDocument
+    @AppStorage("colorTheme") private var themeRaw = ColorTheme.tokyoNight.rawValue
     @State private var showStats = false
     @State private var showTimings = false
     @State private var searchText = ""
     @State private var searchIdx: Int?
 
+    private var theme: ColorTheme {
+        ColorTheme(rawValue: themeRaw) ?? .tokyoNight
+    }
+
     var body: some View {
         HSplitView {
             // Left: filters sidebar
-            FilterSidebar(document: document)
+            FilterSidebar(document: document, theme: theme)
                 .frame(minWidth: 200, idealWidth: 220, maxWidth: 300)
 
             // Right: log lines + toolbar
@@ -27,13 +32,15 @@ struct ContentView: View {
                         LogLinesView(
                             allLines: document.allLines,
                             indices: document.filteredIndices,
+                            theme: theme,
                             selectedId: $document.selectedLineId
                         )
                         .frame(minHeight: 200)
 
                         LineDetailView(
                             line: selectedLine,
-                            paramsJSON: selectedLineParams
+                            paramsJSON: selectedLineParams,
+                            theme: theme
                         )
                         .frame(minHeight: 80, idealHeight: 180, maxHeight: 400)
                     }
@@ -47,10 +54,10 @@ struct ContentView: View {
             handleDrop(providers)
         }
         .sheet(isPresented: $showStats) {
-            StatsView(document: document)
+            StatsView(document: document, theme: theme)
         }
         .sheet(isPresented: $showTimings) {
-            MethodTimingView(document: document)
+            MethodTimingView(document: document, theme: theme)
         }
     }
 
@@ -109,6 +116,16 @@ struct ContentView: View {
             }
 
             Spacer()
+
+            Picker("", selection: $themeRaw) {
+                ForEach(ColorTheme.allCases) { t in
+                    Text(t.displayName).tag(t.rawValue)
+                }
+            }
+            .pickerStyle(.segmented)
+            .frame(width: 160)
+
+            Divider().frame(height: 20)
 
             Button {
                 document.buildMethodTimings()

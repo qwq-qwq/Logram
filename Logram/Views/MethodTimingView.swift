@@ -2,6 +2,7 @@ import SwiftUI
 
 struct MethodTimingView: View {
     @Bindable var document: LogDocument
+    let theme: ColorTheme
     @Environment(\.dismiss) private var dismiss
     @State private var selected: Int?
     @State private var sortedItems: [LogDocument.MethodTiming] = []
@@ -101,9 +102,6 @@ struct MethodTimingView: View {
     }
 
     private func durationColor(_ ms: Double) -> Color {
-        if ms >= 10_000 { return .red }
-        if ms >= 1_000 { return .orange }
-        if ms >= 100 { return .yellow }
-        return .primary
+        theme.durationSwiftUIColor(ms)
     }
 }

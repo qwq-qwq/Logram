@@ -2,6 +2,7 @@ import SwiftUI
 
 struct StatsView: View {
     let document: LogDocument
+    let theme: ColorTheme
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
@@ -86,7 +87,7 @@ struct StatsView: View {
                 ForEach(LogLevel.allCases.filter { document.perLevelCount[$0.rawValue] > 0 }) { level in
                     HStack(spacing: 4) {
                         RoundedRectangle(cornerRadius: 2)
-                            .fill(level.bgColor)
+                            .fill(theme.levelBadgeColor(for: level))
                             .frame(width: 10, height: 10)
                         Text(level.label)
                             .font(.system(size: 11, design: .monospaced))

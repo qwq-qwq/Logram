@@ -6,6 +6,7 @@ struct LineDetailView: View {
     let line: LogLine?
     /// JSON params from preceding cust1 line (for SQL parameter substitution)
     let paramsJSON: String?
+    let theme: ColorTheme
     @State private var showSubstituted = false
 
     var body: some View {
@@ -32,7 +33,7 @@ struct LineDetailView: View {
                         .padding(.vertical, 1)
                         .background(
                             RoundedRectangle(cornerRadius: 3)
-                                .fill(line.level.bgColor.opacity(0.4))
+                                .fill(theme.levelBadgeColor(for: line.level).opacity(0.4))
                         )
                     if let dur = line.durationFormatted {
                         Text(dur)

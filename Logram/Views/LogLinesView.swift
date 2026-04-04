@@ -7,10 +7,11 @@ import AppKit
 struct LogLinesView: View {
     let allLines: [LogLine]
     let indices: [Int]
+    let theme: ColorTheme
     @Binding var selectedId: Int?
 
     var body: some View {
-        LogTableView(allLines: allLines, indices: indices, selectedId: $selectedId)
+        LogTableView(allLines: allLines, indices: indices, theme: theme, selectedId: $selectedId)
     }
 }
 
@@ -19,6 +20,7 @@ struct LogLinesView: View {
 struct LogTableView: NSViewRepresentable {
     let allLines: [LogLine]
     let indices: [Int]
+    let theme: ColorTheme
     @Binding var selectedId: Int?
 
     func makeCoordinator() -> Coordinator {
@@ -58,8 +60,9 @@ struct LogTableView: NSViewRepresentable {
         let coord = context.coordinator
         let tableView = coord.tableView!
 
-        // Quick identity check: count + first/last element
+        // Check if data or theme changed
         let oldIndices = coord.currentIndices
+        let themeChanged = coord.currentTheme != theme
         let dataChanged: Bool
         if let old = oldIndices, old.count == indices.count,
            old.first == indices.first, old.last == indices.last {
@@ -69,8 +72,9 @@ struct LogTableView: NSViewRepresentable {
         }
         coord.parent = self
         coord.currentIndices = indices
+        coord.currentTheme = theme
 
-        if dataChanged {
+        if dataChanged || themeChanged {
             tableView.reloadData()
         }
 
@@ -92,18 +96,7 @@ struct LogTableView: NSViewRepresentable {
         var parent: LogTableView
         weak var tableView: NSTableView?
         var currentIndices: [Int]?
-
-        // Pre-computed colors
-        static let threadNSColors: [NSColor] = [
-            .systemRed, .systemBlue, .systemGreen, .systemOrange, .systemPurple,
-            .systemTeal, .systemPink, .systemMint, .systemIndigo, .systemBrown,
-            .systemCyan, .systemYellow
-        ]
-        static let monoFont = NSFont.monospacedSystemFont(ofSize: 12, weight: .regular)
-        static let monoFontSmall = NSFont.monospacedSystemFont(ofSize: 10, weight: .medium)
-        static let monoFontBold = NSFont.monospacedSystemFont(ofSize: 12, weight: .bold)
-        static let tertiaryColor = NSColor.tertiaryLabelColor
-        static let secondaryColor = NSColor.secondaryLabelColor
+        var currentTheme: ColorTheme = .tokyoNight
 
         init(parent: LogTableView) {
             self.parent = parent
@@ -130,7 +123,7 @@ struct LogTableView: NSViewRepresentable {
                 cell.identifier = cellId
             }
 
-            cell.configure(with: line, isSelected: parent.selectedId == line.id)
+            cell.configure(with: line, isSelected: parent.selectedId == line.id, theme: parent.theme)
             return cell
         }
 
@@ -169,11 +162,6 @@ final class LogCellView: NSView {
 
     private let levelBg = NSView()
 
-    private static let threadColors: [NSColor] = [
-        .systemRed, .systemBlue, .systemGreen, .systemOrange, .systemPurple,
-        .systemTeal, .systemPink, .systemMint, .systemIndigo, .systemBrown,
-        .systemCyan, .systemYellow
-    ]
     private static let monoFont = NSFont.monospacedSystemFont(ofSize: 12, weight: .regular)
     private static let smallMonoFont = NSFont.monospacedSystemFont(ofSize: 10, weight: .medium)
     private static let boldMonoFont = NSFont.monospacedSystemFont(ofSize: 12, weight: .bold)
@@ -247,88 +235,37 @@ final class LogCellView: NSView {
         ])
     }
 
-    func configure(with line: LogLine, isSelected: Bool) {
+    func configure(with line: LogLine, isSelected: Bool, theme: ColorTheme) {
         lineNoField.stringValue = "\(line.id + 1)"
         timeField.stringValue = line.timeFormatted ?? ""
 
         if line.thread >= 0 {
             threadField.stringValue = String(Character(UnicodeScalar(0x21 + line.thread)!))
-            threadField.textColor = Self.threadColors[line.thread % Self.threadColors.count]
+            threadField.textColor = theme.threadNSColor(line.thread)
         } else {
             threadField.stringValue = ""
         }
 
         levelField.stringValue = line.level.label
-        levelBg.layer?.backgroundColor = NSColor(line.level.bgColor.opacity(0.4)).cgColor
+        levelBg.layer?.backgroundColor = theme.levelBadgeNSColor(for: line.level).withAlphaComponent(0.4).cgColor
 
         if let dur = line.durationFormatted {
             durationField.stringValue = dur
-            durationField.textColor = durationNSColor(line.durationUS)
+            durationField.textColor = theme.durationNSColor(line.durationUS)
             durationField.font = line.durationUS >= 1_000_000 ? Self.boldMonoFont : Self.monoFont
         } else {
             durationField.stringValue = ""
         }
 
         messageField.stringValue = line.message
-        messageField.textColor = Self.messageColor(for: line.level)
+        messageField.textColor = theme.messageColor(for: line.level)
 
         // Row background
         wantsLayer = true
         if isSelected {
             layer?.backgroundColor = NSColor.controlAccentColor.withAlphaComponent(0.25).cgColor
         } else {
-            layer?.backgroundColor = Self.rowBackground(for: line.level)
+            layer?.backgroundColor = theme.rowBackground(for: line.level)
         }
-    }
-
-    // MARK: - Dark-theme color palette (Tokyo Night inspired, muted & warm-shifted)
-
-    /// Row background — barely-there tints, only for error/warning levels
-    private static func rowBackground(for level: LogLevel) -> CGColor? {
-        switch level {
-        case .error, .exc:
-            return NSColor(red: 0.88, green: 0.42, blue: 0.46, alpha: 0.07).cgColor
-        case .osErr, .excOs, .fail:
-            return NSColor(red: 0.82, green: 0.47, blue: 0.55, alpha: 0.06).cgColor
-        case .warn, .cust2:
-            return NSColor(red: 0.82, green: 0.68, blue: 0.39, alpha: 0.05).cgColor
-        default:
-            return nil
-        }
-    }
-
-    /// Message text color — muted, AA+ contrast on ~#1E1E1E
-    private static func messageColor(for level: LogLevel) -> NSColor {
-        switch level {
-        case .error, .exc:                          // warm coral
-            return NSColor(red: 0.88, green: 0.42, blue: 0.46, alpha: 1)
-        case .osErr, .excOs, .fail, .dddER:         // dusty rose
-            return NSColor(red: 0.82, green: 0.47, blue: 0.55, alpha: 1)
-        case .warn, .cust2:                          // warm amber
-            return NSColor(red: 0.82, green: 0.68, blue: 0.39, alpha: 1)
-        case .sql, .cust1:                           // steel blue
-            return NSColor(red: 0.51, green: 0.63, blue: 0.78, alpha: 1)
-        case .enter, .leave:                         // dim warm gray
-            return NSColor(red: 0.40, green: 0.42, blue: 0.46, alpha: 1)
-        case .http:                                  // muted teal
-            return NSColor(red: 0.55, green: 0.71, blue: 0.71, alpha: 1)
-        case .db:                                    // sage green
-            return NSColor(red: 0.51, green: 0.67, blue: 0.51, alpha: 1)
-        case .debug, .trace:                         // near-invisible
-            return NSColor(red: 0.35, green: 0.37, blue: 0.40, alpha: 1)
-        case .auth:                                  // muted lavender
-            return NSColor(red: 0.63, green: 0.57, blue: 0.75, alpha: 1)
-        case .srvr, .clnt:                           // muted cyan
-            return NSColor(red: 0.51, green: 0.67, blue: 0.71, alpha: 1)
-        default:
-            return .labelColor
-        }
-    }
-
-    private func durationNSColor(_ us: Int64) -> NSColor {
-        if us >= 10_000_000 { return NSColor(red: 0.88, green: 0.42, blue: 0.46, alpha: 1) } // coral
-        if us >= 1_000_000  { return NSColor(red: 0.82, green: 0.68, blue: 0.39, alpha: 1) } // amber
-        if us >= 100_000    { return NSColor(red: 0.68, green: 0.63, blue: 0.44, alpha: 1) } // muted gold
-        return .secondaryLabelColor
     }
 }
