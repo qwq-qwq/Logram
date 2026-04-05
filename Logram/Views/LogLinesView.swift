@@ -15,6 +15,23 @@ struct LogLinesView: View {
     }
 }
 
+// MARK: - NSTableView subclass with copy support
+
+class LogNSTableView: NSTableView {
+    var onCopy: ((_ selectedRows: IndexSet) -> Void)?
+
+    override func keyDown(with event: NSEvent) {
+        if event.modifierFlags.contains(.command) && event.keyCode == 8 /* C key */ {
+            let rows = selectedRowIndexes
+            if !rows.isEmpty {
+                onCopy?(rows)
+                return
+            }
+        }
+        super.keyDown(with: event)
+    }
+}
+
 // MARK: - NSViewRepresentable
 
 struct LogTableView: NSViewRepresentable {
@@ -33,12 +50,12 @@ struct LogTableView: NSViewRepresentable {
         scrollView.hasHorizontalScroller = true
         scrollView.autohidesScrollers = true
 
-        let tableView = NSTableView()
+        let tableView = LogNSTableView()
         tableView.style = .plain
         tableView.rowHeight = 20
         tableView.intercellSpacing = NSSize(width: 0, height: 1)
         tableView.headerView = nil
-        tableView.allowsMultipleSelection = false
+        tableView.allowsMultipleSelection = true
         tableView.gridStyleMask = []
 
         // Single column — we draw everything in one row view
@@ -49,6 +66,10 @@ struct LogTableView: NSViewRepresentable {
 
         tableView.dataSource = context.coordinator
         tableView.delegate = context.coordinator
+        let coordinator = context.coordinator
+        tableView.onCopy = { [weak coordinator] rows in
+            coordinator?.copyRows(rows)
+        }
 
         context.coordinator.tableView = tableView
 
@@ -94,7 +115,7 @@ struct LogTableView: NSViewRepresentable {
 
     class Coordinator: NSObject, NSTableViewDataSource, NSTableViewDelegate {
         var parent: LogTableView
-        weak var tableView: NSTableView?
+        weak var tableView: LogNSTableView?
         var currentIndices: [Int]?
         var currentTheme: ColorTheme = .tokyoNight
 
@@ -146,6 +167,22 @@ struct LogTableView: NSViewRepresentable {
                     self.parent.selectedId = nil
                 }
             }
+        }
+
+        func copyRows(_ rows: IndexSet) {
+            let indices = parent.indices
+            let allLines = parent.allLines
+            var lines: [String] = []
+            lines.reserveCapacity(rows.count)
+            for row in rows {
+                guard row < indices.count else { continue }
+                let lineIdx = indices[row]
+                guard lineIdx < allLines.count else { continue }
+                lines.append(allLines[lineIdx].raw)
+            }
+            let text = lines.joined(separator: "\n")
+            NSPasteboard.general.clearContents()
+            NSPasteboard.general.setString(text, forType: .string)
         }
     }
 }
