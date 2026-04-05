@@ -56,18 +56,19 @@ enum ColorTheme: String, CaseIterable, Identifiable {
     func levelBadgeNSColor(for level: LogLevel) -> NSColor {
         switch self {
         case .tokyoNight:
+            // True Tokyo Night palette for badges
             switch level {
-            case .warn, .cust2:              return NSColor(red: 0.75, green: 0.50, blue: 0.50, alpha: 1)
-            case .error, .exc:               return NSColor(red: 1.00, green: 0.50, blue: 0.50, alpha: 1)
-            case .osErr, .excOs, .fail:      return NSColor(red: 0.94, green: 0.50, blue: 0.75, alpha: 1)
-            case .enter:                     return NSColor(red: 0.75, green: 0.86, blue: 0.75, alpha: 1)
-            case .leave:                     return NSColor(red: 0.75, green: 0.86, blue: 0.86, alpha: 1)
-            case .sql, .cust1:               return NSColor(red: 0.78, green: 0.78, blue: 1.00, alpha: 1)
-            case .db:                        return NSColor(red: 0.50, green: 0.86, blue: 0.50, alpha: 1)
-            case .http:                      return NSColor(red: 0.50, green: 0.50, blue: 0.86, alpha: 1)
-            case .srvr:                      return NSColor(red: 0.00, green: 0.82, blue: 0.86, alpha: 1)
-            case .debug, .trace, .auth:      return NSColor(red: 0.86, green: 0.86, blue: 0.86, alpha: 1)
-            default:                         return NSColor(red: 0.75, green: 0.75, blue: 0.86, alpha: 1)
+            case .error, .exc:               return NSColor(red: 0.969, green: 0.463, blue: 0.557, alpha: 1) // #f7768e
+            case .osErr, .excOs, .fail:      return NSColor(red: 0.859, green: 0.443, blue: 0.537, alpha: 1) // #db7093
+            case .warn, .cust2:              return NSColor(red: 0.878, green: 0.686, blue: 0.408, alpha: 1) // #e0af68
+            case .enter, .leave:             return NSColor(red: 0.620, green: 0.808, blue: 0.416, alpha: 1) // #9ece6a
+            case .sql, .cust1:               return NSColor(red: 0.478, green: 0.635, blue: 0.969, alpha: 1) // #7aa2f7
+            case .db:                        return NSColor(red: 0.451, green: 0.843, blue: 0.612, alpha: 1) // #73daca
+            case .http:                      return NSColor(red: 0.490, green: 0.812, blue: 1.000, alpha: 1) // #7dcfff
+            case .srvr, .clnt:               return NSColor(red: 0.698, green: 0.894, blue: 0.925, alpha: 1) // #b4f9ec
+            case .auth:                      return NSColor(red: 0.733, green: 0.604, blue: 0.969, alpha: 1) // #bb9af7
+            case .debug, .trace:             return NSColor(red: 0.337, green: 0.373, blue: 0.537, alpha: 1) // #565f89
+            default:                         return NSColor(red: 0.663, green: 0.694, blue: 0.839, alpha: 1) // #a9b1d6
             }
         case .tty:
             switch level {
@@ -106,18 +107,20 @@ enum ColorTheme: String, CaseIterable, Identifiable {
     func messageColor(for level: LogLevel) -> NSColor {
         switch self {
         case .tokyoNight:
+            // True Tokyo Night palette — https://github.com/enkia/tokyo-night-vscode-theme
             switch level {
-            case .error, .exc:                          return NSColor(red: 0.88, green: 0.42, blue: 0.46, alpha: 1)
-            case .osErr, .excOs, .fail, .dddER:         return NSColor(red: 0.82, green: 0.47, blue: 0.55, alpha: 1)
-            case .warn, .cust2:                          return NSColor(red: 0.82, green: 0.68, blue: 0.39, alpha: 1)
-            case .sql, .cust1:                           return NSColor(red: 0.51, green: 0.63, blue: 0.78, alpha: 1)
-            case .enter, .leave:                         return NSColor(red: 0.40, green: 0.42, blue: 0.46, alpha: 1)
-            case .http:                                  return NSColor(red: 0.55, green: 0.71, blue: 0.71, alpha: 1)
-            case .db:                                    return NSColor(red: 0.51, green: 0.67, blue: 0.51, alpha: 1)
-            case .debug, .trace:                         return NSColor(red: 0.35, green: 0.37, blue: 0.40, alpha: 1)
-            case .auth:                                  return NSColor(red: 0.63, green: 0.57, blue: 0.75, alpha: 1)
-            case .srvr, .clnt:                           return NSColor(red: 0.51, green: 0.67, blue: 0.71, alpha: 1)
-            default:                                     return .labelColor
+            case .error, .exc:                          return NSColor(red: 0.969, green: 0.463, blue: 0.557, alpha: 1) // #f7768e red
+            case .osErr, .excOs, .fail, .dddER:         return NSColor(red: 0.859, green: 0.443, blue: 0.537, alpha: 1) // #db7093 palevioletred
+            case .warn, .cust2:                          return NSColor(red: 0.878, green: 0.686, blue: 0.408, alpha: 1) // #e0af68 yellow
+            case .sql, .cust1:                           return NSColor(red: 0.478, green: 0.635, blue: 0.969, alpha: 1) // #7aa2f7 blue
+            case .enter, .leave:                         return NSColor(red: 0.620, green: 0.808, blue: 0.416, alpha: 1) // #9ece6a green
+            case .http:                                  return NSColor(red: 0.490, green: 0.812, blue: 1.000, alpha: 1) // #7dcfff cyan
+            case .db:                                    return NSColor(red: 0.451, green: 0.843, blue: 0.612, alpha: 1) // #73daca teal
+            case .debug, .trace:                         return NSColor(red: 0.337, green: 0.373, blue: 0.537, alpha: 1) // #565f89 comment
+            case .auth:                                  return NSColor(red: 0.733, green: 0.604, blue: 0.969, alpha: 1) // #bb9af7 magenta
+            case .srvr, .clnt:                           return NSColor(red: 0.698, green: 0.894, blue: 0.925, alpha: 1) // #b4f9ec teal bright
+            case .info:                                  return NSColor(red: 0.663, green: 0.694, blue: 0.839, alpha: 1) // #a9b1d6 foreground
+            default:                                     return NSColor(red: 0.663, green: 0.694, blue: 0.839, alpha: 1) // #a9b1d6 foreground
             }
         case .tty:
             switch level {
@@ -156,11 +159,11 @@ enum ColorTheme: String, CaseIterable, Identifiable {
         case .tokyoNight:
             switch level {
             case .error, .exc:
-                return NSColor(red: 0.88, green: 0.42, blue: 0.46, alpha: 0.07).cgColor
+                return NSColor(red: 0.97, green: 0.47, blue: 0.56, alpha: 0.07).cgColor
             case .osErr, .excOs, .fail:
-                return NSColor(red: 0.82, green: 0.47, blue: 0.55, alpha: 0.06).cgColor
+                return NSColor(red: 0.90, green: 0.52, blue: 0.62, alpha: 0.06).cgColor
             case .warn, .cust2:
-                return NSColor(red: 0.82, green: 0.68, blue: 0.39, alpha: 0.05).cgColor
+                return NSColor(red: 0.88, green: 0.69, blue: 0.41, alpha: 0.05).cgColor
             default:
                 return nil
             }
@@ -181,9 +184,9 @@ enum ColorTheme: String, CaseIterable, Identifiable {
     func durationNSColor(_ us: Int64) -> NSColor {
         switch self {
         case .tokyoNight:
-            if us >= 10_000_000 { return NSColor(red: 0.88, green: 0.42, blue: 0.46, alpha: 1) }
-            if us >= 1_000_000  { return NSColor(red: 0.82, green: 0.68, blue: 0.39, alpha: 1) }
-            if us >= 100_000    { return NSColor(red: 0.68, green: 0.63, blue: 0.44, alpha: 1) }
+            if us >= 10_000_000 { return NSColor(red: 0.97, green: 0.47, blue: 0.56, alpha: 1) }
+            if us >= 1_000_000  { return NSColor(red: 0.88, green: 0.69, blue: 0.41, alpha: 1) }
+            if us >= 100_000    { return NSColor(red: 0.73, green: 0.67, blue: 0.44, alpha: 1) }
             return .secondaryLabelColor
         case .tty:
             if us >= 10_000_000 { return NSColor(red: 0.90, green: 0.20, blue: 0.20, alpha: 1) }
@@ -196,9 +199,9 @@ enum ColorTheme: String, CaseIterable, Identifiable {
     func durationSwiftUIColor(_ ms: Double) -> Color {
         switch self {
         case .tokyoNight:
-            if ms >= 10_000 { return Color(red: 0.88, green: 0.42, blue: 0.46) }
-            if ms >= 1_000  { return Color(red: 0.82, green: 0.68, blue: 0.39) }
-            if ms >= 100    { return Color(red: 0.68, green: 0.63, blue: 0.44) }
+            if ms >= 10_000 { return Color(red: 0.97, green: 0.47, blue: 0.56) }
+            if ms >= 1_000  { return Color(red: 0.88, green: 0.69, blue: 0.41) }
+            if ms >= 100    { return Color(red: 0.73, green: 0.67, blue: 0.44) }
             return .primary
         case .tty:
             if ms >= 10_000 { return Color(red: 0.90, green: 0.20, blue: 0.20) }
