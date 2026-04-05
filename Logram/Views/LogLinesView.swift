@@ -8,25 +8,35 @@ struct LogLinesView: View {
     let allLines: [LogLine]
     let indices: [Int]
     let theme: ColorTheme
+    let showDuration: Bool
     @Binding var selectedId: Int?
+    var onJumpToPair: (() -> Void)?
 
     var body: some View {
-        LogTableView(allLines: allLines, indices: indices, theme: theme, selectedId: $selectedId)
+        LogTableView(
+            allLines: allLines, indices: indices, theme: theme,
+            showDuration: showDuration, selectedId: $selectedId,
+            onJumpToPair: onJumpToPair
+        )
     }
 }
 
-// MARK: - NSTableView subclass with copy support
+// MARK: - NSTableView subclass with keyboard support
 
 class LogNSTableView: NSTableView {
     var onCopy: ((_ selectedRows: IndexSet) -> Void)?
+    var onJumpToPair: (() -> Void)?
 
     override func keyDown(with event: NSEvent) {
-        if event.modifierFlags.contains(.command) && event.keyCode == 8 /* C key */ {
+        let cmd = event.modifierFlags.contains(.command)
+        switch event.keyCode {
+        case 8 where cmd:  // Cmd+C
             let rows = selectedRowIndexes
-            if !rows.isEmpty {
-                onCopy?(rows)
-                return
-            }
+            if !rows.isEmpty { onCopy?(rows); return }
+        case 38 where cmd: // Cmd+J — jump to matching +/-
+            onJumpToPair?(); return
+        default:
+            break
         }
         super.keyDown(with: event)
     }
@@ -38,7 +48,9 @@ struct LogTableView: NSViewRepresentable {
     let allLines: [LogLine]
     let indices: [Int]
     let theme: ColorTheme
+    let showDuration: Bool
     @Binding var selectedId: Int?
+    var onJumpToPair: (() -> Void)?
 
     func makeCoordinator() -> Coordinator {
         Coordinator(parent: self)
@@ -70,6 +82,7 @@ struct LogTableView: NSViewRepresentable {
         tableView.onCopy = { [weak coordinator] rows in
             coordinator?.copyRows(rows)
         }
+        tableView.onJumpToPair = onJumpToPair
 
         context.coordinator.tableView = tableView
 
@@ -81,9 +94,10 @@ struct LogTableView: NSViewRepresentable {
         let coord = context.coordinator
         let tableView = coord.tableView!
 
-        // Check if data or theme changed
+        // Check if data, theme, or display options changed
         let oldIndices = coord.currentIndices
         let themeChanged = coord.currentTheme != theme
+        let durationChanged = coord.currentShowDuration != showDuration
         let dataChanged: Bool
         if let old = oldIndices, old.count == indices.count,
            old.first == indices.first, old.last == indices.last {
@@ -94,8 +108,10 @@ struct LogTableView: NSViewRepresentable {
         coord.parent = self
         coord.currentIndices = indices
         coord.currentTheme = theme
+        coord.currentShowDuration = showDuration
+        tableView.onJumpToPair = onJumpToPair
 
-        if dataChanged || themeChanged {
+        if dataChanged || themeChanged || durationChanged {
             tableView.reloadData()
         }
 
@@ -118,6 +134,7 @@ struct LogTableView: NSViewRepresentable {
         weak var tableView: LogNSTableView?
         var currentIndices: [Int]?
         var currentTheme: ColorTheme = .tokyoNight
+        var currentShowDuration: Bool = true
 
         init(parent: LogTableView) {
             self.parent = parent
@@ -144,7 +161,8 @@ struct LogTableView: NSViewRepresentable {
                 cell.identifier = cellId
             }
 
-            cell.configure(with: line, isSelected: parent.selectedId == line.id, theme: parent.theme)
+            cell.configure(with: line, isSelected: parent.selectedId == line.id,
+                           theme: parent.theme, showDuration: parent.showDuration)
             return cell
         }
 
@@ -199,6 +217,10 @@ final class LogCellView: NSView {
 
     private let levelBg = NSView()
 
+    // Toggleable constraint for duration column
+    private var durationWidthConstraint: NSLayoutConstraint!
+    private var durationGapConstraint: NSLayoutConstraint!
+
     private static let monoFont = NSFont.monospacedSystemFont(ofSize: 12, weight: .regular)
     private static let smallMonoFont = NSFont.monospacedSystemFont(ofSize: 10, weight: .medium)
     private static let boldMonoFont = NSFont.monospacedSystemFont(ofSize: 12, weight: .bold)
@@ -239,6 +261,10 @@ final class LogCellView: NSView {
         levelBg.translatesAutoresizingMaskIntoConstraints = false
         addSubview(levelBg, positioned: .below, relativeTo: levelField)
 
+        // Toggleable constraints
+        durationWidthConstraint = durationField.widthAnchor.constraint(equalToConstant: 60)
+        durationGapConstraint = durationField.leadingAnchor.constraint(equalTo: levelBg.trailingAnchor, constant: 2)
+
         // Layout
         NSLayoutConstraint.activate([
             lineNoField.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 4),
@@ -262,8 +288,8 @@ final class LogCellView: NSView {
             levelField.trailingAnchor.constraint(equalTo: levelBg.trailingAnchor, constant: -3),
             levelField.centerYAnchor.constraint(equalTo: centerYAnchor),
 
-            durationField.leadingAnchor.constraint(equalTo: levelBg.trailingAnchor, constant: 2),
-            durationField.widthAnchor.constraint(equalToConstant: 60),
+            durationGapConstraint,
+            durationWidthConstraint,
             durationField.centerYAnchor.constraint(equalTo: centerYAnchor),
 
             messageField.leadingAnchor.constraint(equalTo: durationField.trailingAnchor, constant: 4),
@@ -272,7 +298,7 @@ final class LogCellView: NSView {
         ])
     }
 
-    func configure(with line: LogLine, isSelected: Bool, theme: ColorTheme) {
+    func configure(with line: LogLine, isSelected: Bool, theme: ColorTheme, showDuration: Bool) {
         lineNoField.stringValue = "\(line.id + 1)"
         timeField.stringValue = line.timeFormatted ?? ""
 
@@ -286,7 +312,12 @@ final class LogCellView: NSView {
         levelField.stringValue = line.level.label
         levelBg.layer?.backgroundColor = theme.levelBadgeNSColor(for: line.level).withAlphaComponent(0.4).cgColor
 
-        if let dur = line.durationFormatted {
+        // Duration column — toggleable
+        durationField.isHidden = !showDuration
+        durationWidthConstraint.constant = showDuration ? 60 : 0
+        durationGapConstraint.constant = showDuration ? 2 : 0
+
+        if showDuration, let dur = line.durationFormatted {
             durationField.stringValue = dur
             durationField.textColor = theme.durationNSColor(line.durationUS)
             durationField.font = line.durationUS >= 1_000_000 ? Self.boldMonoFont : Self.monoFont

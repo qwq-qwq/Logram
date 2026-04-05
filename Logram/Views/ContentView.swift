@@ -3,6 +3,7 @@ import SwiftUI
 struct ContentView: View {
     @Bindable var document: LogDocument
     @AppStorage("colorTheme") private var themeRaw = ColorTheme.tokyoNight.rawValue
+    @AppStorage("showDuration") private var showDuration = true
     @State private var showStats = false
     @State private var showTimings = false
     @State private var searchText = ""
@@ -33,7 +34,9 @@ struct ContentView: View {
                             allLines: document.allLines,
                             indices: document.filteredIndices,
                             theme: theme,
-                            selectedId: $document.selectedLineId
+                            showDuration: showDuration,
+                            selectedId: $document.selectedLineId,
+                            onJumpToPair: jumpToPair
                         )
                         .frame(minHeight: 200)
 
@@ -115,7 +118,24 @@ struct ContentView: View {
                 }
             }
 
+            // Jump to matching +/-
+            if let sel = selectedLine, (sel.level == .enter || sel.level == .leave) {
+                Button { jumpToPair() } label: {
+                    Image(systemName: sel.level == .enter ? "arrow.down.to.line" : "arrow.up.to.line")
+                }
+                .buttonStyle(.borderless)
+                .help("Jump to matching +/- (Cmd+J)")
+            }
+
             Spacer()
+
+            Button {
+                showDuration.toggle()
+            } label: {
+                Image(systemName: showDuration ? "timer" : "timer.circle")
+            }
+            .buttonStyle(.borderless)
+            .help("Toggle duration column")
 
             Picker("", selection: $themeRaw) {
                 ForEach(ColorTheme.allCases) { t in
@@ -241,6 +261,12 @@ struct ContentView: View {
     }
 
     // MARK: - Actions
+
+    private func jumpToPair() {
+        guard let selId = document.selectedLineId,
+              let pairId = document.findMatchingPair(for: selId) else { return }
+        document.selectedLineId = pairId
+    }
 
     private func openFile() {
         let panel = NSOpenPanel()

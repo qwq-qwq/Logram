@@ -334,6 +334,41 @@ final class LogDocument {
         methodTimings = timings
     }
 
+    // MARK: - Jump to matching +/-
+
+    /// Find the matching Enter for a Leave line, or matching Leave for an Enter line
+    func findMatchingPair(for lineId: Int) -> Int? {
+        guard lineId >= 0, lineId < allLines.count else { return nil }
+        let line = allLines[lineId]
+        let th = line.thread
+        guard th >= 0 else { return nil }
+
+        if line.level == .enter {
+            var depth = 0
+            for i in (lineId + 1)..<allLines.count {
+                let l = allLines[i]
+                guard l.thread == th else { continue }
+                if l.level == .enter { depth += 1 }
+                else if l.level == .leave {
+                    if depth == 0 { return i }
+                    depth -= 1
+                }
+            }
+        } else if line.level == .leave {
+            var depth = 0
+            for i in stride(from: lineId - 1, through: 0, by: -1) {
+                let l = allLines[i]
+                guard l.thread == th else { continue }
+                if l.level == .leave { depth += 1 }
+                else if l.level == .enter {
+                    if depth == 0 { return i }
+                    depth -= 1
+                }
+            }
+        }
+        return nil
+    }
+
     // MARK: - Computed stats
 
     var totalEvents: Int { allLines.count }
