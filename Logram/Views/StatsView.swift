@@ -1,9 +1,11 @@
 import SwiftUI
+import AppKit
 
 struct StatsView: View {
     let document: LogDocument
     let theme: ColorTheme
     @Environment(\.dismiss) private var dismiss
+    @State private var pathCopied = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -13,7 +15,27 @@ struct StatsView: View {
             Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 8) {
                 GridRow {
                     Text("File:").foregroundStyle(.secondary)
-                    Text(document.fileName)
+                    HStack(spacing: 6) {
+                        Text(document.filePath.isEmpty ? document.fileName : document.filePath)
+                            .textSelection(.enabled)
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                            .help(document.filePath)
+                        Button {
+                            let pb = NSPasteboard.general
+                            pb.clearContents()
+                            pb.setString(document.filePath, forType: .string)
+                            pathCopied = true
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                                pathCopied = false
+                            }
+                        } label: {
+                            Image(systemName: pathCopied ? "checkmark" : "doc.on.doc")
+                        }
+                        .buttonStyle(.borderless)
+                        .disabled(document.filePath.isEmpty)
+                        .help("Copy full path")
+                    }
                 }
                 GridRow {
                     Text("Size:").foregroundStyle(.secondary)

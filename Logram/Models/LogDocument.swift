@@ -8,6 +8,7 @@ final class LogDocument {
     var allLines: [LogLine] = []
     var filteredIndices: [Int] = []
     var fileName: String = ""
+    var filePath: String = ""
     var fileSize: Int64 = 0
     var parser: LogParser?
 
@@ -57,6 +58,7 @@ final class LogDocument {
         isLoading = true
         loadingProgress = 0
         fileName = url.lastPathComponent
+        filePath = url.path
 
         do {
             let attrs = try FileManager.default.attributesOfItem(atPath: url.path)
