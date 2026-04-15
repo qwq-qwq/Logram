@@ -8,19 +8,23 @@ struct StatsView: View {
     @State private var pathCopied = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: 0) {
             Text("Log Statistics")
                 .font(.title2.bold())
+                .padding(.bottom, 16)
 
-            Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 8) {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 16) {
+                    Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 8) {
                 GridRow {
                     Text("File:").foregroundStyle(.secondary)
                     HStack(spacing: 6) {
-                        Text(document.filePath.isEmpty ? document.fileName : document.filePath)
+                        Text(document.fileName)
                             .textSelection(.enabled)
                             .lineLimit(1)
                             .truncationMode(.middle)
                             .help(document.filePath)
+                            .layoutPriority(0)
                         Button {
                             let pb = NSPasteboard.general
                             pb.clearContents()
@@ -118,17 +122,20 @@ struct StatsView: View {
                         .font(.system(size: 11, design: .monospaced))
                 }
             }
-
-            Spacer()
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
 
             HStack {
                 Spacer()
                 Button("Close") { dismiss() }
                     .keyboardShortcut(.cancelAction)
             }
+            .padding(.top, 12)
         }
         .padding(20)
-        .frame(minWidth: 400, minHeight: 500)
+        .frame(minWidth: 400, minHeight: 400)
+        .frame(maxHeight: 700)
     }
 
     private func formatSize(_ bytes: Int64) -> String {
