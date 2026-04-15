@@ -208,7 +208,6 @@ struct LogTableView: NSViewRepresentable {
 // MARK: - Native cell view
 
 final class LogCellView: NSView {
-    private let lineNoField = NSTextField(labelWithString: "")
     private let timeField = NSTextField(labelWithString: "")
     private let threadField = NSTextField(labelWithString: "")
     private let levelField = NSTextField(labelWithString: "")
@@ -236,7 +235,7 @@ final class LogCellView: NSView {
     }
 
     private func setup() {
-        let fields = [lineNoField, timeField, threadField, levelField, durationField, messageField]
+        let fields = [timeField, threadField, levelField, durationField, messageField]
         for f in fields {
             f.isEditable = false
             f.isBordered = false
@@ -247,8 +246,6 @@ final class LogCellView: NSView {
             addSubview(f)
         }
 
-        lineNoField.alignment = .right
-        lineNoField.textColor = .tertiaryLabelColor
         timeField.textColor = .secondaryLabelColor
         threadField.alignment = .center
         threadField.font = Self.boldMonoFont
@@ -267,11 +264,7 @@ final class LogCellView: NSView {
 
         // Layout
         NSLayoutConstraint.activate([
-            lineNoField.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 4),
-            lineNoField.widthAnchor.constraint(equalToConstant: 60),
-            lineNoField.centerYAnchor.constraint(equalTo: centerYAnchor),
-
-            timeField.leadingAnchor.constraint(equalTo: lineNoField.trailingAnchor, constant: 6),
+            timeField.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 4),
             timeField.widthAnchor.constraint(equalToConstant: 80),
             timeField.centerYAnchor.constraint(equalTo: centerYAnchor),
 
@@ -299,7 +292,6 @@ final class LogCellView: NSView {
     }
 
     func configure(with line: LogLine, isSelected: Bool, theme: ColorTheme, showDuration: Bool) {
-        lineNoField.stringValue = "\(line.id + 1)"
         timeField.stringValue = line.timeFormatted ?? ""
 
         if line.thread >= 0 {

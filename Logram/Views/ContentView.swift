@@ -137,13 +137,24 @@ struct ContentView: View {
             .buttonStyle(.borderless)
             .help("Toggle duration column")
 
-            Picker("", selection: $themeRaw) {
+            Menu {
                 ForEach(ColorTheme.allCases) { t in
-                    Text(t.displayName).tag(t.rawValue)
+                    Button {
+                        themeRaw = t.rawValue
+                    } label: {
+                        if t.rawValue == themeRaw {
+                            Label(t.displayName, systemImage: "checkmark")
+                        } else {
+                            Text(t.displayName)
+                        }
+                    }
                 }
+            } label: {
+                Image(systemName: "paintpalette")
             }
-            .pickerStyle(.segmented)
-            .frame(width: 160)
+            .menuStyle(.borderlessButton)
+            .frame(width: 24)
+            .help("Color theme")
 
             Divider().frame(height: 20)
 
