@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Logram — аналізатор логів UnityBase для macOS</title>
+<meta name="description" content="Нативний macOS-аналізатор логів UnityBase: мільйон рядків, чотири формати, метод-таймінги, SQL-підсвітка." />
+
+<link rel="canonical" href="https://logram.perek.rest/" />
+<link rel="alternate" hreflang="uk" href="https://logram.perek.rest/" />
+<link rel="alternate" hreflang="ru" href="https://logram.perek.rest/ru/" />
+<link rel="alternate" hreflang="en" href="https://logram.perek.rest/en/" />
+<link rel="alternate" hreflang="x-default" href="https://logram.perek.rest/" />
+
+<meta name="theme-color" content="#0f1016" />
+<meta name="color-scheme" content="dark" />
+
+<meta property="og:type" content="website" />
+<meta property="og:url" content="https://logram.perek.rest/" />
+<meta property="og:title" content="Logram — аналізатор логів UnityBase для macOS" />
+<meta property="og:description" content="Мільйон рядків без пауз. Чотири формати UB-логів, метод-таймінги, SQL з підстановкою cust1, теми Tokyo Night і TTY." />
+<meta property="og:image" content="https://logram.perek.rest/assets/screenshot.png" />
+<meta property="og:image:width" content="2560" />
+<meta property="og:image:height" content="1600" />
+<meta property="og:locale" content="uk_UA" />
+<meta property="og:locale:alternate" content="ru_RU" />
+<meta property="og:locale:alternate" content="en_US" />
+<meta property="og:site_name" content="Logram" />
+
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Logram — аналізатор логів UnityBase для macOS" />
+<meta name="twitter:description" content="Мільйон рядків без пауз. Чотири формати UB-логів, метод-таймінги, SQL з підстановкою cust1." />
+<meta name="twitter:image" content="https://logram.perek.rest/assets/screenshot.png" />
+
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%230f1016'/><circle cx='16' cy='16' r='6' fill='%239ece6a'/><circle cx='16' cy='16' r='10' fill='none' stroke='%239ece6a' stroke-opacity='.25' stroke-width='2'/></svg>" />
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<link rel="preload" as="image" href="/assets/screenshot.png" fetchpriority="high">
+<link rel="stylesheet" href="/assets/styles.css">
+</head>
+<body>
+
+<nav id="nav">
+  <a class="brand" href="/"><span class="dot"></span>LOGRAM</a>
+  <div class="nav-links">
+    <a href="#formats">Формати</a>
+    <a href="#features">Можливості</a>
+    <a href="#architecture">Архітектура</a>
+    <a href="#download">Завантажити</a>
+  </div>
+  <div class="nav-right">
+    <div class="lang-switch" role="group" aria-label="Мова">
+      <a href="/"    aria-current="true" hreflang="uk">UA</a>
+      <a href="/ru/" hreflang="ru">RU</a>
+      <a href="/en/" hreflang="en">EN</a>
+    </div>
+    <div class="nav-meta">v1.0 / macOS 14+</div>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="hero-meta">
+    <span>REL <b>2026.04</b></span>
+    <span>TGT <b>MACOS 14+</b></span>
+    <span>SWIFT <b>5.9</b></span>
+    <span>LINES <b>∞</b></span>
+  </div>
+
+  <div class="hero-left">
+    <div class="tag"><span class="bar"></span>Нативний аналізатор логів UnityBase</div>
+
+    <h1 class="display">
+      Мільйон<br>
+      рядків<span class="num">·01</span><br>
+      <em>без пауз</em><span class="dot">.</span>
+    </h1>
+
+    <p class="lead">
+      Logram відкриває <b>багатогігабайтні</b> логи UnityBase і перетворює їх на читабельний
+      потік&nbsp;— з парними <b>+/-</b> таймерами, підсвіченим SQL, підставленими
+      <b>cust1</b>-параметрами та фільтрами за рівнями й потоками в один клік.
+    </p>
+
+    <div class="cta-row">
+      <a class="btn btn-primary" href="#download">
+        Завантажити для macOS
+        <span class="arr">→</span>
+      </a>
+      <a class="btn btn-ghost" href="#" target="_blank" rel="noopener">
+        Відкрити на GitHub
+      </a>
+    </div>
+
+    <div class="hero-stats">
+      <div><span class="k">32</span><span class="l">Рівні UB</span></div>
+      <div><span class="k">04</span><span class="l">Формати</span></div>
+      <div><span class="k">50<em>K</em></span><span class="l">Рядків / чанк</span></div>
+      <div><span class="k"><em>∞</em></span><span class="l">Рядків усього</span></div>
+    </div>
+  </div>
+
+  <figure class="shot">
+    <div class="shot-glow"></div>
+    <img src="/assets/screenshot.png" alt="Logram — головне вікно: фільтри, потік логів і деталі SQL з підстановкою cust1" />
+    <figcaption class="shot-caption">
+      <span class="dot"></span>
+      Logram · live
+    </figcaption>
+  </figure>
+</header>
+
+<section class="formats" id="formats">
+  <div class="section-tag"><span class="num">01</span><span class="bar"></span>Формати</div>
+  <h2 class="section-title reveal">Чотири діалекти <em>одного</em> лога.</h2>
+  <p class="section-lead reveal">Logram розпізнає заголовок файлу за мілісекунди й перемикає парсер автоматично. Жодних майстрів імпорту.</p>
+
+  <div class="formats-grid">
+    <div class="format reveal">
+      <div class="format-head">
+        <span class="format-num">i.</span>
+        <div class="format-name">mORMot 1<span>Основний формат UB</span></div>
+      </div>
+      <div class="format-sample"><span class="d">20210727 08260933</span>  <span class="h">$</span> <span class="l">SQL   </span>	<span class="t">SELECT id FROM uba_user WHERE name=:name</span></div>
+    </div>
+    <div class="format reveal">
+      <div class="format-head">
+        <span class="format-num">ii.</span>
+        <div class="format-name">mORMot 2 HiRes<span>Високоточний hex-таймер</span></div>
+      </div>
+      <div class="format-sample"><span class="d">0000000000000C72</span>  <span class="h">!</span> <span class="l">info  </span>	<span class="t">UB server started on port 8881</span></div>
+    </div>
+    <div class="format reveal">
+      <div class="format-head">
+        <span class="format-num">iii.</span>
+        <div class="format-name">journald<span>systemd / ub[pid]</span></div>
+      </div>
+      <div class="format-sample"><span class="d">2022-10-27T00:00:00.358664+0300</span> ub[657518]:  <span class="h">$</span> <span class="l">SQL   </span>	<span class="t">COMMIT</span></div>
+    </div>
+    <div class="format reveal">
+      <div class="format-head">
+        <span class="format-num">iv.</span>
+        <div class="format-name">console<span>stdin без дати</span></div>
+      </div>
+      <div class="format-sample">  <span class="h">$</span> <span class="l">EXC   </span>	<span class="t">EUBSecurityException at auth.js:142</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="features" id="features">
+  <div class="section-tag"><span class="num">02</span><span class="bar"></span>Можливості</div>
+  <h2 class="section-title reveal">Інструменти, що роблять<br>лог <em>читабельним</em>.</h2>
+  <p class="section-lead reveal">Кожна функція зроблена заради однієї речі: швидше побачити те, що зламалось.</p>
+
+  <div class="features-grid">
+    <article class="feat reveal">
+      <div class="feat-kicker"><span class="no">F.01</span> Method timing</div>
+      <h3 class="feat-title">Парні <em>+</em> і <em>-</em> збираються<br>в таблицю повільних методів.</h3>
+      <p class="feat-body">Для кожної вхідної операції Logram знаходить парний вихід на тому ж потоці з урахуванням вкладеності — і сортує за тривалістю. <b>Cmd+J</b> — стрибок між парою.</p>
+      <div class="feat-visual">
+        <div class="timing">
+          <div class="timing-row slow"><span class="lbl"><b>runList</b></span><span class="timing-bar" style="width:98%"></span><span class="ms">1 842 ms</span></div>
+          <div class="timing-row slow"><span class="lbl"><b>selectByID</b></span><span class="timing-bar" style="width:72%"></span><span class="ms">   648 ms</span></div>
+          <div class="timing-row"><span class="lbl"><b>authByPwd</b></span><span class="timing-bar" style="width:42%"></span><span class="ms">   214 ms</span></div>
+          <div class="timing-row"><span class="lbl"><b>insert</b></span><span class="timing-bar" style="width:28%"></span><span class="ms">    89 ms</span></div>
+          <div class="timing-row"><span class="lbl"><b>getAppInfo</b></span><span class="timing-bar" style="width:12%"></span><span class="ms">    31 ms</span></div>
+        </div>
+      </div>
+    </article>
+
+    <article class="feat reveal">
+      <div class="feat-kicker"><span class="no">F.02</span> SQL / cust1</div>
+      <h3 class="feat-title">Живий SQL<br>з параметрами.</h3>
+      <p class="feat-body">Підстановка <b>cust1</b>-параметрів назад у запит. Копіюй — і встав у psql.</p>
+      <div class="feat-visual">
+        <div class="sql-block">
+<span class="sql-kw">SELECT</span> u.id, u.<span class="sql-fn">name</span>, r.code<br>
+<span class="sql-kw">FROM</span> uba_user u<br>
+<span class="sql-kw">JOIN</span> uba_role r <span class="sql-kw">ON</span> r.id = u.role<br>
+<span class="sql-kw">WHERE</span> u.disabled = <span class="sql-num">0</span><br>
+&nbsp;&nbsp;<span class="sql-kw">AND</span> u.name = <span class="sql-cust">'sergey@perek.rest'</span><br>
+&nbsp;&nbsp;<span class="sql-kw">AND</span> r.code <span class="sql-kw">IN</span> (<span class="sql-cust">'admin','ops'</span>)
+        </div>
+      </div>
+    </article>
+
+    <article class="feat reveal">
+      <div class="feat-kicker"><span class="no">F.03</span> Фільтри</div>
+      <h3 class="feat-title"><em>Один</em> прохід<br>мільйоном рядків.</h3>
+      <p class="feat-body">Рівні, потоки, пресети <b>Errors / SQL / HTTP</b> — O(n) фільтрація через Set&lt;LogLevel&gt; і Set&lt;Int&gt; потоків.</p>
+      <div class="feat-visual">
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          <span class="term-pill" style="color:var(--red);border-color:rgba(247,118,142,.3);background:rgba(247,118,142,.08)">EXC · 14</span>
+          <span class="term-pill">info · 8 412</span>
+          <span class="term-pill" style="color:var(--purple);border-color:rgba(187,154,247,.3);background:rgba(187,154,247,.08)">SQL · 2 108</span>
+          <span class="term-pill" style="color:var(--yellow);border-color:rgba(224,175,104,.3);background:rgba(224,175,104,.08)">WRN · 37</span>
+          <span class="term-pill" style="color:var(--teal);border-color:rgba(115,218,202,.3);background:rgba(115,218,202,.08)">HTTP · 912</span>
+        </div>
+      </div>
+    </article>
+
+    <article class="feat reveal">
+      <div class="feat-kicker"><span class="no">F.04</span> Теми</div>
+      <h3 class="feat-title">Tokyo&nbsp;Night<br>або <em>TTY</em>.</h3>
+      <p class="feat-body">Кольори потоків, badge рівнів і підсвітка рядків — перемикаються без перезавантаження файлу.</p>
+      <div class="feat-visual">
+        <div class="swatches">
+          <div class="swatch swatch-tokyo">
+            <h5>TOKYO NIGHT</h5>
+            <div class="swatch-row">
+              <span style="background:#7aa2f7"></span><span style="background:#bb9af7"></span><span style="background:#9ece6a"></span><span style="background:#f7768e"></span><span style="background:#e0af68"></span>
+            </div>
+          </div>
+          <div class="swatch swatch-tty">
+            <h5>TTY</h5>
+            <div class="swatch-row">
+              <span style="background:#00afff"></span><span style="background:#d75fd7"></span><span style="background:#5fd75f"></span><span style="background:#ff5f5f"></span><span style="background:#ffd75f"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <article class="feat reveal">
+      <div class="feat-kicker"><span class="no">F.05</span> Гарячі клавіші</div>
+      <h3 class="feat-title">Руки не відриваються<br>від клавіатури.</h3>
+      <p class="feat-body">Увесь workflow — на шорткатах. Перетягни файл у вікно, натисни <b>Cmd+J</b> і читай пару.</p>
+      <div class="feat-visual shortcuts">
+        <div class="sc-row"><kbd>⌘</kbd><kbd>O</kbd><span>відкрити файл</span></div>
+        <div class="sc-row"><kbd>⌘</kbd><kbd>C</kbd><span>копіювати виділене</span></div>
+        <div class="sc-row"><kbd>⌘</kbd><kbd>J</kbd><span>стрибок до парного +/-</span></div>
+        <div class="sc-row"><kbd>⌘</kbd><kbd>F</kbd><span>пошук</span></div>
+      </div>
+    </article>
+  </div>
+</section>
+
+<section class="architecture" id="architecture">
+  <div class="section-tag"><span class="num">03</span><span class="bar"></span>Інженерія</div>
+  <div class="arch-grid">
+    <div>
+      <h2 class="section-title reveal">Чому<br><em>не гальмує.</em></h2>
+      <p class="section-lead reveal">Чистий Swift 5.9, нативний macOS, NSTableView під капотом — SwiftUI List захлинається на мільйоні рядків, Logram — ні.</p>
+    </div>
+    <div class="arch-list reveal">
+      <div class="arch-item"><span class="idx">01</span><span class="ti"><em>NSTableView</em> через NSViewRepresentable</span><span class="det">~10⁶ рядків</span></div>
+      <div class="arch-item"><span class="idx">02</span><span class="ti">Чанки по <em>50K</em> з Task.yield()</span><span class="det">responsive</span></div>
+      <div class="arch-item"><span class="idx">03</span><span class="ti">@Observable + <em>MainActor</em></span><span class="det">безпечно</span></div>
+      <div class="arch-item"><span class="idx">04</span><span class="ti">Sendable <em>LogParser</em></span><span class="det">один раз</span></div>
+      <div class="arch-item"><span class="idx">05</span><span class="ti">Drag-and-drop <em>.fileURL</em></span><span class="det">у вікно</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="final" id="download">
+  <h2>Логи.<br><em>Прочитано.</em></h2>
+  <p>macOS 14+, Apple Silicon та Intel. Нативна збірка, без Electron, без телеметрії.</p>
+  <div class="cta-row">
+    <a class="btn btn-primary" href="#">Завантажити .dmg <span class="arr">→</span></a>
+    <a class="btn btn-ghost" href="#">Зібрати з вихідників</a>
+  </div>
+</section>
+
+<footer>
+  <div>© 2026 · LOGRAM</div>
+  <div class="mid">Сергій Перекрестов · для розробників UnityBase</div>
+  <div class="right">MIT · Swift 5.9</div>
+</footer>
+
+<script src="/assets/app.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Logram — UnityBase log analyzer for macOS</title>
+<meta name="description" content="Native macOS analyzer for UnityBase logs: a million lines, four formats, method timing, SQL highlighting." />
+
+<link rel="canonical" href="https://logram.perek.rest/en/" />
+<link rel="alternate" hreflang="uk" href="https://logram.perek.rest/" />
+<link rel="alternate" hreflang="ru" href="https://logram.perek.rest/ru/" />
+<link rel="alternate" hreflang="en" href="https://logram.perek.rest/en/" />
+<link rel="alternate" hreflang="x-default" href="https://logram.perek.rest/" />
+
+<meta name="theme-color" content="#0f1016" />
+<meta name="color-scheme" content="dark" />
+
+<meta property="og:type" content="website" />
+<meta property="og:url" content="https://logram.perek.rest/en/" />
+<meta property="og:title" content="Logram — UnityBase log analyzer for macOS" />
+<meta property="og:description" content="A million lines without stalls. Four UB log formats, method timing, SQL with cust1 substitution, Tokyo Night and TTY themes." />
+<meta property="og:image" content="https://logram.perek.rest/assets/screenshot.png" />
+<meta property="og:image:width" content="2560" />
+<meta property="og:image:height" content="1600" />
+<meta property="og:locale" content="en_US" />
+<meta property="og:locale:alternate" content="uk_UA" />
+<meta property="og:locale:alternate" content="ru_RU" />
+<meta property="og:site_name" content="Logram" />
+
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Logram — UnityBase log analyzer for macOS" />
+<meta name="twitter:description" content="A million lines without stalls. Four UB log formats, method timing, SQL with cust1 substitution." />
+<meta name="twitter:image" content="https://logram.perek.rest/assets/screenshot.png" />
+
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%230f1016'/><circle cx='16' cy='16' r='6' fill='%239ece6a'/><circle cx='16' cy='16' r='10' fill='none' stroke='%239ece6a' stroke-opacity='.25' stroke-width='2'/></svg>" />
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<link rel="preload" as="image" href="/assets/screenshot.png" fetchpriority="high">
+<link rel="stylesheet" href="/assets/styles.css">
+</head>
+<body>
+
+<nav id="nav">
+  <a class="brand" href="/en/"><span class="dot"></span>LOGRAM</a>
+  <div class="nav-links">
+    <a href="#formats">Formats</a>
+    <a href="#features">Features</a>
+    <a href="#architecture">Engineering</a>
+    <a href="#download">Download</a>
+  </div>
+  <div class="nav-right">
+    <div class="lang-switch" role="group" aria-label="Language">
+      <a href="/"    hreflang="uk">UA</a>
+      <a href="/ru/" hreflang="ru">RU</a>
+      <a href="/en/" aria-current="true" hreflang="en">EN</a>
+    </div>
+    <div class="nav-meta">v1.0 / macOS 14+</div>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="hero-meta">
+    <span>REL <b>2026.04</b></span>
+    <span>TGT <b>MACOS 14+</b></span>
+    <span>SWIFT <b>5.9</b></span>
+    <span>LINES <b>∞</b></span>
+  </div>
+
+  <div class="hero-left">
+    <div class="tag"><span class="bar"></span>Native UnityBase log analyzer</div>
+
+    <h1 class="display">
+      A million<br>
+      lines<span class="num">·01</span><br>
+      <em>no stalls</em><span class="dot">.</span>
+    </h1>
+
+    <p class="lead">
+      Logram opens <b>multi-gigabyte</b> UnityBase logs and turns them into a readable
+      stream&nbsp;— with paired <b>+/-</b> timers, highlighted SQL, substituted
+      <b>cust1</b> parameters, and one-click filtering by level and thread.
+    </p>
+
+    <div class="cta-row">
+      <a class="btn btn-primary" href="#download">
+        Download for macOS
+        <span class="arr">→</span>
+      </a>
+      <a class="btn btn-ghost" href="#" target="_blank" rel="noopener">
+        View on GitHub
+      </a>
+    </div>
+
+    <div class="hero-stats">
+      <div><span class="k">32</span><span class="l">UB levels</span></div>
+      <div><span class="k">04</span><span class="l">Formats</span></div>
+      <div><span class="k">50<em>K</em></span><span class="l">Lines / chunk</span></div>
+      <div><span class="k"><em>∞</em></span><span class="l">Lines total</span></div>
+    </div>
+  </div>
+
+  <figure class="shot">
+    <div class="shot-glow"></div>
+    <img src="/assets/screenshot.png" alt="Logram — main window: filters, log stream, and SQL details with cust1 substitution" />
+    <figcaption class="shot-caption">
+      <span class="dot"></span>
+      Logram · live
+    </figcaption>
+  </figure>
+</header>
+
+<section class="formats" id="formats">
+  <div class="section-tag"><span class="num">01</span><span class="bar"></span>Formats</div>
+  <h2 class="section-title reveal">Four dialects of <em>one</em> log.</h2>
+  <p class="section-lead reveal">Logram detects the file header in milliseconds and switches the parser automatically. No import wizards.</p>
+
+  <div class="formats-grid">
+    <div class="format reveal">
+      <div class="format-head">
+        <span class="format-num">i.</span>
+        <div class="format-name">mORMot 1<span>Primary UB format</span></div>
+      </div>
+      <div class="format-sample"><span class="d">20210727 08260933</span>  <span class="h">$</span> <span class="l">SQL   </span>	<span class="t">SELECT id FROM uba_user WHERE name=:name</span></div>
+    </div>
+    <div class="format reveal">
+      <div class="format-head">
+        <span class="format-num">ii.</span>
+        <div class="format-name">mORMot 2 HiRes<span>High-precision hex timer</span></div>
+      </div>
+      <div class="format-sample"><span class="d">0000000000000C72</span>  <span class="h">!</span> <span class="l">info  </span>	<span class="t">UB server started on port 8881</span></div>
+    </div>
+    <div class="format reveal">
+      <div class="format-head">
+        <span class="format-num">iii.</span>
+        <div class="format-name">journald<span>systemd / ub[pid]</span></div>
+      </div>
+      <div class="format-sample"><span class="d">2022-10-27T00:00:00.358664+0300</span> ub[657518]:  <span class="h">$</span> <span class="l">SQL   </span>	<span class="t">COMMIT</span></div>
+    </div>
+    <div class="format reveal">
+      <div class="format-head">
+        <span class="format-num">iv.</span>
+        <div class="format-name">console<span>stdin without date</span></div>
+      </div>
+      <div class="format-sample">  <span class="h">$</span> <span class="l">EXC   </span>	<span class="t">EUBSecurityException at auth.js:142</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="features" id="features">
+  <div class="section-tag"><span class="num">02</span><span class="bar"></span>Features</div>
+  <h2 class="section-title reveal">Tools that make<br>a log <em>readable</em>.</h2>
+  <p class="section-lead reveal">Every feature is built for one thing: see what broke, faster.</p>
+
+  <div class="features-grid">
+    <article class="feat reveal">
+      <div class="feat-kicker"><span class="no">F.01</span> Method timing</div>
+      <h3 class="feat-title">Paired <em>+</em> and <em>-</em> fold<br>into a slow-method table.</h3>
+      <p class="feat-body">For every entry Logram finds the matching exit on the same thread, respecting nesting — and sorts by duration. <b>Cmd+J</b> jumps between a pair.</p>
+      <div class="feat-visual">
+        <div class="timing">
+          <div class="timing-row slow"><span class="lbl"><b>runList</b></span><span class="timing-bar" style="width:98%"></span><span class="ms">1,842 ms</span></div>
+          <div class="timing-row slow"><span class="lbl"><b>selectByID</b></span><span class="timing-bar" style="width:72%"></span><span class="ms">  648 ms</span></div>
+          <div class="timing-row"><span class="lbl"><b>authByPwd</b></span><span class="timing-bar" style="width:42%"></span><span class="ms">  214 ms</span></div>
+          <div class="timing-row"><span class="lbl"><b>insert</b></span><span class="timing-bar" style="width:28%"></span><span class="ms">   89 ms</span></div>
+          <div class="timing-row"><span class="lbl"><b>getAppInfo</b></span><span class="timing-bar" style="width:12%"></span><span class="ms">   31 ms</span></div>
+        </div>
+      </div>
+    </article>
+
+    <article class="feat reveal">
+      <div class="feat-kicker"><span class="no">F.02</span> SQL / cust1</div>
+      <h3 class="feat-title">Live SQL<br>with parameters.</h3>
+      <p class="feat-body"><b>cust1</b> parameters substituted back into the query. Copy — and paste into psql.</p>
+      <div class="feat-visual">
+        <div class="sql-block">
+<span class="sql-kw">SELECT</span> u.id, u.<span class="sql-fn">name</span>, r.code<br>
+<span class="sql-kw">FROM</span> uba_user u<br>
+<span class="sql-kw">JOIN</span> uba_role r <span class="sql-kw">ON</span> r.id = u.role<br>
+<span class="sql-kw">WHERE</span> u.disabled = <span class="sql-num">0</span><br>
+&nbsp;&nbsp;<span class="sql-kw">AND</span> u.name = <span class="sql-cust">'sergey@perek.rest'</span><br>
+&nbsp;&nbsp;<span class="sql-kw">AND</span> r.code <span class="sql-kw">IN</span> (<span class="sql-cust">'admin','ops'</span>)
+        </div>
+      </div>
+    </article>
+
+    <article class="feat reveal">
+      <div class="feat-kicker"><span class="no">F.03</span> Filters</div>
+      <h3 class="feat-title"><em>One</em> pass<br>through a million lines.</h3>
+      <p class="feat-body">Levels, threads, presets <b>Errors / SQL / HTTP</b> — O(n) filtering via Set&lt;LogLevel&gt; and Set&lt;Int&gt; of threads.</p>
+      <div class="feat-visual">
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          <span class="term-pill" style="color:var(--red);border-color:rgba(247,118,142,.3);background:rgba(247,118,142,.08)">EXC · 14</span>
+          <span class="term-pill">info · 8,412</span>
+          <span class="term-pill" style="color:var(--purple);border-color:rgba(187,154,247,.3);background:rgba(187,154,247,.08)">SQL · 2,108</span>
+          <span class="term-pill" style="color:var(--yellow);border-color:rgba(224,175,104,.3);background:rgba(224,175,104,.08)">WRN · 37</span>
+          <span class="term-pill" style="color:var(--teal);border-color:rgba(115,218,202,.3);background:rgba(115,218,202,.08)">HTTP · 912</span>
+        </div>
+      </div>
+    </article>
+
+    <article class="feat reveal">
+      <div class="feat-kicker"><span class="no">F.04</span> Themes</div>
+      <h3 class="feat-title">Tokyo&nbsp;Night<br>or <em>TTY</em>.</h3>
+      <p class="feat-body">Thread colors, level badges, and row highlighting — switch without reloading the file.</p>
+      <div class="feat-visual">
+        <div class="swatches">
+          <div class="swatch swatch-tokyo">
+            <h5>TOKYO NIGHT</h5>
+            <div class="swatch-row">
+              <span style="background:#7aa2f7"></span><span style="background:#bb9af7"></span><span style="background:#9ece6a"></span><span style="background:#f7768e"></span><span style="background:#e0af68"></span>
+            </div>
+          </div>
+          <div class="swatch swatch-tty">
+            <h5>TTY</h5>
+            <div class="swatch-row">
+              <span style="background:#00afff"></span><span style="background:#d75fd7"></span><span style="background:#5fd75f"></span><span style="background:#ff5f5f"></span><span style="background:#ffd75f"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <article class="feat reveal">
+      <div class="feat-kicker"><span class="no">F.05</span> Shortcuts</div>
+      <h3 class="feat-title">Hands never<br>leave the keyboard.</h3>
+      <p class="feat-body">The whole workflow is shortcut-driven. Drop a file into the window, press <b>Cmd+J</b>, and read the pair.</p>
+      <div class="feat-visual shortcuts">
+        <div class="sc-row"><kbd>⌘</kbd><kbd>O</kbd><span>open file</span></div>
+        <div class="sc-row"><kbd>⌘</kbd><kbd>C</kbd><span>copy selection</span></div>
+        <div class="sc-row"><kbd>⌘</kbd><kbd>J</kbd><span>jump to paired +/-</span></div>
+        <div class="sc-row"><kbd>⌘</kbd><kbd>F</kbd><span>search</span></div>
+      </div>
+    </article>
+  </div>
+</section>
+
+<section class="architecture" id="architecture">
+  <div class="section-tag"><span class="num">03</span><span class="bar"></span>Engineering</div>
+  <div class="arch-grid">
+    <div>
+      <h2 class="section-title reveal">Why it<br><em>doesn't lag.</em></h2>
+      <p class="section-lead reveal">Pure Swift 5.9, native macOS, NSTableView under the hood — SwiftUI List chokes on a million rows, Logram doesn't.</p>
+    </div>
+    <div class="arch-list reveal">
+      <div class="arch-item"><span class="idx">01</span><span class="ti"><em>NSTableView</em> via NSViewRepresentable</span><span class="det">~10⁶ rows</span></div>
+      <div class="arch-item"><span class="idx">02</span><span class="ti">50K chunks with <em>Task.yield()</em></span><span class="det">responsive</span></div>
+      <div class="arch-item"><span class="idx">03</span><span class="ti">@Observable + <em>MainActor</em></span><span class="det">safe</span></div>
+      <div class="arch-item"><span class="idx">04</span><span class="ti">Sendable <em>LogParser</em></span><span class="det">once</span></div>
+      <div class="arch-item"><span class="idx">05</span><span class="ti">Drag-and-drop <em>.fileURL</em></span><span class="det">into window</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="final" id="download">
+  <h2>Logs.<br><em>Read.</em></h2>
+  <p>macOS 14+, Apple Silicon &amp; Intel. Native build, no Electron, no telemetry.</p>
+  <div class="cta-row">
+    <a class="btn btn-primary" href="#">Download .dmg <span class="arr">→</span></a>
+    <a class="btn btn-ghost" href="#">Build from source</a>
+  </div>
+</section>
+
+<footer>
+  <div>© 2026 · LOGRAM</div>
+  <div class="mid">Sergey Perekrestov · for UnityBase developers</div>
+  <div class="right">MIT · Swift 5.9</div>
+</footer>
+
+<script src="/assets/app.js" defer></script>
+</body>
+</html>
