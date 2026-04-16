@@ -74,5 +74,5 @@ private:
     static constexpr int kMinSidebarWidthDip  = 120;
     static constexpr int kMinDetailHeightDip  = 80;
     int sidebarWidth_ = 220;   // left pane width (DIP)
-    int detailHeight_ = 260;   // bottom detail pane height (DIP)
+    int detailHeight_ = -1;    // -1 = auto (70% of work area on first layout)
 };

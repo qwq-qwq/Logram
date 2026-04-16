@@ -6,6 +6,7 @@
 #include "sql/SqlFormatter.h"
 #include "sql/SqlParamSubst.h"
 #include "sql/JsonPretty.h"
+#include <richedit.h>
 
 DetailPanel::DetailPanel() {}
 DetailPanel::~DetailPanel() {
@@ -80,17 +81,19 @@ HWND DetailPanel::Create(HWND parent, HINSTANCE hInstance, LogDocument* doc) {
     if (hFontSmall_) SendMessageW(hwndCopy_, WM_SETFONT,
                                   reinterpret_cast<WPARAM>(hFontSmall_), TRUE);
 
-    // Multi-line edit
-    hwndEdit_ = CreateWindowExW(WS_EX_CLIENTEDGE, L"EDIT", nullptr,
+    // RichEdit for syntax-highlighted SQL/JSON.
+    LoadLibraryW(L"Msftedit.dll");
+    hwndEdit_ = CreateWindowExW(WS_EX_CLIENTEDGE, MSFTEDIT_CLASS, nullptr,
         WS_CHILD | WS_VISIBLE | WS_VSCROLL | WS_HSCROLL |
-        ES_MULTILINE | ES_READONLY | ES_AUTOVSCROLL | ES_AUTOHSCROLL,
+        ES_MULTILINE | ES_READONLY | ES_AUTOVSCROLL | ES_AUTOHSCROLL | ES_NOOLEDRAGDROP,
         0, headerH, 400, 200 - headerH, hwnd_, nullptr, hInstance, nullptr);
     if (hFont_) SendMessageW(hwndEdit_, WM_SETFONT,
                              reinterpret_cast<WPARAM>(hFont_), TRUE);
 
-    // Dark background brush matching the theme.
+    // Dark background for RichEdit + brush for WM_CTLCOLOR*.
     auto& theme = CurrentTheme();
     hBgBrush_ = CreateSolidBrush(ToCOLORREF(theme.background));
+    SendMessageW(hwndEdit_, EM_SETBKGNDCOLOR, 0, ToCOLORREF(theme.background));
 
     return hwnd_;
 }
@@ -146,6 +149,198 @@ static std::string FindParamsForSql(LogDocument* doc, int lineId) {
     return {};
 }
 
+static void SetRangeColor(HWND hwnd, int start, int end, COLORREF color) {
+    CHARRANGE cr = {start, end};
+    SendMessageW(hwnd, EM_EXSETSEL, 0, reinterpret_cast<LPARAM>(&cr));
+    CHARFORMAT2W cf = {};
+    cf.cbSize = sizeof(cf);
+    cf.dwMask = CFM_COLOR;
+    cf.crTextColor = color;
+    SendMessageW(hwnd, EM_SETCHARFORMAT, SCF_SELECTION, reinterpret_cast<LPARAM>(&cf));
+}
+
+enum class TokType { Keyword, String, Number, Operator, Bind, Comment, Ident };
+
+struct HlToken {
+    int start;
+    int end;
+    TokType type;
+};
+
+static bool IsSqlKeyword(const std::string& upper) {
+    static const char* kw[] = {
+        "SELECT","FROM","WHERE","AND","OR","NOT","IN","IS","NULL","AS","ON",
+        "JOIN","LEFT","RIGHT","INNER","OUTER","CROSS","FULL","ORDER","BY",
+        "GROUP","HAVING","LIMIT","OFFSET","INSERT","INTO","VALUES","UPDATE",
+        "SET","DELETE","CREATE","ALTER","DROP","TABLE","INDEX","VIEW",
+        "UNION","ALL","DISTINCT","CASE","WHEN","THEN","ELSE","END",
+        "EXISTS","BETWEEN","LIKE","CAST","COALESCE","COUNT","SUM","MAX",
+        "MIN","AVG","TOP","WITH","DECLARE","BEGIN","RETURN","FOR","XML",
+        "PATH","STUFF","ISNULL","CONVERT","NVARCHAR","BIGINT","INT",
+        nullptr};
+    for (int i = 0; kw[i]; ++i) if (upper == kw[i]) return true;
+    return false;
+}
+
+static std::vector<HlToken> TokenizeSqlForHighlight(const std::wstring& text) {
+    std::vector<HlToken> tokens;
+    int len = static_cast<int>(text.size());
+    int i = 0;
+    while (i < len) {
+        wchar_t c = text[i];
+        if (c == ' ' || c == '\t' || c == '\r' || c == '\n') { i++; continue; }
+
+        if (c == '\'') {
+            int start = i++;
+            while (i < len) {
+                if (text[i] == '\'' && i + 1 < len && text[i + 1] == '\'') { i += 2; continue; }
+                if (text[i] == '\'') { i++; break; }
+                i++;
+            }
+            tokens.push_back({start, i, TokType::String});
+            continue;
+        }
+        if (c == '-' && i + 1 < len && text[i + 1] == '-') {
+            int start = i;
+            while (i < len && text[i] != '\n') i++;
+            tokens.push_back({start, i, TokType::Comment});
+            continue;
+        }
+        if (c == ':' || c == '?') {
+            int start = i++;
+            if (c == ':') while (i < len && (iswalnum(text[i]) || text[i] == '_')) i++;
+            tokens.push_back({start, i, TokType::Bind});
+            continue;
+        }
+        if (iswdigit(c) || (c == '.' && i + 1 < len && iswdigit(text[i + 1]))) {
+            int start = i++;
+            while (i < len && (iswdigit(text[i]) || text[i] == '.')) i++;
+            tokens.push_back({start, i, TokType::Number});
+            continue;
+        }
+        if (iswalpha(c) || c == '_' || c == '@' || c == '#') {
+            int start = i++;
+            while (i < len && (iswalnum(text[i]) || text[i] == '_' || text[i] == '.' ||
+                               text[i] == '@' || text[i] == '#')) i++;
+            std::string upper;
+            for (int k = start; k < i; ++k) {
+                wchar_t ch = text[k];
+                if (ch >= 'a' && ch <= 'z') ch -= 32;
+                upper += static_cast<char>(ch);
+            }
+            tokens.push_back({start, i, IsSqlKeyword(upper) ? TokType::Keyword : TokType::Ident});
+            continue;
+        }
+        if (c == '(' || c == ')' || c == ',' || c == '=' || c == '<' || c == '>' ||
+            c == '+' || c == '-' || c == '*' || c == '/' || c == '|' || c == ';') {
+            tokens.push_back({i, i + 1, TokType::Operator});
+            i++;
+            continue;
+        }
+        i++;
+    }
+    return tokens;
+}
+
+static std::vector<HlToken> TokenizeJsonForHighlight(const std::wstring& text) {
+    std::vector<HlToken> tokens;
+    int len = static_cast<int>(text.size());
+    int i = 0;
+    while (i < len) {
+        wchar_t c = text[i];
+        if (c == ' ' || c == '\t' || c == '\r' || c == '\n') { i++; continue; }
+        if (c == '"') {
+            int start = i++;
+            while (i < len && text[i] != '"') {
+                if (text[i] == '\\') i++;
+                i++;
+            }
+            if (i < len) i++;
+            // Key if followed by ':'
+            int j = i;
+            while (j < len && (text[j] == ' ' || text[j] == '\t')) j++;
+            TokType type = (j < len && text[j] == ':') ? TokType::Keyword : TokType::String;
+            tokens.push_back({start, i, type});
+            continue;
+        }
+        if (iswdigit(c) || c == '-') {
+            int start = i++;
+            while (i < len && (iswdigit(text[i]) || text[i] == '.' || text[i] == 'e' ||
+                               text[i] == 'E' || text[i] == '+' || text[i] == '-')) i++;
+            tokens.push_back({start, i, TokType::Number});
+            continue;
+        }
+        if (c == 't' || c == 'f' || c == 'n') {
+            int start = i;
+            while (i < len && iswalpha(text[i])) i++;
+            tokens.push_back({start, i, TokType::Bind});
+            continue;
+        }
+        if (c == '{' || c == '}' || c == '[' || c == ']' || c == ',' || c == ':') {
+            tokens.push_back({i, i + 1, TokType::Operator});
+            i++;
+            continue;
+        }
+        i++;
+    }
+    return tokens;
+}
+
+enum class HighlightMode { None, Sql, Json };
+
+static void ApplyHighlighting(HWND hwnd, const std::wstring& text, HighlightMode mode) {
+    if (mode == HighlightMode::None) return;
+
+    auto& theme = CurrentTheme();
+    std::vector<HlToken> tokens;
+    if (mode == HighlightMode::Sql)
+        tokens = TokenizeSqlForHighlight(text);
+    else
+        tokens = TokenizeJsonForHighlight(text);
+
+    SendMessageW(hwnd, WM_SETREDRAW, FALSE, 0);
+
+    // Default foreground
+    CHARRANGE crAll = {0, -1};
+    SendMessageW(hwnd, EM_EXSETSEL, 0, reinterpret_cast<LPARAM>(&crAll));
+    CHARFORMAT2W cfDef = {};
+    cfDef.cbSize = sizeof(cfDef);
+    cfDef.dwMask = CFM_COLOR;
+    cfDef.crTextColor = ToCOLORREF(theme.foreground);
+    SendMessageW(hwnd, EM_SETCHARFORMAT, SCF_SELECTION, reinterpret_cast<LPARAM>(&cfDef));
+
+    for (const auto& t : tokens) {
+        COLORREF color;
+        if (mode == HighlightMode::Sql) {
+            switch (t.type) {
+                case TokType::Keyword:  color = ToCOLORREF(theme.sqlKeyword); break;
+                case TokType::String:   color = ToCOLORREF(theme.sqlString); break;
+                case TokType::Number:   color = ToCOLORREF(theme.sqlNumber); break;
+                case TokType::Comment:  color = ToCOLORREF(theme.sqlComment); break;
+                case TokType::Operator: color = ToCOLORREF(theme.sqlOperator); break;
+                case TokType::Bind:     color = ToCOLORREF(theme.sqlBind); break;
+                default: continue;
+            }
+        } else {
+            switch (t.type) {
+                case TokType::Keyword:  color = ToCOLORREF(theme.jsonKey); break;
+                case TokType::String:   color = ToCOLORREF(theme.jsonString); break;
+                case TokType::Number:   color = ToCOLORREF(theme.jsonNumber); break;
+                case TokType::Bind:     color = ToCOLORREF(theme.jsonBool); break;
+                case TokType::Operator: color = ToCOLORREF(theme.jsonBracket); break;
+                default: continue;
+            }
+        }
+        SetRangeColor(hwnd, t.start, t.end, color);
+    }
+
+    // Reset selection to start
+    CHARRANGE crStart = {0, 0};
+    SendMessageW(hwnd, EM_EXSETSEL, 0, reinterpret_cast<LPARAM>(&crStart));
+    SendMessageW(hwnd, WM_SETREDRAW, TRUE, 0);
+    InvalidateRect(hwnd, nullptr, FALSE);
+}
+
 void DetailPanel::ShowLine(int lineId) {
     lastLineId_ = lineId;
     lastSql_.clear();
@@ -168,6 +363,7 @@ void DetailPanel::ShowLine(int lineId) {
 
     std::string displayText;
     std::string headerText;
+    HighlightMode hlMode = HighlightMode::None;
 
     // SQL lines: format SQL
     if (level == LogLevel::Sql || level == LogLevel::Cust2) {
@@ -190,11 +386,13 @@ void DetailPanel::ShowLine(int lineId) {
             displayText = SqlFormat(lastSql_);
         }
         lastStats_ = headerText;
+        hlMode = HighlightMode::Sql;
     }
     // JSON lines (Cust1/Params)
     else if (level == LogLevel::Cust1 ||
              (msgStr.size() > 1 && (msgStr[0] == '{' || msgStr[0] == '['))) {
         displayText = JsonPrettyPrint(msgStr);
+        hlMode = HighlightMode::Json;
     }
     // Error with embedded SQL
     else if (msgStr.find(" q=") != std::string::npos ||
@@ -202,6 +400,7 @@ void DetailPanel::ShowLine(int lineId) {
         auto parsed = SqlStatsParse(msgStr);
         lastSql_ = parsed.sql;
         displayText = SqlFormat(parsed.sql);
+        hlMode = HighlightMode::Sql;
     }
     // Plain text
     else {
@@ -229,7 +428,11 @@ void DetailPanel::ShowLine(int lineId) {
     }
 
     SetWindowTextW(hwndHeader_, Utf8ToWide(headerText).c_str());
-    SetWindowTextW(hwndEdit_, Utf8ToWide(crlfText).c_str());
+
+    auto wideText = Utf8ToWide(crlfText);
+    SetWindowTextW(hwndEdit_, wideText.c_str());
+
+    ApplyHighlighting(hwndEdit_, wideText, hlMode);
 }
 
 void DetailPanel::OnDocumentChanged(DocumentChanges changes) {

@@ -1,4 +1,5 @@
 #include "ui/Splitter.h"
+#include "ui/ThemeColors.h"
 
 void Splitter::RegisterClass(HINSTANCE hInstance) {
     WNDCLASSEXW wc = {};
@@ -7,7 +8,7 @@ void Splitter::RegisterClass(HINSTANCE hInstance) {
     wc.lpfnWndProc = WndProc;
     wc.hInstance = hInstance;
     wc.hCursor = LoadCursorW(nullptr, IDC_SIZEWE);
-    wc.hbrBackground = reinterpret_cast<HBRUSH>(COLOR_3DFACE + 1);
+    wc.hbrBackground = nullptr;
     wc.lpszClassName = kClassName;
     RegisterClassExW(&wc);
 }
@@ -80,6 +81,16 @@ LRESULT Splitter::HandleMessage(UINT msg, WPARAM wParam, LPARAM lParam) {
             SetCursor(LoadCursorW(nullptr,
                 orient_ == Orientation::Vertical ? IDC_SIZEWE : IDC_SIZENS));
             return TRUE;
+
+        case WM_ERASEBKGND: {
+            auto& theme = CurrentTheme();
+            RECT rc;
+            GetClientRect(hwnd_, &rc);
+            HBRUSH brush = CreateSolidBrush(ToCOLORREF(theme.background));
+            FillRect(reinterpret_cast<HDC>(wParam), &rc, brush);
+            DeleteObject(brush);
+            return 1;
+        }
     }
     return DefWindowProcW(hwnd_, msg, wParam, lParam);
 }

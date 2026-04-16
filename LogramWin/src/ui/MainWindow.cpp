@@ -197,11 +197,12 @@ void MainWindow::OnCreate() {
                  reinterpret_cast<LPARAM>(L"Search..."));
 
     // Populate sidebarWidth_ / detailHeight_ from stored prefs (values are
-    // physical pixels as last persisted). If missing, scale the DIP defaults.
+    // physical pixels as last persisted). detailHeight_=-1 means "auto 70%"
+    // which is resolved in the first LayoutChildren call once we know the window size.
     int saved = Settings::Instance().GetSplitterPos(0 /*sidebar*/);
     sidebarWidth_ = (saved > 0) ? saved : Scale(sidebarWidth_);
     saved = Settings::Instance().GetSplitterPos(1 /*detail*/);
-    detailHeight_ = (saved > 0) ? saved : Scale(detailHeight_);
+    detailHeight_ = (saved > 0) ? saved : -1;
 
     // Filter sidebar (left)
     filterSidebar_ = std::make_unique<FilterSidebar>();
@@ -291,6 +292,9 @@ void MainWindow::LayoutChildren() {
 
     int rightX = sidebarWidth_ + splitterPx;
     int rightW = std::max(0, totalW - rightX);
+
+    // First layout: set detail to 70% of work area.
+    if (detailHeight_ < 0) detailHeight_ = workH * 70 / 100;
 
     int detailH = std::min(detailHeight_, std::max(0, workH - minDetailPx));
     if (detailH < minDetailPx) detailH = minDetailPx;
