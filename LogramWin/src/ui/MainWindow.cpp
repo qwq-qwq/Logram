@@ -16,6 +16,12 @@ namespace {
 constexpr int IDC_SEARCH_EDIT   = 9001;
 } // namespace
 
+int MainWindow::Scale(int dip) const {
+    UINT dpi = hwnd_ ? GetDpiForWindow(hwnd_) : 96;
+    if (dpi == 0) dpi = 96;
+    return MulDiv(dip, static_cast<int>(dpi), 96);
+}
+
 MainWindow::MainWindow() {
     doc_.listeners.Add(this);
 }
@@ -41,10 +47,17 @@ void MainWindow::RegisterClass(HINSTANCE hInstance) {
 
 bool MainWindow::Create(HINSTANCE hInstance, int nCmdShow) {
     auto rect = Settings::Instance().GetWindowRect();
+
+    // Default size in DIPs → physical pixels using primary monitor DPI.
+    UINT defDpi = GetDpiForSystem();
+    if (defDpi == 0) defDpi = 96;
+    int defW = MulDiv(1200, defDpi, 96);
+    int defH = MulDiv(800,  defDpi, 96);
+
     int x = rect.valid ? rect.x : CW_USEDEFAULT;
     int y = rect.valid ? rect.y : CW_USEDEFAULT;
-    int w = rect.valid ? rect.w : 1200;
-    int h = rect.valid ? rect.h : 800;
+    int w = rect.valid ? rect.w : defW;
+    int h = rect.valid ? rect.h : defH;
 
     hwnd_ = CreateWindowExW(
         0, kClassName, L"Logram",
@@ -151,19 +164,31 @@ void MainWindow::OnCreate() {
     SendMessageW(hwndStatus_, SB_SETPARTS, 5, reinterpret_cast<LPARAM>(parts));
     SendMessageW(hwndStatus_, SB_SETTEXTW, 0, reinterpret_cast<LPARAM>(L"Ready"));
 
-    // Search box in the toolbar strip (top)
+    // Search box in the toolbar strip (top). Exact rect is set later in
+    // LayoutChildren; use DPI-scaled defaults here.
     hwndSearch_ = CreateWindowExW(WS_EX_CLIENTEDGE, L"EDIT", L"",
         WS_CHILD | WS_VISIBLE | WS_TABSTOP | ES_AUTOHSCROLL,
-        8, 6, 300, kToolbarHeight - 12,
+        Scale(8), Scale(6), Scale(300), Scale(kToolbarHeightDip - 12),
         hwnd_,
         reinterpret_cast<HMENU>(static_cast<LONG_PTR>(IDC_SEARCH_EDIT)),
         hInst, nullptr);
 
-    // Populate sidebarWidth_ / detailHeight_ from stored prefs
+    // DPI-scaled monospaced font for the search box
+    UINT dpi = GetDpiForWindow(hwnd_);
+    if (dpi == 0) dpi = 96;
+    HFONT hFont = CreateFontW(-MulDiv(10, dpi, 72), 0, 0, 0,
+        FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET,
+        OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY,
+        VARIABLE_PITCH | FF_SWISS, L"Segoe UI");
+    if (hFont) SendMessageW(hwndSearch_, WM_SETFONT,
+                            reinterpret_cast<WPARAM>(hFont), TRUE);
+
+    // Populate sidebarWidth_ / detailHeight_ from stored prefs (values are
+    // physical pixels as last persisted). If missing, scale the DIP defaults.
     int saved = Settings::Instance().GetSplitterPos(0 /*sidebar*/);
-    if (saved > 0) sidebarWidth_ = saved;
+    sidebarWidth_ = (saved > 0) ? saved : Scale(sidebarWidth_);
     saved = Settings::Instance().GetSplitterPos(1 /*detail*/);
-    if (saved > 0) detailHeight_ = saved;
+    detailHeight_ = (saved > 0) ? saved : Scale(detailHeight_);
 
     // Filter sidebar (left)
     filterSidebar_ = std::make_unique<FilterSidebar>();
@@ -177,15 +202,17 @@ void MainWindow::OnCreate() {
     detailPanel_ = std::make_unique<DetailPanel>();
     detailPanel_->Create(hwnd_, hInst, &doc_);
 
-    // Splitters
+    // Splitters (exact geometry set in LayoutChildren)
     sidebarSplitter_ = std::make_unique<Splitter>(Splitter::Orientation::Vertical);
     sidebarSplitter_->Create(hwnd_, hInst,
-        sidebarWidth_, kToolbarHeight, kSplitterThickness, 100);
-    sidebarSplitter_->SetPosition(sidebarWidth_);
+        Scale(sidebarWidth_), Scale(kToolbarHeightDip),
+        Scale(kSplitterThicknessDip), Scale(100));
+    sidebarSplitter_->SetPosition(Scale(sidebarWidth_));
 
     detailSplitter_ = std::make_unique<Splitter>(Splitter::Orientation::Horizontal);
     detailSplitter_->Create(hwnd_, hInst,
-        sidebarWidth_ + kSplitterThickness, 0, 100, kSplitterThickness);
+        Scale(sidebarWidth_) + Scale(kSplitterThicknessDip), 0,
+        Scale(100), Scale(kSplitterThicknessDip));
 }
 
 void MainWindow::OnSize(int width, int height) {
@@ -209,9 +236,10 @@ void MainWindow::OnSize(int width, int height) {
                 RECT sr; GetWindowRect(hwndStatus_, &sr);
                 sbH = sr.bottom - sr.top;
             }
-            int maxY = rc.bottom - sbH - kSplitterThickness;
+            const int splitterPx = Scale(kSplitterThicknessDip);
+            int maxY = rc.bottom - sbH - splitterPx;
             if (p < maxY) {
-                detailHeight_ = rc.bottom - sbH - p - kSplitterThickness;
+                detailHeight_ = rc.bottom - sbH - p - splitterPx;
             }
         }
     }
@@ -232,27 +260,36 @@ void MainWindow::LayoutChildren() {
         sbH = sr.bottom - sr.top;
     }
 
+    // All constants below are in DIPs; scale to physical pixels for Win32.
+    const int toolbarPx      = Scale(kToolbarHeightDip);
+    const int splitterPx     = Scale(kSplitterThicknessDip);
+    const int minSidebarPx   = Scale(kMinSidebarWidthDip);
+    const int minDetailPx    = Scale(kMinDetailHeightDip);
+    const int minTablePx     = Scale(200);
+
     // Clamp dimensions so children always have room
-    int workH = std::max(0, totalH - kToolbarHeight - sbH);
-    int workY = kToolbarHeight;
+    int workH = std::max(0, totalH - toolbarPx - sbH);
+    int workY = toolbarPx;
     int workBottom = workY + workH;
 
-    if (sidebarWidth_ < kMinSidebarWidth) sidebarWidth_ = kMinSidebarWidth;
-    if (sidebarWidth_ > totalW - 200)     sidebarWidth_ = std::max(kMinSidebarWidth, totalW - 200);
+    if (sidebarWidth_ < minSidebarPx) sidebarWidth_ = minSidebarPx;
+    if (sidebarWidth_ > totalW - minTablePx)
+        sidebarWidth_ = std::max(minSidebarPx, totalW - minTablePx);
 
-    int rightX = sidebarWidth_ + kSplitterThickness;
+    int rightX = sidebarWidth_ + splitterPx;
     int rightW = std::max(0, totalW - rightX);
 
-    int detailH = std::min(detailHeight_, std::max(0, workH - kMinDetailHeight));
-    if (detailH < kMinDetailHeight) detailH = kMinDetailHeight;
-    if (detailH > workH - kMinDetailHeight) detailH = std::max(kMinDetailHeight, workH - kMinDetailHeight);
+    int detailH = std::min(detailHeight_, std::max(0, workH - minDetailPx));
+    if (detailH < minDetailPx) detailH = minDetailPx;
+    if (detailH > workH - minDetailPx) detailH = std::max(minDetailPx, workH - minDetailPx);
     detailHeight_ = detailH;
 
-    int topH = std::max(0, workH - detailH - kSplitterThickness);
+    int topH = std::max(0, workH - detailH - splitterPx);
 
-    // Toolbar: search box already fixed-positioned in OnCreate; keep it flush
+    // Toolbar: search box position is DPI-scaled
     if (hwndSearch_) {
-        MoveWindow(hwndSearch_, 8, 6, 300, kToolbarHeight - 12, TRUE);
+        MoveWindow(hwndSearch_, Scale(8), Scale(6), Scale(300),
+                   toolbarPx - Scale(12), TRUE);
     }
 
     // Filter sidebar (left)
@@ -264,7 +301,7 @@ void MainWindow::LayoutChildren() {
     // Vertical splitter (between sidebar and right pane)
     if (sidebarSplitter_) {
         MoveWindow(sidebarSplitter_->GetHwnd(),
-                   sidebarWidth_, workY, kSplitterThickness, workH, TRUE);
+                   sidebarWidth_, workY, splitterPx, workH, TRUE);
     }
 
     // Table view (top-right)
@@ -276,12 +313,12 @@ void MainWindow::LayoutChildren() {
     int splitY = workY + topH;
     if (detailSplitter_) {
         MoveWindow(detailSplitter_->GetHwnd(),
-                   rightX, splitY, rightW, kSplitterThickness, TRUE);
+                   rightX, splitY, rightW, splitterPx, TRUE);
         detailSplitter_->SetPosition(splitY); // keep in sync for drags
     }
 
     // Detail panel (bottom-right)
-    int detailY = splitY + kSplitterThickness;
+    int detailY = splitY + splitterPx;
     int detailActualH = std::max(0, workBottom - detailY);
     if (detailPanel_) {
         MoveWindow(detailPanel_->GetHwnd(), rightX, detailY, rightW, detailActualH, TRUE);

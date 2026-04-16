@@ -47,8 +47,9 @@ private:
 
     int topRow_ = 0;
     int rowHeight_ = 20;
-    int clientWidth_ = 0;
-    int clientHeight_ = 0;
+    int clientWidth_ = 0;   // in DIPs
+    int clientHeight_ = 0;  // in DIPs
+    float dpiScale_ = 1.0f;
     std::set<size_t> selectedRows_;
     size_t anchorRow_ = 0;
     bool showDuration_ = false;

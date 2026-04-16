@@ -142,6 +142,12 @@ void LogTableView::CreateRenderTarget() {
         &rt_);
 
     if (rt_) {
+        // Align D2D coordinate system with the monitor DPI so 1 DIP ≈ 1/96".
+        // Without this, "12pt" text renders as 12 physical pixels on hi-DPI
+        // displays while pixel-sized column offsets stay unscaled.
+        UINT dpi = GetDpiForWindow(hwnd_);
+        if (dpi == 0) dpi = 96;
+        rt_->SetDpi(static_cast<float>(dpi), static_cast<float>(dpi));
         rt_->CreateSolidColorBrush(D2D1::ColorF(1, 1, 1), &brush_);
     }
 }
@@ -251,8 +257,12 @@ void LogTableView::OnPaint() {
 }
 
 void LogTableView::OnSize(int w, int h) {
-    clientWidth_ = w;
-    clientHeight_ = h;
+    // w/h are physical pixels; drawing coords are DIPs once SetDpi is set.
+    float scale = GetDpiForWindow(hwnd_) / 96.0f;
+    if (scale <= 0.0f) scale = 1.0f;
+    dpiScale_ = scale;
+    clientWidth_ = static_cast<int>(w / scale);
+    clientHeight_ = static_cast<int>(h / scale);
     if (rt_) {
         rt_->Resize(D2D1::SizeU(w, h));
     }
@@ -307,7 +317,10 @@ void LogTableView::OnMouseWheel(int delta) {
 
 int LogTableView::HitTestRow(int y) const {
     if (rowHeight_ <= 0) return -1;
-    return topRow_ + y / rowHeight_;
+    // y arrives in physical pixels from WM_LBUTTONDOWN, but rowHeight_ is in
+    // DIPs (matches the drawing coordinate system).
+    int yDip = static_cast<int>(y / (dpiScale_ > 0.0f ? dpiScale_ : 1.0f));
+    return topRow_ + yDip / rowHeight_;
 }
 
 void LogTableView::OnLButtonDown(int x, int y, WPARAM keys) {

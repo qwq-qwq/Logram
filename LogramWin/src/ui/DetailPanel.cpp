@@ -14,18 +14,21 @@ HWND DetailPanel::Create(HWND parent, HINSTANCE hInstance, LogDocument* doc) {
     doc_ = doc;
     if (doc_) doc_->listeners.Add(this);
 
-    hwnd_ = CreateWindowExW(0, L"STATIC", nullptr,
-        WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN,
+    // EDIT as the panel root — MoveWindow from parent directly resizes the
+    // control. A STATIC wrapper does not forward WM_SIZE to child EDITs, so
+    // the text box stayed at its initial 400x200 no matter the layout.
+    // TODO(Этап 4): replace with Scintilla.
+    hwnd_ = CreateWindowExW(WS_EX_CLIENTEDGE, L"EDIT", nullptr,
+        WS_CHILD | WS_VISIBLE | WS_VSCROLL | WS_HSCROLL |
+        ES_MULTILINE | ES_READONLY | ES_AUTOVSCROLL | ES_AUTOHSCROLL,
         0, 0, 400, 200, parent, nullptr, hInstance, nullptr);
+    hwndEdit_ = hwnd_;
 
-    // For now use a simple multi-line EDIT control as placeholder
-    // Will be replaced with Scintilla in Этап 4
-    hwndEdit_ = CreateWindowExW(WS_EX_CLIENTEDGE, L"EDIT", nullptr,
-        WS_CHILD | WS_VISIBLE | WS_VSCROLL | ES_MULTILINE | ES_READONLY | ES_AUTOVSCROLL,
-        0, 0, 400, 200, hwnd_, nullptr, hInstance, nullptr);
-
-    // Set monospaced font
-    HFONT hFont = CreateFontW(-14, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
+    // DPI-scaled monospaced font
+    UINT dpi = GetDpiForWindow(parent);
+    if (dpi == 0) dpi = 96;
+    int fontHeight = -MulDiv(10, dpi, 72); // 10pt
+    HFONT hFont = CreateFontW(fontHeight, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
         DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
         CLEARTYPE_QUALITY, FIXED_PITCH | FF_MODERN, L"Consolas");
     if (hFont) SendMessageW(hwndEdit_, WM_SETFONT, reinterpret_cast<WPARAM>(hFont), TRUE);

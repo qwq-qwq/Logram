@@ -64,11 +64,14 @@ private:
 
     static constexpr const wchar_t* kClassName = L"LogramMainWindow";
 
-    // Child-window pixel dimensions
-    static constexpr int kToolbarHeight = 36;
-    static constexpr int kSplitterThickness = 4;
-    static constexpr int kMinSidebarWidth = 120;
-    static constexpr int kMinDetailHeight = 80;
-    int sidebarWidth_ = 220;   // left pane width
-    int detailHeight_ = 260;   // bottom detail pane height
+    // Layout dimensions in DIPs (96-DPI base). Scale() multiplies them to
+    // physical pixels using the window's current DPI.
+    int Scale(int dip) const;
+
+    static constexpr int kToolbarHeightDip    = 36;
+    static constexpr int kSplitterThicknessDip = 4;
+    static constexpr int kMinSidebarWidthDip  = 120;
+    static constexpr int kMinDetailHeightDip  = 80;
+    int sidebarWidth_ = 220;   // left pane width (DIP)
+    int detailHeight_ = 260;   // bottom detail pane height (DIP)
 };
