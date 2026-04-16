@@ -29,6 +29,7 @@ private:
     HWND hwndCopy_ = nullptr;     // Copy button
     HFONT hFont_ = nullptr;
     HFONT hFontSmall_ = nullptr;
+    HBRUSH hBgBrush_ = nullptr;
     LogDocument* doc_ = nullptr;
     int lastLineId_ = -1;
     bool paramsEnabled_ = false;

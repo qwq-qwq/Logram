@@ -29,6 +29,7 @@ MainWindow::MainWindow() {
 MainWindow::~MainWindow() {
     doc_.listeners.Remove(this);
     if (loadThread_.joinable()) loadThread_.join();
+    if (hBgBrush_) DeleteObject(hBgBrush_);
 }
 
 void MainWindow::RegisterClass(HINSTANCE hInstance) {
@@ -146,6 +147,16 @@ LRESULT MainWindow::HandleMessage(UINT msg, WPARAM wParam, LPARAM lParam) {
             FillRect(reinterpret_cast<HDC>(wParam), &rc, brush);
             DeleteObject(brush);
             return 1;
+        }
+
+        case WM_CTLCOLOREDIT: {
+            auto& theme = CurrentTheme();
+            HDC hdc = reinterpret_cast<HDC>(wParam);
+            SetTextColor(hdc, ToCOLORREF(theme.foreground));
+            SetBkColor(hdc, ToCOLORREF(theme.background));
+            if (!hBgBrush_)
+                hBgBrush_ = CreateSolidBrush(ToCOLORREF(theme.background));
+            return reinterpret_cast<LRESULT>(hBgBrush_);
         }
     }
 
@@ -332,21 +343,11 @@ void MainWindow::LayoutChildren() {
 }
 
 void MainWindow::OnCommand(int id, int code, HWND ctrl) {
-    // Search field — Enter key fires EN_CHANGE repeatedly; rely on explicit
-    // F3 / Shift+F3 / menu "Find" instead. But auto-run on each keystroke too.
+    // Search field — just reset the navigation index on text change.
+    // Actual navigation happens via F3/Shift+F3 (RunSearch).
+    // Search does NOT filter — it's a find-in-list, not a filter.
     if (ctrl && id == IDC_SEARCH_EDIT) {
-        if (code == EN_CHANGE) {
-            wchar_t buf[512];
-            GetWindowTextW(hwndSearch_, buf, 512);
-            auto utf8 = WideToUtf8(buf);
-            doc_.SetSearchPattern(utf8, false);
-            doc_.ApplyFilters();
-            DocumentChanges ch;
-            ch.flags = DocumentChanges::FiltersChanged;
-            doc_.listeners.Notify(ch);
-            lastFoundIdx_ = -1;
-            UpdateStatusBar();
-        }
+        if (code == EN_CHANGE) lastFoundIdx_ = -1;
         return;
     }
 

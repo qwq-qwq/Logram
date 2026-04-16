@@ -50,6 +50,7 @@ private:
     HWND hwndStatus_ = nullptr;
     HWND hwndToolbar_ = nullptr;
     HWND hwndSearch_ = nullptr;
+    HBRUSH hBgBrush_ = nullptr;
 
     std::unique_ptr<LogTableView>  tableView_;
     std::unique_ptr<FilterSidebar> filterSidebar_;

@@ -48,7 +48,13 @@ HWND FilterSidebar::Create(HWND parent, HINSTANCE hInstance, LogDocument* doc) {
         hwnd_, nullptr, hInstance, nullptr);
 
     ListView_SetExtendedListViewStyle(hwndList_,
-        LVS_EX_CHECKBOXES | LVS_EX_FULLROWSELECT);
+        LVS_EX_CHECKBOXES | LVS_EX_FULLROWSELECT | LVS_EX_DOUBLEBUFFER);
+
+    // Dark background for the entire ListView surface.
+    auto& theme = CurrentTheme();
+    ListView_SetBkColor(hwndList_, ToCOLORREF(theme.background));
+    ListView_SetTextBkColor(hwndList_, ToCOLORREF(theme.background));
+    ListView_SetTextColor(hwndList_, ToCOLORREF(theme.foreground));
 
     if (hFont_) SendMessageW(hwndList_, WM_SETFONT,
                              reinterpret_cast<WPARAM>(hFont_), TRUE);
@@ -297,6 +303,16 @@ LRESULT FilterSidebar::HandleMessage(UINT msg, WPARAM wParam, LPARAM lParam) {
             clientH_ = HIWORD(lParam);
             LayoutInternal();
             return 0;
+
+        case WM_ERASEBKGND: {
+            auto& theme = CurrentTheme();
+            RECT rc;
+            GetClientRect(hwnd_, &rc);
+            HBRUSH brush = CreateSolidBrush(ToCOLORREF(theme.background));
+            FillRect(reinterpret_cast<HDC>(wParam), &rc, brush);
+            DeleteObject(brush);
+            return 1;
+        }
 
         case WM_COMMAND: {
             int id = LOWORD(wParam);

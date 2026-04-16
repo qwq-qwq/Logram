@@ -12,6 +12,7 @@ DetailPanel::~DetailPanel() {
     if (doc_) doc_->listeners.Remove(this);
     if (hFont_) DeleteObject(hFont_);
     if (hFontSmall_) DeleteObject(hFontSmall_);
+    if (hBgBrush_) DeleteObject(hBgBrush_);
 }
 
 void DetailPanel::RegisterClass(HINSTANCE hInstance) {
@@ -87,6 +88,10 @@ HWND DetailPanel::Create(HWND parent, HINSTANCE hInstance, LogDocument* doc) {
     if (hFont_) SendMessageW(hwndEdit_, WM_SETFONT,
                              reinterpret_cast<WPARAM>(hFont_), TRUE);
 
+    // Dark background brush matching the theme.
+    auto& theme = CurrentTheme();
+    hBgBrush_ = CreateSolidBrush(ToCOLORREF(theme.background));
+
     return hwnd_;
 }
 
@@ -134,6 +139,8 @@ static std::string FindParamsForSql(LogDocument* doc, int lineId) {
         if (candidate.thread != thread) continue;
         if (static_cast<LogLevel>(candidate.level) != LogLevel::Cust1) continue;
         auto msg = GetMessage(base, candidate);
+        // Trim leading whitespace/tab — messageOffset may not skip the tab.
+        while (!msg.empty() && (msg[0] == ' ' || msg[0] == '\t')) msg.remove_prefix(1);
         if (!msg.empty() && msg[0] == '{') return std::string(msg);
     }
     return {};
@@ -155,6 +162,8 @@ void DetailPanel::ShowLine(int lineId) {
     const uint8_t* base = doc_->MappedBase();
     auto level = static_cast<LogLevel>(line.level);
     auto msg = GetMessage(base, line);
+    // Trim leading tab that separates level code from message in the raw line.
+    while (!msg.empty() && (msg[0] == '\t' || msg[0] == ' ')) msg.remove_prefix(1);
     std::string msgStr(msg);
 
     std::string displayText;
@@ -248,6 +257,25 @@ LRESULT DetailPanel::HandleMessage(UINT msg, WPARAM wParam, LPARAM lParam) {
         case WM_SIZE:
             LayoutInternal();
             return 0;
+
+        case WM_CTLCOLOREDIT:
+        case WM_CTLCOLORSTATIC: {
+            auto& theme = CurrentTheme();
+            HDC hdc = reinterpret_cast<HDC>(wParam);
+            SetTextColor(hdc, ToCOLORREF(theme.foreground));
+            SetBkColor(hdc, ToCOLORREF(theme.background));
+            return reinterpret_cast<LRESULT>(hBgBrush_);
+        }
+
+        case WM_ERASEBKGND: {
+            auto& theme = CurrentTheme();
+            RECT rc;
+            GetClientRect(hwnd_, &rc);
+            HBRUSH brush = CreateSolidBrush(ToCOLORREF(theme.background));
+            FillRect(reinterpret_cast<HDC>(wParam), &rc, brush);
+            DeleteObject(brush);
+            return 1;
+        }
 
         case WM_COMMAND: {
             int id = LOWORD(wParam);
