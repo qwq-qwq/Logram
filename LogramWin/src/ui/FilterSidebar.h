@@ -37,14 +37,22 @@ private:
     HWND hwnd_      = nullptr;
     HWND hwndList_  = nullptr;
     HWND hwndPreset_[5] = {nullptr, nullptr, nullptr, nullptr, nullptr};
+    HFONT hFont_ = nullptr;
     LogDocument* doc_ = nullptr;
 
     int clientW_ = 0;
     int clientH_ = 0;
+    float dpiScale_ = 1.0f;
     bool suppressNotify_ = false;   // true while programmatically toggling checks
     int threadRowBase_ = 0;         // index of first thread row in the list
 
+    // DIP constants — scaled at runtime via dpiScale_
     static constexpr const wchar_t* kClassName = L"LogramFilterSidebar";
-    static constexpr int kPresetBarHeight = 28;
+    static constexpr int kPresetBarHeightDip = 28;
     static constexpr int kPresetButtonBase = 9100;
+
+    LRESULT OnCustomDraw(LPNMLVCUSTOMDRAW cd);
+    int Scale(int dip) const {
+        return static_cast<int>(dip * dpiScale_ + 0.5f);
+    }
 };

@@ -182,6 +182,8 @@ void MainWindow::OnCreate() {
         VARIABLE_PITCH | FF_SWISS, L"Segoe UI");
     if (hFont) SendMessageW(hwndSearch_, WM_SETFONT,
                             reinterpret_cast<WPARAM>(hFont), TRUE);
+    SendMessageW(hwndSearch_, EM_SETCUEBANNER, TRUE,
+                 reinterpret_cast<LPARAM>(L"Search..."));
 
     // Populate sidebarWidth_ / detailHeight_ from stored prefs (values are
     // physical pixels as last persisted). If missing, scale the DIP defaults.
@@ -286,10 +288,14 @@ void MainWindow::LayoutChildren() {
 
     int topH = std::max(0, workH - detailH - splitterPx);
 
-    // Toolbar: search box position is DPI-scaled
+    // Toolbar: search box stretches across the right pane.
     if (hwndSearch_) {
-        MoveWindow(hwndSearch_, Scale(8), Scale(6), Scale(300),
-                   toolbarPx - Scale(12), TRUE);
+        const int pad = Scale(6);
+        const int searchY = Scale(6);
+        const int searchH = toolbarPx - Scale(12);
+        const int searchX = sidebarWidth_ + splitterPx + pad;
+        const int searchW = std::max(Scale(120), totalW - searchX - pad);
+        MoveWindow(hwndSearch_, searchX, searchY, searchW, searchH, TRUE);
     }
 
     // Filter sidebar (left)

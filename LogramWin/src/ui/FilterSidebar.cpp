@@ -2,10 +2,12 @@
 #include "ui/ThemeColors.h"
 #include "infra/Utf.h"
 #include <commctrl.h>
+#include <windowsx.h>
 
 FilterSidebar::FilterSidebar() {}
 FilterSidebar::~FilterSidebar() {
     if (doc_) doc_->listeners.Remove(this);
+    if (hFont_) DeleteObject(hFont_);
 }
 
 void FilterSidebar::RegisterClass(HINSTANCE hInstance) {
@@ -24,23 +26,36 @@ HWND FilterSidebar::Create(HWND parent, HINSTANCE hInstance, LogDocument* doc) {
     doc_ = doc;
     if (doc_) doc_->listeners.Add(this);
 
+    UINT dpi = GetDpiForWindow(parent);
+    if (dpi == 0) dpi = 96;
+    dpiScale_ = dpi / 96.0f;
+
     hwnd_ = CreateWindowExW(0, kClassName, nullptr,
         WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN,
-        0, 0, 200, 400, parent, nullptr, hInstance, this);
+        0, 0, Scale(200), Scale(400), parent, nullptr, hInstance, this);
+
+    // DPI-scaled UI font shared by preset buttons and the list.
+    hFont_ = CreateFontW(-MulDiv(10, dpi, 72), 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
+        DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
+        CLEARTYPE_QUALITY, VARIABLE_PITCH | FF_SWISS, L"Segoe UI");
 
     CreatePresetButtons(hInstance);
 
     hwndList_ = CreateWindowExW(0, WC_LISTVIEWW, nullptr,
         WS_CHILD | WS_VISIBLE | LVS_REPORT | LVS_NOCOLUMNHEADER | LVS_SINGLESEL,
-        0, kPresetBarHeight, 200, 400 - kPresetBarHeight,
+        0, Scale(kPresetBarHeightDip), Scale(200),
+        Scale(400 - kPresetBarHeightDip),
         hwnd_, nullptr, hInstance, nullptr);
 
     ListView_SetExtendedListViewStyle(hwndList_,
         LVS_EX_CHECKBOXES | LVS_EX_FULLROWSELECT);
 
+    if (hFont_) SendMessageW(hwndList_, WM_SETFONT,
+                             reinterpret_cast<WPARAM>(hFont_), TRUE);
+
     LVCOLUMNW col = {};
     col.mask = LVCF_WIDTH;
-    col.cx = 190;
+    col.cx = Scale(190);
     ListView_InsertColumn(hwndList_, 0, &col);
 
     RebuildList();
@@ -49,14 +64,19 @@ HWND FilterSidebar::Create(HWND parent, HINSTANCE hInstance, LogDocument* doc) {
 
 void FilterSidebar::CreatePresetButtons(HINSTANCE hInstance) {
     const wchar_t* labels[5] = {L"All", L"Err", L"SQL", L"HTTP", L"+/-"};
-    int xBase = 2;
-    int btnW = 38;
+    int xBase = Scale(4);
+    int btnW  = Scale(44);
+    int btnH  = Scale(kPresetBarHeightDip - 6);
+    int btnY  = Scale(3);
+    int gap   = Scale(3);
     for (int i = 0; i < 5; ++i) {
         hwndPreset_[i] = CreateWindowExW(0, L"BUTTON", labels[i],
             WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
-            xBase + i * (btnW + 2), 2, btnW, kPresetBarHeight - 6,
+            xBase + i * (btnW + gap), btnY, btnW, btnH,
             hwnd_, reinterpret_cast<HMENU>(static_cast<LONG_PTR>(kPresetButtonBase + i)),
             hInstance, nullptr);
+        if (hFont_) SendMessageW(hwndPreset_[i], WM_SETFONT,
+                                 reinterpret_cast<WPARAM>(hFont_), TRUE);
     }
 }
 
@@ -74,11 +94,11 @@ void FilterSidebar::Resize(int w, int h) {
 }
 
 void FilterSidebar::LayoutInternal() {
+    const int barH = Scale(kPresetBarHeightDip);
     if (hwndList_) {
-        MoveWindow(hwndList_, 0, kPresetBarHeight,
-                   clientW_, std::max(0, clientH_ - kPresetBarHeight), TRUE);
-        // Stretch the single column
-        ListView_SetColumnWidth(hwndList_, 0, std::max(50, clientW_ - 4));
+        MoveWindow(hwndList_, 0, barH,
+                   clientW_, std::max(0, clientH_ - barH), TRUE);
+        ListView_SetColumnWidth(hwndList_, 0, std::max(Scale(50), clientW_ - Scale(4)));
     }
 }
 
@@ -87,22 +107,37 @@ void FilterSidebar::RebuildList() {
     suppressNotify_ = true;
     ListView_DeleteAllItems(hwndList_);
 
+    // Enable group view for "Log Levels" / "Threads" headers.
+    ListView_EnableGroupView(hwndList_, TRUE);
+
+    LVGROUP grp = {};
+    grp.cbSize = sizeof(grp);
+    grp.mask = LVGF_HEADER | LVGF_GROUPID;
+    grp.pszHeader = const_cast<LPWSTR>(L"Log Levels");
+    grp.iGroupId = 1;
+    ListView_InsertGroup(hwndList_, -1, &grp);
+
+    grp.pszHeader = const_cast<LPWSTR>(L"Threads");
+    grp.iGroupId = 2;
+    ListView_InsertGroup(hwndList_, -1, &grp);
+
     // 1) Level rows
     uint64_t levelMask = doc_ ? doc_->EnabledLevelMask() : ~uint64_t(0);
     for (int i = 0; i < kLogLevelCount; ++i) {
         auto& info = GetLogLevelInfo(static_cast<LogLevel>(i));
         auto wlabel = Utf8ToWide(info.label);
         LVITEMW item = {};
-        item.mask = LVIF_TEXT | LVIF_PARAM;
+        item.mask = LVIF_TEXT | LVIF_PARAM | LVIF_GROUPID;
         item.iItem = i;
-        item.lParam = static_cast<LPARAM>(i);  // identify level rows
+        item.iGroupId = 1;
+        item.lParam = static_cast<LPARAM>(i);
         item.pszText = const_cast<LPWSTR>(wlabel.c_str());
         ListView_InsertItem(hwndList_, &item);
         bool on = (levelMask >> i) & 1;
         ListView_SetCheckState(hwndList_, i, on);
     }
 
-    // 2) Separator + Thread rows
+    // 2) Thread rows
     threadRowBase_ = kLogLevelCount;
     if (doc_) {
         const auto& active = doc_->ActiveThreads();
@@ -110,11 +145,12 @@ void FilterSidebar::RebuildList() {
         int row = threadRowBase_;
         for (int t : active) {
             wchar_t buf[32];
-            swprintf(buf, 32, L"T%d", t);
+            swprintf(buf, 32, L"Thread %d", t + 1);
             LVITEMW item = {};
-            item.mask = LVIF_TEXT | LVIF_PARAM;
+            item.mask = LVIF_TEXT | LVIF_PARAM | LVIF_GROUPID;
             item.iItem = row;
-            item.lParam = static_cast<LPARAM>(1000 + t);  // identify thread rows
+            item.iGroupId = 2;
+            item.lParam = static_cast<LPARAM>(1000 + t);
             item.pszText = buf;
             ListView_InsertItem(hwndList_, &item);
             bool on = (thMask >> t) & 1;
@@ -206,6 +242,40 @@ void FilterSidebar::ApplyPreset(Preset p) {
     doc_->listeners.Notify(changes);
 }
 
+LRESULT FilterSidebar::OnCustomDraw(LPNMLVCUSTOMDRAW cd) {
+    switch (cd->nmcd.dwDrawStage) {
+        case CDDS_PREPAINT:
+            return CDRF_NOTIFYITEMDRAW;
+
+        case CDDS_ITEMPREPAINT: {
+            LPARAM lp = cd->nmcd.lItemlParam;
+            auto& theme = CurrentTheme();
+
+            if (lp < 1000) {
+                // Level row — set text to the level badge color.
+                auto level = static_cast<LogLevel>(lp);
+                auto c = theme.levelBadge[static_cast<int>(level)];
+                cd->clrText = RGB(static_cast<BYTE>(c.r * 255),
+                                  static_cast<BYTE>(c.g * 255),
+                                  static_cast<BYTE>(c.b * 255));
+            } else {
+                // Thread row — use the thread color palette.
+                int threadIdx = static_cast<int>(lp) - 1000;
+                auto c = ThreadColor(threadIdx);
+                cd->clrText = RGB(static_cast<BYTE>(c.r * 255),
+                                  static_cast<BYTE>(c.g * 255),
+                                  static_cast<BYTE>(c.b * 255));
+            }
+
+            cd->clrTextBk = RGB(static_cast<BYTE>(theme.background.r * 255),
+                                static_cast<BYTE>(theme.background.g * 255),
+                                static_cast<BYTE>(theme.background.b * 255));
+            return CDRF_NEWFONT;
+        }
+    }
+    return CDRF_DODEFAULT;
+}
+
 LRESULT CALLBACK FilterSidebar::WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
     FilterSidebar* self = nullptr;
     if (msg == WM_NCCREATE) {
@@ -238,14 +308,22 @@ LRESULT FilterSidebar::HandleMessage(UINT msg, WPARAM wParam, LPARAM lParam) {
 
         case WM_NOTIFY: {
             auto* hdr = reinterpret_cast<NMHDR*>(lParam);
-            if (hdr && hdr->hwndFrom == hwndList_ && hdr->code == LVN_ITEMCHANGED) {
+            if (!hdr || hdr->hwndFrom != hwndList_) break;
+
+            if (hdr->code == LVN_ITEMCHANGED) {
                 auto* ch = reinterpret_cast<NMLISTVIEW*>(lParam);
-                // Check-state change flips the upper bits of stateMask (LVIS_STATEIMAGEMASK)
                 if (!suppressNotify_ &&
                     (ch->uChanged & LVIF_STATE) &&
                     ((ch->uOldState ^ ch->uNewState) & LVIS_STATEIMAGEMASK)) {
                     ReadCheckStatesIntoDoc();
                 }
+                return 0;
+            }
+
+            if (hdr->code == NM_CUSTOMDRAW) {
+                auto result = OnCustomDraw(reinterpret_cast<LPNMLVCUSTOMDRAW>(lParam));
+                SetWindowLongPtrW(hwnd_, DWLP_MSGRESULT, result);
+                return result;
             }
             return 0;
         }

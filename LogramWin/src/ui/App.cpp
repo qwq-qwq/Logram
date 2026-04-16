@@ -3,6 +3,7 @@
 #include "ui/LogTableView.h"
 #include "ui/Splitter.h"
 #include "ui/FilterSidebar.h"
+#include "ui/DetailPanel.h"
 #include "resource.h"
 #include <d2d1_1.h>
 #include <dwrite.h>
@@ -40,6 +41,7 @@ void LogramApp::RegisterWindowClasses() {
     LogTableView::RegisterClass(hInstance_);
     Splitter::RegisterClass(hInstance_);
     FilterSidebar::RegisterClass(hInstance_);
+    DetailPanel::RegisterClass(hInstance_);
 }
 
 bool LogramApp::Init(int nCmdShow) {
