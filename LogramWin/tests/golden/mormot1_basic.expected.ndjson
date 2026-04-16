@@ -1,0 +1,18 @@
+{"epochCS":-1,"id":0,"level":"???   ","messageOffset":0,"thread":-1}
+{"epochCS":-1,"id":1,"level":"???   ","messageOffset":0,"thread":-1}
+{"epochCS":-1,"id":2,"level":"???   ","messageOffset":0,"thread":-1}
+{"epochCS":-1,"id":3,"level":"???   ","messageOffset":0,"thread":-1}
+{"epochCS":-1,"id":4,"level":"???   ","messageOffset":0,"thread":-1}
+{"epochCS":-1,"id":5,"level":"???   ","messageOffset":0,"thread":-1}
+{"epochCS":-1,"id":6,"level":"???   ","messageOffset":0,"thread":-1}
+{"epochCS":-1,"id":7,"level":"???   ","messageOffset":0,"thread":-1}
+{"epochCS":-1,"id":8,"level":"???   ","messageOffset":0,"thread":-1}
+{"epochCS":-1,"id":9,"level":"???   ","messageOffset":0,"thread":-1}
+{"epochCS":-1,"id":10,"level":"???   ","messageOffset":0,"thread":-1}
+{"epochCS":162737436934,"id":11,"level":"info  ","messageOffset":27,"thread":0}
+{"epochCS":162737436934,"id":12,"level":"SQL   ","messageOffset":27,"thread":1}
+{"epochCS":162737436934,"id":13,"level":"ERROR ","messageOffset":27,"thread":2}
+{"epochCS":162737436934,"id":14,"level":" +    ","messageOffset":27,"thread":3}
+{"durationUS":-1,"epochCS":162737436934,"id":15,"level":" -    ","messageOffset":27,"thread":3}
+{"epochCS":162737436934,"httpMethod":"GET","httpPath":"\/api\/users","id":16,"level":"http  ","messageOffset":27,"thread":0}
+{"epochCS":162737436934,"httpStatus":200,"id":17,"level":"http  ","messageOffset":27,"thread":0}

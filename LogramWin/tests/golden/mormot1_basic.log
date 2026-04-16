@@ -1,0 +1,18 @@
+Software    : Test UB server v5.7.20
+ExeVersion  : UB5.7.20
+Host        : testhost
+User        : testuser
+CPU         : 8 x64
+OS          : Darwin 25.4
+Wow64       : no
+Freq        : 100
+Instance    : 1
+TimeStamp   : 20210727 08260934
+
+20210727 08260934  ! info  	server started pid=1234
+20210727 08260934  " SQL   	r=5 t=12 q=SELECT * FROM users WHERE id=:1
+20210727 08260934  # ERROR 	connection timeout after 5000ms
+20210727 08260934  $  +    	doSomething
+20210727 08260934  $  -    	doSomething 000.123.456
+20210727 08260934  ! http  	 - > GET /api/users
+20210727 08260934  ! http  	 < - 200 OK

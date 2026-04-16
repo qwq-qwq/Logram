@@ -1,0 +1,79 @@
+#include <windows.h>
+#include "resource.h"
+
+// Menu
+IDR_MAINMENU MENU
+BEGIN
+    POPUP "&File"
+    BEGIN
+        MENUITEM "&Open...\tCtrl+O",    ID_FILE_OPEN
+        MENUITEM SEPARATOR
+        MENUITEM "E&xit",               ID_FILE_EXIT
+    END
+    POPUP "&View"
+    BEGIN
+        MENUITEM "Toggle &Duration",    ID_VIEW_DURATION
+        MENUITEM SEPARATOR
+        POPUP "&Theme"
+        BEGIN
+            MENUITEM "Tokyo Night",     ID_THEME_TOKYONIGHT
+            MENUITEM "TTY",             ID_THEME_TTY
+        END
+        MENUITEM SEPARATOR
+        MENUITEM "&Statistics...",       ID_VIEW_STATS
+        MENUITEM "&Method Timing...",    ID_VIEW_TIMING
+    END
+    POPUP "&Navigate"
+    BEGIN
+        MENUITEM "&Find...\tCtrl+F",            ID_NAV_FIND
+        MENUITEM "Find &Next\tF3",              ID_NAV_FINDNEXT
+        MENUITEM "Find &Previous\tShift+F3",    ID_NAV_FINDPREV
+        MENUITEM SEPARATOR
+        MENUITEM "&Jump to +/-\tCtrl+J",        ID_NAV_JUMPPAIR
+        MENUITEM "Next &Error\tCtrl+Shift+Down",ID_NAV_NEXTERROR
+        MENUITEM "Prev E&rror\tCtrl+Shift+Up",  ID_NAV_PREVERROR
+    END
+    POPUP "&Help"
+    BEGIN
+        MENUITEM "&About Logram",       ID_HELP_ABOUT
+    END
+END
+
+// Accelerators
+IDR_ACCEL ACCELERATORS
+BEGIN
+    "O",        ID_FILE_OPEN,       VIRTKEY, CONTROL
+    "F",        ID_NAV_FIND,        VIRTKEY, CONTROL
+    VK_F3,      ID_NAV_FINDNEXT,    VIRTKEY
+    VK_F3,      ID_NAV_FINDPREV,    VIRTKEY, SHIFT
+    "J",        ID_NAV_JUMPPAIR,    VIRTKEY, CONTROL
+    VK_DOWN,    ID_NAV_NEXTERROR,   VIRTKEY, CONTROL, SHIFT
+    VK_UP,      ID_NAV_PREVERROR,   VIRTKEY, CONTROL, SHIFT
+END
+
+// Version info
+VS_VERSION_INFO VERSIONINFO
+    FILEVERSION    1,0,0,0
+    PRODUCTVERSION 1,0,0,0
+    FILEFLAGSMASK  VS_FFI_FILEFLAGSMASK
+    FILEFLAGS      0
+    FILEOS         VOS_NT_WINDOWS32
+    FILETYPE       VFT_APP
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904B0"
+        BEGIN
+            VALUE "FileDescription",  "Logram - UnityBase Log Viewer"
+            VALUE "FileVersion",      "1.0.0"
+            VALUE "InternalName",     "Logram"
+            VALUE "OriginalFilename", "Logram.exe"
+            VALUE "ProductName",      "Logram"
+            VALUE "ProductVersion",   "1.0.0"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x0409, 0x04B0
+    END
+END
