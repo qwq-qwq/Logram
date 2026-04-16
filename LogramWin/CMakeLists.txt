@@ -47,7 +47,7 @@ target_link_libraries(Logram PRIVATE
     logram_core
     d2d1 dwrite dwmapi comctl32 shlwapi uxtheme
 )
-target_include_directories(Logram PRIVATE src)
+target_include_directories(Logram PRIVATE src ${CMAKE_CURRENT_SOURCE_DIR})
 target_precompile_headers(Logram REUSE_FROM logram_core)
 
 if(MSVC)
@@ -67,5 +67,10 @@ if(BUILD_TESTS)
     add_executable(parser_tests tests/parser_tests.cpp)
     target_link_libraries(parser_tests PRIVATE logram_core)
     target_include_directories(parser_tests PRIVATE src)
+    if(MSVC)
+        set_target_properties(parser_tests PROPERTIES
+            MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>"
+        )
+    endif()
     add_test(NAME ParserTests COMMAND parser_tests)
 endif()

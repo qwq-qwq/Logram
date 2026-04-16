@@ -1,9 +1,14 @@
 #pragma once
 
 #ifdef _WIN32
+#ifndef NOMINMAX
 #define NOMINMAX
+#endif
+#ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
+#endif
 #include <windows.h>
+#include <windowsx.h>
 #include <d2d1_1.h>
 #include <dwrite.h>
 #include <dwmapi.h>
