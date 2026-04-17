@@ -127,6 +127,9 @@ struct StatsView: View {
             }
 
             HStack {
+                Link("logram.perek.rest", destination: URL(string: "https://logram.perek.rest")!)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
                 Spacer()
                 Button("Close") { dismiss() }
                     .keyboardShortcut(.cancelAction)

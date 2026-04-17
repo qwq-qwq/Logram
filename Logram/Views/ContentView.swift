@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct ContentView: View {
-    @Bindable var document: LogDocument
+    @State private var document = LogDocument()
     @AppStorage("colorTheme") private var themeRaw = ColorTheme.tokyoNight.rawValue
     @AppStorage("showDuration") private var showDuration = false
     @State private var showStats = false
@@ -62,6 +62,8 @@ struct ContentView: View {
         .sheet(isPresented: $showTimings) {
             MethodTimingView(document: document, theme: theme)
         }
+        .navigationTitle(document.fileName.isEmpty ? "Logram" : document.fileName)
+        .focusedSceneValue(\.openLogFile, openFile)
     }
 
     // MARK: - Toolbar

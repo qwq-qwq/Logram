@@ -125,6 +125,9 @@ static LRESULT CALLBACK StatsWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
             }
             addRow(L"Active Threads", Utf8ToWide(threads));
 
+            addRow(L"", std::wstring(L""));
+            addRow(L"Web", std::wstring(L"https://logram.perek.rest"));
+
             return 0;
         }
 

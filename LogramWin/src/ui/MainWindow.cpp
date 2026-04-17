@@ -191,8 +191,6 @@ void MainWindow::OnCreate() {
         WS_CHILD | WS_VISIBLE | SBARS_SIZEGRIP,
         0, 0, 0, 0, hwnd_, nullptr, hInst, nullptr);
 
-    int parts[] = {200, 350, 500, 650, -1};
-    SendMessageW(hwndStatus_, SB_SETPARTS, 5, reinterpret_cast<LPARAM>(parts));
     SendMessageW(hwndStatus_, SB_SETTEXTW, 0, reinterpret_cast<LPARAM>(L"Ready"));
 
     // Search box in the toolbar strip (top). Exact rect is set later in
@@ -260,7 +258,21 @@ void MainWindow::OnCreate() {
 }
 
 void MainWindow::OnSize(int width, int height) {
-    if (hwndStatus_) SendMessageW(hwndStatus_, WM_SIZE, 0, 0);
+    if (hwndStatus_) {
+        SendMessageW(hwndStatus_, WM_SIZE, 0, 0);
+        // Recalculate status bar part widths proportionally
+        RECT sr;
+        GetClientRect(hwndStatus_, &sr);
+        int sw = sr.right;
+        int parts[] = {
+            sw * 15 / 100,               // filename
+            sw * 25 / 100,               // size
+            sw * 50 / 100,               // filtered/total
+            sw * 70 / 100,               // errors
+            -1                           // duration (fills rest)
+        };
+        SendMessageW(hwndStatus_, SB_SETPARTS, 5, reinterpret_cast<LPARAM>(parts));
+    }
 
     // Splitter drag re-enters here via SendMessage(parent, WM_SIZE). Pull
     // current positions into our bookkeeping before laying children out.
@@ -457,8 +469,13 @@ void MainWindow::OnCommand(int id, int code, HWND ctrl) {
             JumpToErrorRelative(-1);
             break;
         case ID_HELP_ABOUT:
-            MessageBoxW(hwnd_, L"Logram 1.0\nUnityBase Log Viewer\n\nWin32 + Direct2D",
-                        L"About Logram", MB_OK | MB_ICONINFORMATION);
+            MessageBoxW(hwnd_,
+                L"Logram 1.1\n"
+                L"UnityBase Log Analyzer\n\n"
+                L"macOS: Swift 5.9 + SwiftUI\n"
+                L"Windows: C++20 + Win32 + Direct2D\n\n"
+                L"https://logram.perek.rest",
+                L"About Logram", MB_OK | MB_ICONINFORMATION);
             break;
     }
 }

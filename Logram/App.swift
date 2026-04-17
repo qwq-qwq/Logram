@@ -1,36 +1,47 @@
 import SwiftUI
 
+// FocusedValue key so Cmd+O reaches the active window
+struct OpenLogFileKey: FocusedValueKey {
+    typealias Value = () -> Void
+}
+
+extension FocusedValues {
+    var openLogFile: (() -> Void)? {
+        get { self[OpenLogFileKey.self] }
+        set { self[OpenLogFileKey.self] = newValue }
+    }
+}
+
 @main
 struct LogramApp: App {
-    @State private var document = LogDocument()
-    @AppStorage("showDuration") private var showDuration = false
+    @FocusedValue(\.openLogFile) var openLogFile
 
     var body: some Scene {
         WindowGroup {
-            ContentView(document: document)
+            ContentView()
                 .frame(minWidth: 900, minHeight: 600)
         }
         .commands {
             CommandGroup(replacing: .newItem) {
                 Button("Open Log...") {
-                    openFile()
+                    openLogFile?()
                 }
                 .keyboardShortcut("o", modifiers: .command)
             }
-        }
-    }
-
-    private func openFile() {
-        let panel = NSOpenPanel()
-        panel.allowedContentTypes = [.plainText, .log]
-        panel.allowsMultipleSelection = false
-        panel.canChooseDirectories = false
-        panel.message = "Select a UB server log file"
-
-        if panel.runModal() == .OK, let url = panel.url {
-            showDuration = false
-            Task {
-                await document.load(from: url)
+            CommandGroup(replacing: .appInfo) {
+                Button("About Logram") {
+                    NSApplication.shared.orderFrontStandardAboutPanel(options: [
+                        .applicationName: "Logram",
+                        .applicationVersion: "1.1",
+                        .credits: NSAttributedString(
+                            string: "UnityBase Log Analyzer\nhttps://logram.perek.rest",
+                            attributes: [
+                                .font: NSFont.systemFont(ofSize: 11),
+                                .foregroundColor: NSColor.secondaryLabelColor
+                            ]
+                        )
+                    ])
+                }
             }
         }
     }

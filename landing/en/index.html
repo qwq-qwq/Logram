@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Logram — UnityBase log analyzer for macOS</title>
-<meta name="description" content="Native macOS analyzer for UnityBase logs: a million lines, four formats, method timing, SQL highlighting." />
+<title>Logram — UnityBase log analyzer for macOS and Windows</title>
+<meta name="description" content="Native UnityBase log analyzer for macOS and Windows: a million lines, four formats, method timing, SQL highlighting, tabs." />
 
 <link rel="canonical" href="https://logram.perek.rest/en/" />
 <link rel="alternate" hreflang="uk" href="https://logram.perek.rest/" />
@@ -17,8 +17,8 @@
 
 <meta property="og:type" content="website" />
 <meta property="og:url" content="https://logram.perek.rest/en/" />
-<meta property="og:title" content="Logram — UnityBase log analyzer for macOS" />
-<meta property="og:description" content="A million lines without stalls. Four UB log formats, method timing, SQL with cust1 substitution, Tokyo Night and TTY themes." />
+<meta property="og:title" content="Logram — UnityBase log analyzer for macOS and Windows" />
+<meta property="og:description" content="A million lines without stalls. Four UB log formats, method timing, SQL with cust1 substitution. Native on macOS and Windows." />
 <meta property="og:image" content="https://logram.perek.rest/assets/screenshot.png" />
 <meta property="og:image:width" content="2560" />
 <meta property="og:image:height" content="1600" />
@@ -28,8 +28,8 @@
 <meta property="og:site_name" content="Logram" />
 
 <meta name="twitter:card" content="summary_large_image" />
-<meta name="twitter:title" content="Logram — UnityBase log analyzer for macOS" />
-<meta name="twitter:description" content="A million lines without stalls. Four UB log formats, method timing, SQL with cust1 substitution." />
+<meta name="twitter:title" content="Logram — UnityBase log analyzer for macOS and Windows" />
+<meta name="twitter:description" content="A million lines without stalls. Native analyzer for macOS (SwiftUI) and Windows (Win32 + Direct2D)." />
 <meta name="twitter:image" content="https://logram.perek.rest/assets/screenshot.png" />
 
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%230f1016'/><circle cx='16' cy='16' r='6' fill='%239ece6a'/><circle cx='16' cy='16' r='10' fill='none' stroke='%239ece6a' stroke-opacity='.25' stroke-width='2'/></svg>" />
@@ -57,16 +57,17 @@
       <a href="/ru/" hreflang="ru">RU</a>
       <a href="/en/" aria-current="true" hreflang="en">EN</a>
     </div>
-    <div class="nav-meta">v1.0 / macOS 14+</div>
+    <div class="nav-meta">v1.1 / macOS + Win</div>
   </div>
 </nav>
 
 <header class="hero">
   <div class="hero-meta">
     <span>REL <b>2026.04</b></span>
-    <span>TGT <b>MACOS 14+</b></span>
+    <span>TGT <b>MACOS 14+ / WIN10+</b></span>
     <span>SWIFT <b>5.9</b></span>
-    <span>LINES <b>∞</b></span>
+    <span>C++ <b>20</b></span>
+    <span>LINES <b>&infin;</b></span>
   </div>
 
   <div class="hero-left">
@@ -74,20 +75,21 @@
 
     <h1 class="display">
       A million<br>
-      lines<span class="num">·01</span><br>
+      lines<span class="num">&middot;01</span><br>
       <em>no stalls</em><span class="dot">.</span>
     </h1>
 
     <p class="lead">
       Logram opens <b>multi-gigabyte</b> UnityBase logs and turns them into a readable
-      stream&nbsp;— with paired <b>+/-</b> timers, highlighted SQL, substituted
+      stream&nbsp;&mdash; with paired <b>+/-</b> timers, highlighted SQL, substituted
       <b>cust1</b> parameters, and one-click filtering by level and thread.
+      Native on <b>macOS</b> and <b>Windows</b>.
     </p>
 
     <div class="cta-row">
       <a class="btn btn-primary" href="#download">
-        Download for macOS
-        <span class="arr">→</span>
+        Download
+        <span class="arr">&rarr;</span>
       </a>
       <a class="btn btn-ghost" href="#" target="_blank" rel="noopener">
         View on GitHub
@@ -97,17 +99,17 @@
     <div class="hero-stats">
       <div><span class="k">32</span><span class="l">UB levels</span></div>
       <div><span class="k">04</span><span class="l">Formats</span></div>
-      <div><span class="k">50<em>K</em></span><span class="l">Lines / chunk</span></div>
-      <div><span class="k"><em>∞</em></span><span class="l">Lines total</span></div>
+      <div><span class="k">02</span><span class="l">Platforms</span></div>
+      <div><span class="k"><em>&infin;</em></span><span class="l">Lines total</span></div>
     </div>
   </div>
 
   <figure class="shot">
     <div class="shot-glow"></div>
-    <img src="/assets/screenshot.png" alt="Logram — main window: filters, log stream, and SQL details with cust1 substitution" />
+    <img src="/assets/screenshot.png" alt="Logram &mdash; main window: filters, log stream, and SQL details with cust1 substitution" />
     <figcaption class="shot-caption">
       <span class="dot"></span>
-      Logram · live
+      Logram &middot; live
     </figcaption>
   </figure>
 </header>
@@ -158,7 +160,7 @@
     <article class="feat reveal">
       <div class="feat-kicker"><span class="no">F.01</span> Method timing</div>
       <h3 class="feat-title">Paired <em>+</em> and <em>-</em> fold<br>into a slow-method table.</h3>
-      <p class="feat-body">For every entry Logram finds the matching exit on the same thread, respecting nesting — and sorts by duration. <b>Cmd+J</b> jumps between a pair.</p>
+      <p class="feat-body">For every entry Logram finds the matching exit on the same thread, respecting nesting &mdash; and sorts by duration. Timings are computed lazily: only when you enable them.</p>
       <div class="feat-visual">
         <div class="timing">
           <div class="timing-row slow"><span class="lbl"><b>runList</b></span><span class="timing-bar" style="width:98%"></span><span class="ms">1,842 ms</span></div>
@@ -173,7 +175,7 @@
     <article class="feat reveal">
       <div class="feat-kicker"><span class="no">F.02</span> SQL / cust1</div>
       <h3 class="feat-title">Live SQL<br>with parameters.</h3>
-      <p class="feat-body"><b>cust1</b> parameters substituted back into the query. Copy — and paste into psql.</p>
+      <p class="feat-body"><b>cust1</b> parameters substituted back into the query. Copy &mdash; and paste into psql.</p>
       <div class="feat-visual">
         <div class="sql-block">
 <span class="sql-kw">SELECT</span> u.id, u.<span class="sql-fn">name</span>, r.code<br>
@@ -189,14 +191,14 @@
     <article class="feat reveal">
       <div class="feat-kicker"><span class="no">F.03</span> Filters</div>
       <h3 class="feat-title"><em>One</em> pass<br>through a million lines.</h3>
-      <p class="feat-body">Levels, threads, presets <b>Errors / SQL / HTTP</b> — O(n) filtering via Set&lt;LogLevel&gt; and Set&lt;Int&gt; of threads.</p>
+      <p class="feat-body">Levels, threads, presets <b>Errors / SQL / HTTP</b> &mdash; O(n) filtering. On Windows&nbsp;&mdash; bitmasks, even faster.</p>
       <div class="feat-visual">
         <div style="display:flex;gap:6px;flex-wrap:wrap;">
-          <span class="term-pill" style="color:var(--red);border-color:rgba(247,118,142,.3);background:rgba(247,118,142,.08)">EXC · 14</span>
-          <span class="term-pill">info · 8,412</span>
-          <span class="term-pill" style="color:var(--purple);border-color:rgba(187,154,247,.3);background:rgba(187,154,247,.08)">SQL · 2,108</span>
-          <span class="term-pill" style="color:var(--yellow);border-color:rgba(224,175,104,.3);background:rgba(224,175,104,.08)">WRN · 37</span>
-          <span class="term-pill" style="color:var(--teal);border-color:rgba(115,218,202,.3);background:rgba(115,218,202,.08)">HTTP · 912</span>
+          <span class="term-pill" style="color:var(--red);border-color:rgba(247,118,142,.3);background:rgba(247,118,142,.08)">EXC &middot; 14</span>
+          <span class="term-pill">info &middot; 8,412</span>
+          <span class="term-pill" style="color:var(--purple);border-color:rgba(187,154,247,.3);background:rgba(187,154,247,.08)">SQL &middot; 2,108</span>
+          <span class="term-pill" style="color:var(--yellow);border-color:rgba(224,175,104,.3);background:rgba(224,175,104,.08)">WRN &middot; 37</span>
+          <span class="term-pill" style="color:var(--teal);border-color:rgba(115,218,202,.3);background:rgba(115,218,202,.08)">HTTP &middot; 912</span>
         </div>
       </div>
     </article>
@@ -204,7 +206,7 @@
     <article class="feat reveal">
       <div class="feat-kicker"><span class="no">F.04</span> Themes</div>
       <h3 class="feat-title">Tokyo&nbsp;Night<br>or <em>TTY</em>.</h3>
-      <p class="feat-body">Thread colors, level badges, and row highlighting — switch without reloading the file.</p>
+      <p class="feat-body">Thread colors, level badges, and row highlighting &mdash; switch without reloading. On both platforms.</p>
       <div class="feat-visual">
         <div class="swatches">
           <div class="swatch swatch-tokyo">
@@ -224,14 +226,14 @@
     </article>
 
     <article class="feat reveal">
-      <div class="feat-kicker"><span class="no">F.05</span> Shortcuts</div>
-      <h3 class="feat-title">Hands never<br>leave the keyboard.</h3>
-      <p class="feat-body">The whole workflow is shortcut-driven. Drop a file into the window, press <b>Cmd+J</b>, and read the pair.</p>
+      <div class="feat-kicker"><span class="no">F.05</span> Tabs</div>
+      <h3 class="feat-title">Multiple logs<br>in one <em>window</em>.</h3>
+      <p class="feat-body">On macOS &mdash; native tabs via <b>Cmd+N</b>. Each tab is its own document, its own filters, its own state. Drag tabs between windows.</p>
       <div class="feat-visual shortcuts">
-        <div class="sc-row"><kbd>⌘</kbd><kbd>O</kbd><span>open file</span></div>
-        <div class="sc-row"><kbd>⌘</kbd><kbd>C</kbd><span>copy selection</span></div>
-        <div class="sc-row"><kbd>⌘</kbd><kbd>J</kbd><span>jump to paired +/-</span></div>
-        <div class="sc-row"><kbd>⌘</kbd><kbd>F</kbd><span>search</span></div>
+        <div class="sc-row"><kbd>&#8984;</kbd><kbd>N</kbd><span>new tab</span></div>
+        <div class="sc-row"><kbd>&#8984;</kbd><kbd>O</kbd><span>open file</span></div>
+        <div class="sc-row"><kbd>&#8984;</kbd><kbd>J</kbd><span>jump to paired +/-</span></div>
+        <div class="sc-row"><kbd>&#8984;</kbd><kbd>C</kbd><span>copy selection</span></div>
       </div>
     </article>
   </div>
@@ -239,34 +241,59 @@
 
 <section class="architecture" id="architecture">
   <div class="section-tag"><span class="num">03</span><span class="bar"></span>Engineering</div>
-  <div class="arch-grid">
-    <div>
-      <h2 class="section-title reveal">Why it<br><em>doesn't lag.</em></h2>
-      <p class="section-lead reveal">Pure Swift 5.9, native macOS, NSTableView under the hood — SwiftUI List chokes on a million rows, Logram doesn't.</p>
+  <h2 class="section-title reveal">Two platforms.<br><em>Zero compromises.</em></h2>
+  <p class="section-lead reveal">Not Electron. Not a cross-platform framework. Two native implementations &mdash; each using the best of its OS.</p>
+
+  <div class="arch-dual reveal">
+    <div class="arch-platform">
+      <div class="arch-platform-head">
+        <span class="arch-icon">&#63743;</span>
+        <div>
+          <h4>macOS</h4>
+          <span class="arch-stack">Swift 5.9 &middot; SwiftUI &middot; NSTableView</span>
+        </div>
+      </div>
+      <div class="arch-list">
+        <div class="arch-item"><span class="idx">01</span><span class="ti"><em>NSTableView</em> via NSViewRepresentable</span><span class="det">~10&#8310; rows</span></div>
+        <div class="arch-item"><span class="idx">02</span><span class="ti"><em>WindowGroup</em> + native tabs</span><span class="det">Cmd+N</span></div>
+        <div class="arch-item"><span class="idx">03</span><span class="ti">@Observable + <em>MainActor</em></span><span class="det">safe</span></div>
+        <div class="arch-item"><span class="idx">04</span><span class="ti">Lazy <em>buildMethodTimings</em></span><span class="det">not at load</span></div>
+        <div class="arch-item"><span class="idx">05</span><span class="ti">Drag-and-drop <em>.fileURL</em></span><span class="det">into window</span></div>
+      </div>
     </div>
-    <div class="arch-list reveal">
-      <div class="arch-item"><span class="idx">01</span><span class="ti"><em>NSTableView</em> via NSViewRepresentable</span><span class="det">~10⁶ rows</span></div>
-      <div class="arch-item"><span class="idx">02</span><span class="ti">50K chunks with <em>Task.yield()</em></span><span class="det">responsive</span></div>
-      <div class="arch-item"><span class="idx">03</span><span class="ti">@Observable + <em>MainActor</em></span><span class="det">safe</span></div>
-      <div class="arch-item"><span class="idx">04</span><span class="ti">Sendable <em>LogParser</em></span><span class="det">once</span></div>
-      <div class="arch-item"><span class="idx">05</span><span class="ti">Drag-and-drop <em>.fileURL</em></span><span class="det">into window</span></div>
+    <div class="arch-platform">
+      <div class="arch-platform-head">
+        <span class="arch-icon">&#9632;</span>
+        <div>
+          <h4>Windows</h4>
+          <span class="arch-stack">C++20 &middot; Win32 &middot; Direct2D &middot; DirectWrite</span>
+        </div>
+      </div>
+      <div class="arch-list">
+        <div class="arch-item"><span class="idx">01</span><span class="ti"><em>Direct2D</em> custom table control</span><span class="det">60 fps</span></div>
+        <div class="arch-item"><span class="idx">02</span><span class="ti"><em>Memory-mapped</em> file, 0 copies</span><span class="det">~200 MB / 10M</span></div>
+        <div class="arch-item"><span class="idx">03</span><span class="ti"><em>SoA</em> LogLineHot &mdash; 20 bytes/row</span><span class="det">cache-friendly</span></div>
+        <div class="arch-item"><span class="idx">04</span><span class="ti"><em>std::jthread</em> &times; CPU cores</span><span class="det">parallel parsing</span></div>
+        <div class="arch-item"><span class="idx">05</span><span class="ti">Portable <em>.exe</em>, no runtime</span><span class="det">~2-3 MB</span></div>
+      </div>
     </div>
   </div>
 </section>
 
 <section class="final" id="download">
   <h2>Logs.<br><em>Read.</em></h2>
-  <p>macOS 14+, Apple Silicon &amp; Intel. Native build, no Electron, no telemetry.</p>
+  <p>macOS 14+ (Apple Silicon &amp; Intel) &middot; Windows 10+ (x64). Native builds, no Electron, no telemetry.</p>
   <div class="cta-row">
-    <a class="btn btn-primary" href="#">Download .dmg <span class="arr">→</span></a>
+    <a class="btn btn-primary" href="#">Download for macOS <span class="arr">&rarr;</span></a>
+    <a class="btn btn-primary" href="#">Download for Windows <span class="arr">&rarr;</span></a>
     <a class="btn btn-ghost" href="#">Build from source</a>
   </div>
 </section>
 
 <footer>
-  <div>© 2026 · LOGRAM</div>
-  <div class="mid">Sergey Perekrestov · for UnityBase developers</div>
-  <div class="right">MIT · Swift 5.9</div>
+  <div>&copy; 2026 &middot; LOGRAM</div>
+  <div class="mid">Sergey Perekrestov &middot; for UnityBase developers</div>
+  <div class="right">MIT &middot; Swift 5.9 + C++20</div>
 </footer>
 
 <script src="/assets/app.js" defer></script>
