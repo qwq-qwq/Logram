@@ -31,7 +31,6 @@ public:
     void RunSearch(bool forward);
     void JumpToErrorRelative(int delta);
     void JumpToMatchingPair();
-    WNDPROC origSearchProc_ = nullptr;
 
 private:
     static LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
