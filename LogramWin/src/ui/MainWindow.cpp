@@ -52,23 +52,15 @@ void MainWindow::RegisterClass(HINSTANCE hInstance) {
 }
 
 bool MainWindow::Create(HINSTANCE hInstance, int nCmdShow) {
-    auto rect = Settings::Instance().GetWindowRect();
-
-    // Default size in DIPs → physical pixels using primary monitor DPI.
     UINT defDpi = GetDpiForSystem();
     if (defDpi == 0) defDpi = 96;
     int defW = MulDiv(1200, defDpi, 96);
     int defH = MulDiv(800,  defDpi, 96);
 
-    int x = rect.valid ? rect.x : CW_USEDEFAULT;
-    int y = rect.valid ? rect.y : CW_USEDEFAULT;
-    int w = rect.valid ? rect.w : defW;
-    int h = rect.valid ? rect.h : defH;
-
     hwnd_ = CreateWindowExW(
         0, kClassName, L"Logram",
         WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN,
-        x, y, w, h,
+        CW_USEDEFAULT, CW_USEDEFAULT, defW, defH,
         nullptr, nullptr, hInstance, this);
 
     if (!hwnd_) return false;
@@ -129,15 +121,9 @@ LRESULT MainWindow::HandleMessage(UINT msg, WPARAM wParam, LPARAM lParam) {
             return 0;
         }
 
-        case WM_CLOSE: {
-            RECT rc;
-            if (GetWindowRect(hwnd_, &rc)) {
-                Settings::Instance().SetWindowRect(rc.left, rc.top,
-                    rc.right - rc.left, rc.bottom - rc.top);
-            }
+        case WM_CLOSE:
             DestroyWindow(hwnd_);
             return 0;
-        }
 
         case WM_DESTROY:
             OnDestroy();

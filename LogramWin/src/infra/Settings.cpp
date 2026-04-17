@@ -65,23 +65,6 @@ void Settings::SetTheme(const std::string& theme) { WriteString(L"Theme", theme)
 bool Settings::GetShowDuration() const { return ReadDword(L"ShowDuration", 0) != 0; }
 void Settings::SetShowDuration(bool show) { WriteDword(L"ShowDuration", show ? 1 : 0); }
 
-Settings::WindowRect Settings::GetWindowRect() const {
-    DWORD x = ReadDword(L"WindowX", 0xFFFFFFFF);
-    if (x == 0xFFFFFFFF) return {0, 0, 0, 0, false};
-    return {static_cast<int>(x),
-            static_cast<int>(ReadDword(L"WindowY", 100)),
-            static_cast<int>(ReadDword(L"WindowW", 1200)),
-            static_cast<int>(ReadDword(L"WindowH", 800)),
-            true};
-}
-
-void Settings::SetWindowRect(int x, int y, int w, int h) {
-    WriteDword(L"WindowX", static_cast<DWORD>(x));
-    WriteDword(L"WindowY", static_cast<DWORD>(y));
-    WriteDword(L"WindowW", static_cast<DWORD>(w));
-    WriteDword(L"WindowH", static_cast<DWORD>(h));
-}
-
 int Settings::GetSplitterPos(int id) const {
     wchar_t name[32];
     wsprintfW(name, L"Splitter%d", id);
@@ -125,8 +108,6 @@ std::string Settings::GetTheme() const { return "TokyoNight"; }
 void Settings::SetTheme(const std::string&) {}
 bool Settings::GetShowDuration() const { return false; }
 void Settings::SetShowDuration(bool) {}
-Settings::WindowRect Settings::GetWindowRect() const { return {0,0,0,0,false}; }
-void Settings::SetWindowRect(int,int,int,int) {}
 int Settings::GetSplitterPos(int) const { return -1; }
 void Settings::SetSplitterPos(int,int) {}
 std::vector<std::wstring> Settings::GetRecentFiles() const { return {}; }
