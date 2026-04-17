@@ -173,6 +173,8 @@ void LogTableView::OnPaint() {
         const auto& indices = doc_->FilteredIndices();
         const auto& lines = doc_->AllLines();
         const uint8_t* base = doc_->MappedBase();
+        bool showDur = Settings::Instance().GetShowDuration();
+        float durColWidth = showDur ? 100.0f : 0.0f;
         int visibleRows = clientHeight_ / rowHeight_ + 1;
         int totalRows = static_cast<int>(indices.size());
 
@@ -246,10 +248,6 @@ void LogTableView::OnPaint() {
                 }
             }
             x += badgeWidth + 8.0f;
-
-            // Duration column (right-aligned, before message)
-            bool showDur = Settings::Instance().GetShowDuration();
-            float durColWidth = showDur ? 90.0f : 0.0f;
 
             // Message
             auto msg = GetMessage(base, line);
@@ -361,8 +359,6 @@ void LogTableView::OnMouseWheel(int delta) {
 
 int LogTableView::HitTestRow(int y) const {
     if (rowHeight_ <= 0) return -1;
-    // y arrives in physical pixels from WM_LBUTTONDOWN, but rowHeight_ is in
-    // DIPs (matches the drawing coordinate system).
     int yDip = static_cast<int>(y / (dpiScale_ > 0.0f ? dpiScale_ : 1.0f));
     return topRow_ + yDip / rowHeight_;
 }
@@ -457,7 +453,7 @@ void LogTableView::OnKeyDown(WPARAM vk, LPARAM) {
 }
 
 void LogTableView::ScrollToLine(int filteredIdx) {
-    int pageSize = (rowHeight_ > 0) ? clientHeight_ / rowHeight_ : 1;
+    int pageSize = (rowHeight_ > 0) ? std::max(1, (clientHeight_ - rowHeight_) / rowHeight_) : 1;
     if (filteredIdx < topRow_) {
         topRow_ = filteredIdx;
     } else if (filteredIdx >= topRow_ + pageSize) {

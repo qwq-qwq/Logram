@@ -1,6 +1,7 @@
 #include "ui/TimingDialog.h"
 #include "ui/ThemeColors.h"
 #include "infra/Utf.h"
+#include "infra/Settings.h"
 #include <commctrl.h>
 #include <cstdio>
 #include <algorithm>
@@ -42,6 +43,9 @@ static void GoToSelected(HWND hwnd, TimingDlgData* data) {
 
     const auto* t = data->sorted[sel];
 
+    // Enable duration column so timings are visible
+    Settings::Instance().SetShowDuration(true);
+
     // Filter to show only this thread (like Mac version)
     data->doc->SetEnabledThreadMask(uint64_t(1) << t->thread);
     data->doc->ApplyFilters();
@@ -73,7 +77,7 @@ static LRESULT CALLBACK TimingWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM
 
             UINT dpi = GetDpiForWindow(hwnd);
             if (dpi == 0) dpi = 96;
-            d->hFont = CreateFontW(-MulDiv(11, dpi, 72), 0, 0, 0, FW_NORMAL,
+            d->hFont = CreateFontW(-MulDiv(9, dpi, 72), 0, 0, 0, FW_NORMAL,
                 FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS,
                 CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY,
                 VARIABLE_PITCH | FF_SWISS, L"Segoe UI");
