@@ -3,6 +3,7 @@ import SwiftUI
 @main
 struct LogramApp: App {
     @State private var document = LogDocument()
+    @AppStorage("showDuration") private var showDuration = false
 
     var body: some Scene {
         WindowGroup {
@@ -27,6 +28,7 @@ struct LogramApp: App {
         panel.message = "Select a UB server log file"
 
         if panel.runModal() == .OK, let url = panel.url {
+            showDuration = false
             Task {
                 await document.load(from: url)
             }

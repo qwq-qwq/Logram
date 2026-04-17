@@ -116,10 +116,16 @@ struct ContentView: View {
                         .foregroundStyle(.red)
                         .font(.system(size: 11))
                 }
-            }
 
-            // Jump to matching +/-
-            if let sel = selectedLine, (sel.level == .enter || sel.level == .leave) {
+                // Jump to matching +/-
+                if let sel = selectedLine, (sel.level == .enter || sel.level == .leave) {
+                    Button { jumpToPair() } label: {
+                        Image(systemName: sel.level == .enter ? "arrow.down.to.line" : "arrow.up.to.line")
+                    }
+                    .buttonStyle(.borderless)
+                    .help("Jump to matching +/- (Cmd+J)")
+                }
+            } else if let sel = selectedLine, (sel.level == .enter || sel.level == .leave) {
                 Button { jumpToPair() } label: {
                     Image(systemName: sel.level == .enter ? "arrow.down.to.line" : "arrow.up.to.line")
                 }
@@ -128,6 +134,8 @@ struct ContentView: View {
             }
 
             Spacer()
+
+            Divider().frame(height: 20)
 
             Button {
                 if !showDuration && document.methodTimings.isEmpty {
@@ -289,6 +297,7 @@ struct ContentView: View {
         panel.canChooseDirectories = false
 
         if panel.runModal() == .OK, let url = panel.url {
+            showDuration = false
             Task { await document.load(from: url) }
         }
     }
@@ -340,6 +349,7 @@ struct ContentView: View {
                   let url = URL(dataRepresentation: data, relativeTo: nil)
             else { return }
             Task { @MainActor in
+                showDuration = false
                 await document.load(from: url)
             }
         }
