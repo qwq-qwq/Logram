@@ -3,7 +3,7 @@ import SwiftUI
 struct ContentView: View {
     @Bindable var document: LogDocument
     @AppStorage("colorTheme") private var themeRaw = ColorTheme.tokyoNight.rawValue
-    @AppStorage("showDuration") private var showDuration = true
+    @AppStorage("showDuration") private var showDuration = false
     @State private var showStats = false
     @State private var showTimings = false
     @State private var searchText = ""
@@ -130,6 +130,9 @@ struct ContentView: View {
             Spacer()
 
             Button {
+                if !showDuration && document.methodTimings.isEmpty {
+                    document.buildMethodTimings()
+                }
                 showDuration.toggle()
             } label: {
                 Image(systemName: showDuration ? "timer" : "timer.circle")

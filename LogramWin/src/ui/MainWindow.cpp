@@ -410,10 +410,15 @@ void MainWindow::OnCommand(int id, int code, HWND ctrl) {
         case ID_FILE_EXIT:
             PostMessageW(hwnd_, WM_CLOSE, 0, 0);
             break;
-        case ID_VIEW_DURATION:
-            Settings::Instance().SetShowDuration(!Settings::Instance().GetShowDuration());
+        case ID_VIEW_DURATION: {
+            bool newState = !Settings::Instance().GetShowDuration();
+            if (newState && doc_.Timings().empty()) {
+                doc_.BuildMethodTimings();
+            }
+            Settings::Instance().SetShowDuration(newState);
             if (tableView_) InvalidateRect(tableView_->GetHwnd(), nullptr, FALSE);
             break;
+        }
         case ID_VIEW_STATS:
             ShowStatsDialog(hwnd_, doc_);
             break;
@@ -605,6 +610,7 @@ void MainWindow::LoadFile(const wchar_t* path) {
         bool ok = doc_.Load(pathStr.c_str(), [](double) {});
         if (ok) {
             Settings::Instance().AddRecentFile(pathStr);
+            Settings::Instance().SetShowDuration(false);
             PostMessageW(hwnd, WM_APP_DOC_LOADED, 0, 0);
         }
     });

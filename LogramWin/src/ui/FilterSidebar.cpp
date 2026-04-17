@@ -215,6 +215,25 @@ void FilterSidebar::ReadCheckStatesIntoDoc() {
 void FilterSidebar::OnDocumentChanged(DocumentChanges changes) {
     if (changes.Has(DocumentChanges::DataLoaded)) {
         RebuildList();
+    } else if (changes.Has(DocumentChanges::FiltersChanged) && doc_ && hwndList_) {
+        // Sync checkboxes with current masks (e.g. after Method Timing "Go to Line")
+        suppressNotify_ = true;
+        uint64_t levelMask = doc_->EnabledLevelMask();
+        uint64_t thMask = doc_->EnabledThreadMask();
+        int total = ListView_GetItemCount(hwndList_);
+        for (int row = 0; row < total; ++row) {
+            LVITEMW li = {};
+            li.mask = LVIF_PARAM;
+            li.iItem = row;
+            ListView_GetItem(hwndList_, &li);
+            if (li.lParam < 1000) {
+                ListView_SetCheckState(hwndList_, row, (levelMask >> li.lParam) & 1);
+            } else {
+                int t = static_cast<int>(li.lParam) - 1000;
+                ListView_SetCheckState(hwndList_, row, (thMask >> t) & 1);
+            }
+        }
+        suppressNotify_ = false;
     }
 }
 
