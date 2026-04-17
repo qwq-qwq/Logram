@@ -343,40 +343,36 @@ void LogDocument::BuildMethodTimings() {
     const uint8_t* base = file_.Data();
     size_t count = allLines_.size();
 
+    // Single-pass O(n) with per-thread stacks.
+    // Each stack entry is the line index of an Enter.
+    std::array<std::vector<uint32_t>, kMaxThreads> stacks;
+
     for (size_t i = 0; i < count; ++i) {
-        if (static_cast<LogLevel>(allLines_[i].level) != LogLevel::Enter) continue;
+        auto lv = static_cast<LogLevel>(allLines_[i].level);
         int th = allLines_[i].thread;
-        int depth = 0;
+        if (th < 0 || th >= kMaxThreads) continue;
 
-        for (size_t j = i + 1; j < count; ++j) {
-            if (allLines_[j].thread != th) continue;
-            auto lv = static_cast<LogLevel>(allLines_[j].level);
-            if (lv == LogLevel::Enter) {
-                depth++;
-            } else if (lv == LogLevel::Leave) {
-                if (depth == 0) {
-                    int64_t csStart = allLines_[i].epochCS;
-                    int64_t csEnd = allLines_[j].epochCS;
-                    if (csStart >= 0 && csEnd >= 0) {
-                        double durationMS = static_cast<double>(csEnd - csStart) * 10.0;
-                        if (durationMS >= 10.0) {
-                            auto msg = GetMessage(base, allLines_[i]);
-                            // Trim whitespace
-                            while (!msg.empty() && (msg.front() == ' ' || msg.front() == '\t'))
-                                msg.remove_prefix(1);
-                            while (!msg.empty() && (msg.back() == ' ' || msg.back() == '\t' ||
-                                                     msg.back() == '\r' || msg.back() == '\n'))
-                                msg.remove_suffix(1);
+        if (lv == LogLevel::Enter) {
+            stacks[th].push_back(static_cast<uint32_t>(i));
+        } else if (lv == LogLevel::Leave && !stacks[th].empty()) {
+            uint32_t enterIdx = stacks[th].back();
+            stacks[th].pop_back();
 
-                            methodTimings_.push_back({
-                                static_cast<uint32_t>(i), th, durationMS,
-                                std::string(msg)
-                            });
-                        }
-                    }
-                    break;
-                } else {
-                    depth--;
+            int64_t csStart = allLines_[enterIdx].epochCS;
+            int64_t csEnd = allLines_[i].epochCS;
+            if (csStart >= 0 && csEnd >= 0) {
+                double durationMS = static_cast<double>(csEnd - csStart) * 10.0;
+                if (durationMS >= 10.0) {
+                    auto msg = GetMessage(base, allLines_[enterIdx]);
+                    while (!msg.empty() && (msg.front() == ' ' || msg.front() == '\t'))
+                        msg.remove_prefix(1);
+                    while (!msg.empty() && (msg.back() == ' ' || msg.back() == '\t' ||
+                                             msg.back() == '\r' || msg.back() == '\n'))
+                        msg.remove_suffix(1);
+
+                    methodTimings_.push_back({
+                        enterIdx, th, durationMS, std::string(msg)
+                    });
                 }
             }
         }

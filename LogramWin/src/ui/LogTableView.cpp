@@ -4,6 +4,7 @@
 #include "infra/Utf.h"
 #include "infra/Clipboard.h"
 #include "infra/Dpi.h"
+#include "infra/Settings.h"
 
 LogTableView::LogTableView() {}
 LogTableView::~LogTableView() {
@@ -236,14 +237,47 @@ void LogTableView::OnPaint() {
                           textFormat_, badgeTextRect, brush_);
             x += badgeWidth + 8.0f;
 
+            // Duration column (right-aligned, before message)
+            bool showDur = Settings::Instance().GetShowDuration();
+            float durColWidth = showDur ? 90.0f : 0.0f;
+
             // Message
             auto msg = GetMessage(base, line);
             if (!msg.empty()) {
                 auto wmsg = Utf8ToWide(msg.substr(0, 500)); // truncate for performance
                 brush_->SetColor(ToD2D(theme.messageColor[static_cast<int>(level)]));
-                D2D1_RECT_F msgRect = {x, y, static_cast<float>(clientWidth_) - 4.0f, y + rowHeight_};
+                float msgRight = static_cast<float>(clientWidth_) - durColWidth - 4.0f;
+                D2D1_RECT_F msgRect = {x, y, msgRight, y + rowHeight_};
                 rt_->DrawText(wmsg.c_str(), static_cast<UINT32>(wmsg.size()),
                               textFormat_, msgRect, brush_);
+            }
+
+            // Duration value
+            if (showDur) {
+                int64_t durUS = doc_->GetDuration(lineId);
+                if (durUS > 0) {
+                    wchar_t durBuf[32];
+                    double durMS = durUS / 1000.0;
+                    if (durMS >= 1000.0)
+                        swprintf(durBuf, 32, L"%.1f s", durMS / 1000.0);
+                    else
+                        swprintf(durBuf, 32, L"%.3f ms", durMS);
+
+                    brush_->SetColor(ToD2D(DurationColor(durUS)));
+                    float durX = static_cast<float>(clientWidth_) - durColWidth;
+                    D2D1_RECT_F durRect = {durX, y, static_cast<float>(clientWidth_) - 4.0f, y + rowHeight_};
+
+                    // Right-align: create layout for measuring
+                    IDWriteTextLayout* layout = nullptr;
+                    LogramApp::Get()->DWriteFactory()->CreateTextLayout(
+                        durBuf, static_cast<UINT32>(wcslen(durBuf)),
+                        textFormat_, durColWidth - 4.0f, static_cast<float>(rowHeight_), &layout);
+                    if (layout) {
+                        layout->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_TRAILING);
+                        rt_->DrawTextLayout({durX, y}, layout, brush_);
+                        layout->Release();
+                    }
+                }
             }
         }
     }

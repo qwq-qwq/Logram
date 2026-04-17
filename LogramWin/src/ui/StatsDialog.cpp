@@ -69,7 +69,7 @@ static INT_PTR CALLBACK StatsDlgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
 
         case WM_COMMAND:
             if (LOWORD(wParam) == IDOK || LOWORD(wParam) == IDCANCEL) {
-                DestroyWindow(hwnd);
+                EndDialog(hwnd, LOWORD(wParam));
                 return TRUE;
             }
             break;
@@ -85,7 +85,7 @@ static INT_PTR CALLBACK StatsDlgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
         }
 
         case WM_CLOSE:
-            DestroyWindow(hwnd);
+            EndDialog(hwnd, IDCANCEL);
             return TRUE;
     }
     return FALSE;

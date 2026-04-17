@@ -14,6 +14,10 @@
 // Child-control IDs (must not overlap with menu IDs in resource.h)
 namespace {
 constexpr int IDC_SEARCH_EDIT   = 9001;
+constexpr int IDC_BTN_FINDNEXT  = 9010;
+constexpr int IDC_BTN_FINDPREV  = 9011;
+constexpr int IDC_BTN_ERRNEXT   = 9012;
+constexpr int IDC_BTN_ERRPREV   = 9013;
 } // namespace
 
 int MainWindow::Scale(int dip) const {
@@ -30,6 +34,7 @@ MainWindow::~MainWindow() {
     doc_.listeners.Remove(this);
     if (loadThread_.joinable()) loadThread_.join();
     if (hBgBrush_) DeleteObject(hBgBrush_);
+    if (hToolbarFont_) DeleteObject(hToolbarFont_);
 }
 
 void MainWindow::RegisterClass(HINSTANCE hInstance) {
@@ -184,17 +189,33 @@ void MainWindow::OnCreate() {
         reinterpret_cast<HMENU>(static_cast<LONG_PTR>(IDC_SEARCH_EDIT)),
         hInst, nullptr);
 
-    // DPI-scaled monospaced font for the search box
+    // DPI-scaled font for toolbar controls
     UINT dpi = GetDpiForWindow(hwnd_);
     if (dpi == 0) dpi = 96;
-    HFONT hFont = CreateFontW(-MulDiv(10, dpi, 72), 0, 0, 0,
+    hToolbarFont_ = CreateFontW(-MulDiv(10, dpi, 72), 0, 0, 0,
         FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET,
         OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY,
         VARIABLE_PITCH | FF_SWISS, L"Segoe UI");
-    if (hFont) SendMessageW(hwndSearch_, WM_SETFONT,
-                            reinterpret_cast<WPARAM>(hFont), TRUE);
+    if (hToolbarFont_) SendMessageW(hwndSearch_, WM_SETFONT,
+                            reinterpret_cast<WPARAM>(hToolbarFont_), TRUE);
     SendMessageW(hwndSearch_, EM_SETCUEBANNER, TRUE,
                  reinterpret_cast<LPARAM>(L"Search..."));
+
+    // Navigation buttons next to search
+    auto makeBtn = [&](const wchar_t* label, int id) -> HWND {
+        HWND btn = CreateWindowExW(0, L"BUTTON", label,
+            WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
+            0, 0, Scale(32), Scale(kToolbarHeightDip - 12),
+            hwnd_, reinterpret_cast<HMENU>(static_cast<LONG_PTR>(id)),
+            hInst, nullptr);
+        if (hToolbarFont_) SendMessageW(btn, WM_SETFONT,
+                                        reinterpret_cast<WPARAM>(hToolbarFont_), TRUE);
+        return btn;
+    };
+    hwndBtnFindPrev_ = makeBtn(L"\x25B2", IDC_BTN_FINDPREV);   // ▲
+    hwndBtnFindNext_ = makeBtn(L"\x25BC", IDC_BTN_FINDNEXT);   // ▼
+    hwndBtnErrPrev_  = makeBtn(L"Err\x25B2", IDC_BTN_ERRPREV); // Err▲
+    hwndBtnErrNext_  = makeBtn(L"Err\x25BC", IDC_BTN_ERRNEXT); // Err▼
 
     // Populate sidebarWidth_ / detailHeight_ from stored prefs (values are
     // physical pixels as last persisted). detailHeight_=-1 means "auto 70%"
@@ -238,12 +259,11 @@ void MainWindow::OnSize(int width, int height) {
         int p = sidebarSplitter_->GetPosition();
         if (p > 0) sidebarWidth_ = p;
     }
-    if (detailSplitter_) {
+    if (detailSplitter_ && detailHeight_ > 0) {
+        // Only read splitter position after the first layout has resolved
+        // detailHeight_ from its -1 (auto 70%) sentinel.
         int p = detailSplitter_->GetPosition();
         if (p > 0) {
-            // Splitter stores the y-coord of the horizontal bar; detailHeight_ is
-            // measured from the splitter to the status bar.
-            // Derive detailHeight_ from total height minus that y.
             RECT rc; GetClientRect(hwnd_, &rc);
             int sbH = 0;
             if (hwndStatus_) {
@@ -303,14 +323,27 @@ void MainWindow::LayoutChildren() {
 
     int topH = std::max(0, workH - detailH - splitterPx);
 
-    // Toolbar: search box stretches across the right pane.
-    if (hwndSearch_) {
+    // Toolbar: search box + navigation buttons across the right pane.
+    {
         const int pad = Scale(6);
-        const int searchY = Scale(6);
-        const int searchH = toolbarPx - Scale(12);
-        const int searchX = sidebarWidth_ + splitterPx + pad;
-        const int searchW = std::max(Scale(120), totalW - searchX - pad);
-        MoveWindow(hwndSearch_, searchX, searchY, searchW, searchH, TRUE);
+        const int btnY = Scale(4);
+        const int ctrlH = toolbarPx - Scale(8);
+        const int btnW = Scale(36);
+        const int errBtnW = Scale(50);
+
+        // Buttons from right edge: ErrNext, ErrPrev, FindNext, FindPrev
+        int x = totalW - pad;
+        if (hwndBtnErrNext_) { x -= errBtnW; MoveWindow(hwndBtnErrNext_, x, btnY, errBtnW, ctrlH, TRUE); x -= pad/2; }
+        if (hwndBtnErrPrev_) { x -= errBtnW; MoveWindow(hwndBtnErrPrev_, x, btnY, errBtnW, ctrlH, TRUE); x -= pad; }
+        if (hwndBtnFindNext_) { x -= btnW; MoveWindow(hwndBtnFindNext_, x, btnY, btnW, ctrlH, TRUE); x -= pad/2; }
+        if (hwndBtnFindPrev_) { x -= btnW; MoveWindow(hwndBtnFindPrev_, x, btnY, btnW, ctrlH, TRUE); x -= pad; }
+
+        // Search box fills remaining space
+        if (hwndSearch_) {
+            const int searchX = sidebarWidth_ + splitterPx + pad;
+            const int searchW = std::max(Scale(120), x - searchX);
+            MoveWindow(hwndSearch_, searchX, btnY, searchW, ctrlH, TRUE);
+        }
     }
 
     // Filter sidebar (left)
@@ -356,6 +389,10 @@ void MainWindow::OnCommand(int id, int code, HWND ctrl) {
     }
 
     switch (id) {
+        case IDC_BTN_FINDNEXT:  RunSearch(true);           return;
+        case IDC_BTN_FINDPREV:  RunSearch(false);          return;
+        case IDC_BTN_ERRNEXT:   JumpToErrorRelative(+1);   return;
+        case IDC_BTN_ERRPREV:   JumpToErrorRelative(-1);   return;
         case ID_FILE_OPEN:
             ShowOpenDialog();
             break;
@@ -363,9 +400,8 @@ void MainWindow::OnCommand(int id, int code, HWND ctrl) {
             PostMessageW(hwnd_, WM_CLOSE, 0, 0);
             break;
         case ID_VIEW_DURATION:
-            // Toggle duration column (stored in settings; table view reads it on next paint)
             Settings::Instance().SetShowDuration(!Settings::Instance().GetShowDuration());
-            InvalidateRect(hwnd_, nullptr, TRUE);
+            if (tableView_) InvalidateRect(tableView_->GetHwnd(), nullptr, FALSE);
             break;
         case ID_VIEW_STATS:
             ShowStatsDialog(hwnd_, doc_);

@@ -126,25 +126,33 @@ void DetailPanel::SetDocument(LogDocument* doc) {
     if (doc_) doc_->listeners.Add(this);
 }
 
-// Find Cust1 (Params) line adjacent to a SQL line on the same thread.
+// Find Cust1 (Params) line before a SQL line on the same thread.
+// Mirrors the Mac version: search backwards up to 50000 lines, counting
+// only same-thread lines (stop after 200 same-thread misses).  Stop at
+// another SQL/Cust2 boundary (= different query).
 static std::string FindParamsForSql(LogDocument* doc, int lineId) {
     const auto& lines = doc->AllLines();
     const uint8_t* base = doc->MappedBase();
     const auto& sqlLine = lines[lineId];
     int thread = sqlLine.thread;
+    if (thread < 0) return {};
 
-    // Look up to 5 lines before and after for a Cust1 on the same thread.
-    int total = static_cast<int>(lines.size());
-    for (int delta = -5; delta <= 5; ++delta) {
-        int idx = lineId + delta;
-        if (idx < 0 || idx >= total || idx == lineId) continue;
-        const auto& candidate = lines[idx];
-        if (candidate.thread != thread) continue;
-        if (static_cast<LogLevel>(candidate.level) != LogLevel::Cust1) continue;
-        auto msg = GetMessage(base, candidate);
-        // Trim leading whitespace/tab — messageOffset may not skip the tab.
-        while (!msg.empty() && (msg[0] == ' ' || msg[0] == '\t')) msg.remove_prefix(1);
-        if (!msg.empty() && msg[0] == '{') return std::string(msg);
+    int sameThreadSeen = 0;
+    int earliest = std::max(0, lineId - 50000);
+    for (int i = lineId - 1; i >= earliest; --i) {
+        const auto& prev = lines[i];
+        if (prev.thread != thread) continue;
+        ++sameThreadSeen;
+        if (sameThreadSeen > 200) break;
+
+        if (static_cast<LogLevel>(prev.level) == LogLevel::Cust1) {
+            auto msg = GetMessage(base, prev);
+            while (!msg.empty() && (msg[0] == ' ' || msg[0] == '\t')) msg.remove_prefix(1);
+            if (!msg.empty() && msg[0] == '{') return std::string(msg);
+        }
+        // Another SQL/Cust2 = different query boundary → stop
+        auto lvl = static_cast<LogLevel>(prev.level);
+        if (lvl == LogLevel::Sql || lvl == LogLevel::Cust2) break;
     }
     return {};
 }
@@ -289,18 +297,11 @@ static std::vector<HlToken> TokenizeJsonForHighlight(const std::wstring& text) {
 enum class HighlightMode { None, Sql, Json };
 
 static void ApplyHighlighting(HWND hwnd, const std::wstring& text, HighlightMode mode) {
-    if (mode == HighlightMode::None) return;
-
     auto& theme = CurrentTheme();
-    std::vector<HlToken> tokens;
-    if (mode == HighlightMode::Sql)
-        tokens = TokenizeSqlForHighlight(text);
-    else
-        tokens = TokenizeJsonForHighlight(text);
 
     SendMessageW(hwnd, WM_SETREDRAW, FALSE, 0);
 
-    // Default foreground
+    // Always set default foreground (RichEdit defaults to black otherwise).
     CHARRANGE crAll = {0, -1};
     SendMessageW(hwnd, EM_EXSETSEL, 0, reinterpret_cast<LPARAM>(&crAll));
     CHARFORMAT2W cfDef = {};
@@ -308,6 +309,20 @@ static void ApplyHighlighting(HWND hwnd, const std::wstring& text, HighlightMode
     cfDef.dwMask = CFM_COLOR;
     cfDef.crTextColor = ToCOLORREF(theme.foreground);
     SendMessageW(hwnd, EM_SETCHARFORMAT, SCF_SELECTION, reinterpret_cast<LPARAM>(&cfDef));
+
+    if (mode == HighlightMode::None) {
+        CHARRANGE crStart = {0, 0};
+        SendMessageW(hwnd, EM_EXSETSEL, 0, reinterpret_cast<LPARAM>(&crStart));
+        SendMessageW(hwnd, WM_SETREDRAW, TRUE, 0);
+        InvalidateRect(hwnd, nullptr, FALSE);
+        return;
+    }
+
+    std::vector<HlToken> tokens;
+    if (mode == HighlightMode::Sql)
+        tokens = TokenizeSqlForHighlight(text);
+    else
+        tokens = TokenizeJsonForHighlight(text);
 
     for (const auto& t : tokens) {
         COLORREF color;
