@@ -358,9 +358,6 @@ void LogDocument::BuildMethodTimings() {
             uint32_t enterIdx = stacks[th].back();
             stacks[th].pop_back();
 
-            // Only top-level methods (stack now empty = outermost call)
-            if (!stacks[th].empty()) continue;
-
             int64_t csStart = allLines_[enterIdx].epochCS;
             int64_t csEnd = allLines_[i].epochCS;
             if (csStart >= 0 && csEnd >= 0) {
