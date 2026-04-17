@@ -35,16 +35,25 @@ static void SortTimings(TimingDlgData* data) {
         });
 }
 
-static void GoToSelected(TimingDlgData* data) {
+static void GoToSelected(HWND hwnd, TimingDlgData* data) {
     if (!data || !data->hwndList || !data->doc) return;
     int sel = ListView_GetNextItem(data->hwndList, -1, LVNI_SELECTED);
     if (sel < 0 || sel >= static_cast<int>(data->sorted.size())) return;
 
     const auto* t = data->sorted[sel];
+
+    // Filter to show only this thread (like Mac version)
+    data->doc->SetEnabledThreadMask(uint64_t(1) << t->thread);
+    data->doc->ApplyFilters();
+
     data->doc->SetSelectedLineId(static_cast<int>(t->lineId));
+
     DocumentChanges ch;
-    ch.flags = DocumentChanges::SelectionChanged;
+    ch.flags = DocumentChanges::FiltersChanged | DocumentChanges::SelectionChanged;
     data->doc->listeners.Notify(ch);
+
+    // Close the timing window
+    SendMessageW(hwnd, WM_CLOSE, 0, 0);
 }
 
 static LRESULT CALLBACK TimingWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
@@ -185,7 +194,7 @@ static LRESULT CALLBACK TimingWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM
 
         case WM_COMMAND:
             if (LOWORD(wParam) == IDC_GOTO) {
-                GoToSelected(data);
+                GoToSelected(hwnd, data);
                 return 0;
             }
             break;
@@ -242,7 +251,7 @@ static LRESULT CALLBACK TimingWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM
             }
 
             if (hdr->code == NM_DBLCLK) {
-                GoToSelected(data);
+                GoToSelected(hwnd, data);
                 return TRUE;
             }
             break;
