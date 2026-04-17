@@ -228,8 +228,7 @@ void MainWindow::OnCreate() {
     // which is resolved in the first LayoutChildren call once we know the window size.
     int saved = Settings::Instance().GetSplitterPos(0 /*sidebar*/);
     sidebarWidth_ = (saved > 0) ? saved : Scale(sidebarWidth_);
-    saved = Settings::Instance().GetSplitterPos(2 /*detail v2 — reset old default*/);
-    detailHeight_ = (saved > 0) ? saved : -1;
+    // detailHeight_ always starts as -1 (auto 30%) — resolved in first LayoutChildren.
 
     // Filter sidebar (left)
     filterSidebar_ = std::make_unique<FilterSidebar>();
@@ -467,9 +466,8 @@ void MainWindow::OnDropFiles(HDROP hDrop) {
 }
 
 void MainWindow::OnDestroy() {
-    // Persist splitter positions
+    // Persist sidebar width only — detail height always starts at 30%.
     Settings::Instance().SetSplitterPos(0 /*sidebar*/, sidebarWidth_);
-    Settings::Instance().SetSplitterPos(2 /*detail*/, detailHeight_);
     if (loadThread_.joinable()) loadThread_.request_stop();
 }
 
