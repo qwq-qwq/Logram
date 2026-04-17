@@ -216,6 +216,25 @@ void MainWindow::OnCreate() {
     SendMessageW(hwndSearch_, EM_SETCUEBANNER, TRUE,
                  reinterpret_cast<LPARAM>(L"Search..."));
 
+    // Subclass search edit to catch Enter key
+    SetWindowLongPtrW(hwndSearch_, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(this));
+    origSearchProc_ = reinterpret_cast<WNDPROC>(
+        SetWindowLongPtrW(hwndSearch_, GWLP_WNDPROC,
+            reinterpret_cast<LONG_PTR>([](HWND h, UINT m, WPARAM w, LPARAM l) -> LRESULT {
+                if (m == WM_KEYDOWN && w == VK_RETURN) {
+                    auto* self = reinterpret_cast<MainWindow*>(
+                        GetWindowLongPtrW(h, GWLP_USERDATA));
+                    if (self) {
+                        bool shift = (GetKeyState(VK_SHIFT) & 0x8000) != 0;
+                        self->RunSearch(!shift);
+                        return 0;
+                    }
+                }
+                auto* self = reinterpret_cast<MainWindow*>(
+                    GetWindowLongPtrW(h, GWLP_USERDATA));
+                return CallWindowProcW(self->origSearchProc_, h, m, w, l);
+            })));
+
     // Navigation buttons next to search
     auto makeBtn = [&](const wchar_t* label, int id) -> HWND {
         HWND btn = CreateWindowExW(0, L"BUTTON", label,

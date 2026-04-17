@@ -27,6 +27,12 @@ public:
 
     LogDocument& Doc() { return doc_; }
 
+    // Public for subclassed search edit callback
+    void RunSearch(bool forward);
+    void JumpToErrorRelative(int delta);
+    void JumpToMatchingPair();
+    WNDPROC origSearchProc_ = nullptr;
+
 private:
     static LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
     LRESULT HandleMessage(UINT msg, WPARAM wParam, LPARAM lParam);
@@ -40,11 +46,6 @@ private:
     void UpdateTitle();
     void UpdateStatusBar();
     void LayoutChildren();
-
-    // Search helpers
-    void RunSearch(bool forward);
-    void JumpToErrorRelative(int delta);  // +1 next, -1 prev
-    void JumpToMatchingPair();
 
     HWND hwnd_ = nullptr;
     HWND hwndStatus_ = nullptr;

@@ -127,31 +127,36 @@ void FilterSidebar::RebuildList() {
     grp.iGroupId = 2;
     ListView_InsertGroup(hwndList_, -1, &grp);
 
-    // 1) Level rows
+    // 1) Level rows — only levels present in the loaded file
     uint64_t levelMask = doc_ ? doc_->EnabledLevelMask() : ~uint64_t(0);
+    const int* counts = doc_ ? doc_->PerLevelCount() : nullptr;
+    int row = 0;
     for (int i = 0; i < kLogLevelCount; ++i) {
+        if (counts && counts[i] == 0) continue;  // skip absent levels
         auto& info = GetLogLevelInfo(static_cast<LogLevel>(i));
         auto wlabel = Utf8ToWide(info.label);
         LVITEMW item = {};
         item.mask = LVIF_TEXT | LVIF_PARAM | LVIF_GROUPID;
-        item.iItem = i;
+        item.iItem = row;
         item.iGroupId = 1;
         item.lParam = static_cast<LPARAM>(i);
         item.pszText = const_cast<LPWSTR>(wlabel.c_str());
         ListView_InsertItem(hwndList_, &item);
         bool on = (levelMask >> i) & 1;
-        ListView_SetCheckState(hwndList_, i, on);
+        ListView_SetCheckState(hwndList_, row, on);
+        row++;
     }
 
     // 2) Thread rows
-    threadRowBase_ = kLogLevelCount;
+    threadRowBase_ = row;
     if (doc_) {
         const auto& active = doc_->ActiveThreads();
         uint64_t thMask = doc_->EnabledThreadMask();
         int row = threadRowBase_;
         for (int t : active) {
             wchar_t buf[32];
-            swprintf(buf, 32, L"Thread %d", t + 1);
+            wchar_t thChar = static_cast<wchar_t>(t + 0x21); // !, ", #, $, %, &...
+            swprintf(buf, 32, L"%c  Thread %d", thChar, t + 1);
             LVITEMW item = {};
             item.mask = LVIF_TEXT | LVIF_PARAM | LVIF_GROUPID;
             item.iItem = row;
@@ -170,20 +175,35 @@ void FilterSidebar::RebuildList() {
 
 void FilterSidebar::ReadCheckStatesIntoDoc() {
     if (!doc_ || !hwndList_) return;
-    uint64_t levelMask = 0;
-    for (int i = 0; i < kLogLevelCount; ++i) {
-        if (ListView_GetCheckState(hwndList_, i)) {
-            levelMask |= (uint64_t(1) << i);
-        }
-    }
+    int total = ListView_GetItemCount(hwndList_);
+
+    // Start with all levels enabled, then read visible checkboxes.
+    // Absent levels (not in list) stay enabled so their lines aren't hidden.
+    uint64_t levelMask = ~uint64_t(0);
     uint64_t thMask = 0;
-    const auto& active = doc_->ActiveThreads();
-    for (size_t k = 0; k < active.size(); ++k) {
-        int row = threadRowBase_ + static_cast<int>(k);
-        if (ListView_GetCheckState(hwndList_, row)) {
-            thMask |= (uint64_t(1) << active[k]);
+
+    for (int row = 0; row < total; ++row) {
+        LVITEMW li = {};
+        li.mask = LVIF_PARAM;
+        li.iItem = row;
+        ListView_GetItem(hwndList_, &li);
+        LPARAM lp = li.lParam;
+        bool checked = ListView_GetCheckState(hwndList_, row) != 0;
+
+        if (lp < 1000) {
+            // Level row
+            int lvl = static_cast<int>(lp);
+            if (checked)
+                levelMask |= (uint64_t(1) << lvl);
+            else
+                levelMask &= ~(uint64_t(1) << lvl);
+        } else {
+            // Thread row
+            int t = static_cast<int>(lp) - 1000;
+            if (checked) thMask |= (uint64_t(1) << t);
         }
     }
+
     doc_->SetEnabledLevelMask(levelMask);
     doc_->SetEnabledThreadMask(thMask);
     doc_->ApplyFilters();
@@ -235,8 +255,19 @@ void FilterSidebar::ApplyPreset(Preset p) {
     }
 
     suppressNotify_ = true;
-    for (int i = 0; i < kLogLevelCount; ++i) {
-        ListView_SetCheckState(hwndList_, i, (levelMask >> i) & 1);
+    int total = ListView_GetItemCount(hwndList_);
+    for (int row = 0; row < total; ++row) {
+        LVITEMW li = {};
+        li.mask = LVIF_PARAM;
+        li.iItem = row;
+        ListView_GetItem(hwndList_, &li);
+        if (li.lParam < 1000) {
+            // Level row — set check based on mask
+            ListView_SetCheckState(hwndList_, row, (levelMask >> li.lParam) & 1);
+        } else {
+            // Thread row — preset enables all threads
+            ListView_SetCheckState(hwndList_, row, TRUE);
+        }
     }
     suppressNotify_ = false;
 
