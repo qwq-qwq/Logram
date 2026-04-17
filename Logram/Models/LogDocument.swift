@@ -334,6 +334,11 @@ final class LogDocument {
 
         timings.sort { $0.durationMS > $1.durationMS }
         methodTimings = timings
+
+        // Write duration to Enter lines so the Duration column shows them
+        for timing in timings {
+            allLines[timing.id].durationUS = Int64(timing.durationMS * 1000)
+        }
     }
 
     // MARK: - Jump to matching +/-
