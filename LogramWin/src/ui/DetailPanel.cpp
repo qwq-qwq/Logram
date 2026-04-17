@@ -83,10 +83,13 @@ HWND DetailPanel::Create(HWND parent, HINSTANCE hInstance, LogDocument* doc) {
 
     // RichEdit for syntax-highlighted SQL/JSON.
     LoadLibraryW(L"Msftedit.dll");
-    hwndEdit_ = CreateWindowExW(WS_EX_CLIENTEDGE, MSFTEDIT_CLASS, nullptr,
-        WS_CHILD | WS_VISIBLE | WS_VSCROLL | WS_HSCROLL |
+    hwndEdit_ = CreateWindowExW(0, MSFTEDIT_CLASS, nullptr,
+        WS_CHILD | WS_VISIBLE |
         ES_MULTILINE | ES_READONLY | ES_AUTOVSCROLL | ES_AUTOHSCROLL | ES_NOOLEDRAGDROP,
         0, headerH, 400, 200 - headerH, hwnd_, nullptr, hInstance, nullptr);
+    // Show scrollbars only when content overflows.
+    SendMessageW(hwndEdit_, EM_SETEVENTMASK, 0, ENM_SCROLL);
+    SendMessageW(hwndEdit_, EM_SETSCROLLPOS, 0, 0);
     if (hFont_) SendMessageW(hwndEdit_, WM_SETFONT,
                              reinterpret_cast<WPARAM>(hFont_), TRUE);
 

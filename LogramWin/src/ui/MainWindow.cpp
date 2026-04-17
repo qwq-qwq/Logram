@@ -157,10 +157,16 @@ LRESULT MainWindow::HandleMessage(UINT msg, WPARAM wParam, LPARAM lParam) {
         case WM_CTLCOLOREDIT: {
             auto& theme = CurrentTheme();
             HDC hdc = reinterpret_cast<HDC>(wParam);
+            // Slightly lighter background so the search box is visible
+            ColorRGBA editBg;
+            editBg.r = std::min(1.0f, theme.background.r + 0.06f);
+            editBg.g = std::min(1.0f, theme.background.g + 0.06f);
+            editBg.b = std::min(1.0f, theme.background.b + 0.06f);
+            editBg.a = 1.0f;
             SetTextColor(hdc, ToCOLORREF(theme.foreground));
-            SetBkColor(hdc, ToCOLORREF(theme.background));
+            SetBkColor(hdc, ToCOLORREF(editBg));
             if (!hBgBrush_)
-                hBgBrush_ = CreateSolidBrush(ToCOLORREF(theme.background));
+                hBgBrush_ = CreateSolidBrush(ToCOLORREF(editBg));
             return reinterpret_cast<LRESULT>(hBgBrush_);
         }
     }
