@@ -86,7 +86,12 @@ LRESULT Splitter::HandleMessage(UINT msg, WPARAM wParam, LPARAM lParam) {
             auto& theme = CurrentTheme();
             RECT rc;
             GetClientRect(hwnd_, &rc);
-            HBRUSH brush = CreateSolidBrush(ToCOLORREF(theme.background));
+            ColorRGBA c;
+            c.r = (theme.background.r + theme.secondary.r) * 0.5f;
+            c.g = (theme.background.g + theme.secondary.g) * 0.5f;
+            c.b = (theme.background.b + theme.secondary.b) * 0.5f;
+            c.a = 1.0f;
+            HBRUSH brush = CreateSolidBrush(ToCOLORREF(c));
             FillRect(reinterpret_cast<HDC>(wParam), &rc, brush);
             DeleteObject(brush);
             return 1;

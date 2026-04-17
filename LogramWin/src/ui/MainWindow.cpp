@@ -201,7 +201,7 @@ void MainWindow::OnCreate() {
     // which is resolved in the first LayoutChildren call once we know the window size.
     int saved = Settings::Instance().GetSplitterPos(0 /*sidebar*/);
     sidebarWidth_ = (saved > 0) ? saved : Scale(sidebarWidth_);
-    saved = Settings::Instance().GetSplitterPos(1 /*detail*/);
+    saved = Settings::Instance().GetSplitterPos(2 /*detail v2 — reset old default*/);
     detailHeight_ = (saved > 0) ? saved : -1;
 
     // Filter sidebar (left)
@@ -427,7 +427,7 @@ void MainWindow::OnDropFiles(HDROP hDrop) {
 void MainWindow::OnDestroy() {
     // Persist splitter positions
     Settings::Instance().SetSplitterPos(0 /*sidebar*/, sidebarWidth_);
-    Settings::Instance().SetSplitterPos(1 /*detail*/, detailHeight_);
+    Settings::Instance().SetSplitterPos(2 /*detail*/, detailHeight_);
     if (loadThread_.joinable()) loadThread_.request_stop();
 }
 

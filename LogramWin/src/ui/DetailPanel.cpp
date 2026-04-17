@@ -416,23 +416,29 @@ void DetailPanel::ShowLine(int lineId) {
         displayText = FormatStackTrace(plain);
     }
 
-    // EDIT control requires \r\n
-    std::string crlfText;
-    crlfText.reserve(displayText.size() + displayText.size() / 20);
-    for (size_t i = 0; i < displayText.size(); ++i) {
-        if (displayText[i] == '\n' && (i == 0 || displayText[i - 1] != '\r')) {
-            crlfText += "\r\n";
-        } else {
-            crlfText += displayText[i];
-        }
-    }
-
     SetWindowTextW(hwndHeader_, Utf8ToWide(headerText).c_str());
 
-    auto wideText = Utf8ToWide(crlfText);
+    auto wideText = Utf8ToWide(displayText);
     SetWindowTextW(hwndEdit_, wideText.c_str());
 
-    ApplyHighlighting(hwndEdit_, wideText, hlMode);
+    // Re-read text from RichEdit to tokenize exactly what it stores internally.
+    // Use EM_GETTEXTLENGTHEX / EM_GETTEXTEX to get the raw internal text
+    // (line endings as \r) — GetWindowTextW may re-expand them to \r\n.
+    GETTEXTLENGTHEX gtl = {};
+    gtl.flags = GTL_NUMCHARS | GTL_PRECISE;
+    gtl.codepage = 1200; // UTF-16
+    int reLen = static_cast<int>(SendMessageW(hwndEdit_, EM_GETTEXTLENGTHEX,
+                                              reinterpret_cast<WPARAM>(&gtl), 0));
+    std::wstring reText(reLen + 1, L'\0');
+    GETTEXTEX gt = {};
+    gt.cb = static_cast<DWORD>((reLen + 1) * sizeof(wchar_t));
+    gt.flags = GT_DEFAULT;
+    gt.codepage = 1200;
+    SendMessageW(hwndEdit_, EM_GETTEXTEX, reinterpret_cast<WPARAM>(&gt),
+                 reinterpret_cast<LPARAM>(reText.data()));
+    reText.resize(reLen);
+
+    ApplyHighlighting(hwndEdit_, reText, hlMode);
 }
 
 void DetailPanel::OnDocumentChanged(DocumentChanges changes) {
