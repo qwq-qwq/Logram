@@ -493,6 +493,16 @@ void MainWindow::RunSearch(bool forward) {
     auto dir = forward ? LogDocument::SearchDirection::Forward
                        : LogDocument::SearchDirection::Backward;
     int next = doc_.FindNext(pattern, dir, lastFoundIdx_);
+
+    // Wrap-around: if the walk ran off the end (or beginning), restart from
+    // the opposite edge so F3 keeps cycling through matches.
+    bool wrapped = false;
+    if (next < 0 && lastFoundIdx_ >= 0) {
+        int restart = forward ? -1 : static_cast<int>(doc_.FilteredIndices().size());
+        next = doc_.FindNext(pattern, dir, restart);
+        wrapped = (next >= 0);
+    }
+
     if (next >= 0) {
         lastFoundIdx_ = next;
         doc_.SetSelectedLineId(static_cast<int>(doc_.FilteredIndices()[next]));
@@ -503,8 +513,11 @@ void MainWindow::RunSearch(bool forward) {
         DocumentChanges ch;
         ch.flags = DocumentChanges::SelectionChanged;
         doc_.listeners.Notify(ch);
+        if (wrapped) MessageBeep(MB_ICONINFORMATION);
     } else {
         MessageBeep(MB_ICONWARNING);
+        MessageBoxW(hwnd_, L"Совпадений не найдено.", L"Logram",
+                    MB_OK | MB_ICONINFORMATION);
     }
 }
 

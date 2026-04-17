@@ -17,10 +17,6 @@ public:
     bool GetShowDuration() const;
     void SetShowDuration(bool show);
 
-    struct WindowRect { int x, y, w, h; bool valid; };
-    WindowRect GetWindowRect() const;
-    void SetWindowRect(int x, int y, int w, int h);
-
     int GetSplitterPos(int id) const;
     void SetSplitterPos(int id, int pos);
 

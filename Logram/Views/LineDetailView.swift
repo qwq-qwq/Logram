@@ -1,4 +1,4 @@
-import SwiftUI
+d дуimport SwiftUI
 import AppKit
 
 /// Detail panel showing full text of selected log line with SQL syntax highlighting
