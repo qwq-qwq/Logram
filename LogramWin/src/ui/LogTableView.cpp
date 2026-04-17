@@ -222,10 +222,10 @@ void LogTableView::OnPaint() {
             }
             x += 18.0f;
 
-            // Level badge
+            // Level badge — fixed width so message column aligns
             auto& info = GetLogLevelInfo(level);
             auto wlabel = Utf8ToWide(info.label);
-            float badgeWidth = 7.0f * wlabel.size() + 8.0f;
+            float badgeWidth = 60.0f;
             D2D1_ROUNDED_RECT badge = {{x, y + 2, x + badgeWidth, y + rowHeight_ - 2}, 3.0f, 3.0f};
             auto badgeColor = theme.levelBadge[static_cast<int>(level)];
             badgeColor.a = 0.4f;
