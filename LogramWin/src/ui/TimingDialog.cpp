@@ -159,7 +159,7 @@ static INT_PTR CALLBACK TimingDlgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM
 void ShowTimingDialog(HWND parent, LogDocument& doc) {
     alignas(4) char tmpl[1024] = {};
     auto* dt = reinterpret_cast<DLGTEMPLATE*>(tmpl);
-    dt->style = WS_POPUP | WS_CAPTION | WS_SYSMENU | WS_THICKFRAME | DS_CENTER;
+    dt->style = WS_POPUP | WS_CAPTION | WS_SYSMENU | WS_THICKFRAME | WS_VISIBLE | DS_CENTER;
     dt->cdit = 1;
     dt->cx = 320;
     dt->cy = 220;

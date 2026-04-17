@@ -313,8 +313,8 @@ void MainWindow::LayoutChildren() {
     int rightX = sidebarWidth_ + splitterPx;
     int rightW = std::max(0, totalW - rightX);
 
-    // First layout: set detail to 70% of work area.
-    if (detailHeight_ < 0) detailHeight_ = workH * 70 / 100;
+    // First layout: table gets 70%, detail gets 30%.
+    if (detailHeight_ < 0) detailHeight_ = workH * 30 / 100;
 
     int detailH = std::min(detailHeight_, std::max(0, workH - minDetailPx));
     if (detailH < minDetailPx) detailH = minDetailPx;
