@@ -308,9 +308,29 @@ struct ContentView: View {
 
     private func doSearch(_ direction: LogDocument.SearchDirection) {
         guard !searchText.isEmpty else { return }
-        if let idx = document.findNext(searchText, direction: direction, from: searchIdx) {
+
+        var idx = document.findNext(searchText, direction: direction, from: searchIdx)
+
+        // Wrap-around: if we ran off the end/start after a previous hit,
+        // restart from the opposite edge so the search keeps cycling.
+        var wrapped = false
+        if idx == nil, searchIdx != nil {
+            let restart = direction == .forward ? -1 : document.filteredIndices.count
+            idx = document.findNext(searchText, direction: direction, from: restart)
+            wrapped = idx != nil
+        }
+
+        if let idx {
             searchIdx = idx
             document.selectedLineId = document.allLines[document.filteredIndices[idx]].id
+            if wrapped { NSSound.beep() }
+        } else {
+            NSSound.beep()
+            let alert = NSAlert()
+            alert.messageText = "Совпадений не найдено"
+            alert.alertStyle = .informational
+            alert.addButton(withTitle: "OK")
+            alert.runModal()
         }
     }
 
