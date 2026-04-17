@@ -382,6 +382,16 @@ void LogDocument::BuildMethodTimings() {
               [](const MethodTiming& a, const MethodTiming& b) {
                   return a.durationMS > b.durationMS;
               });
+
+    // Add duration to Enter lines so Duration column shows them in the log table.
+    for (const auto& mt : methodTimings_) {
+        int64_t durUS = static_cast<int64_t>(mt.durationMS * 1000.0);
+        durationLines_.push_back({mt.lineId, durUS});
+    }
+    std::sort(durationLines_.begin(), durationLines_.end(),
+              [](const LogLineDuration& a, const LogLineDuration& b) {
+                  return a.lineId < b.lineId;
+              });
 }
 
 int LogDocument::FindNext(const std::string& pattern, SearchDirection dir, int from) const {

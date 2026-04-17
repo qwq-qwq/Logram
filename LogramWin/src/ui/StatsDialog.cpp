@@ -31,7 +31,7 @@ static LRESULT CALLBACK StatsWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
 
             UINT dpi = GetDpiForWindow(hwnd);
             if (dpi == 0) dpi = 96;
-            d->hFont = CreateFontW(-MulDiv(11, dpi, 72), 0, 0, 0, FW_NORMAL,
+            d->hFont = CreateFontW(-MulDiv(9, dpi, 72), 0, 0, 0, FW_NORMAL,
                 FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS,
                 CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY,
                 VARIABLE_PITCH | FF_SWISS, L"Segoe UI");
