@@ -33,7 +33,7 @@ Two independent native implementations sharing the same parser logic and feature
 | Line struct | LogLine (~120 bytes) | LogLineHot (20 bytes SoA) |
 | Parsing | async chunks + Task.yield | std::jthread x CPU cores |
 | Detail panel | SwiftUI | RichEdit + manual highlighting |
-| Binary size | ~5 MB (.app) | ~2-3 MB (.exe) |
+| Binary size | ~1.2 MB (.app) | ~440 KB (.exe) |
 
 ## Build
 
