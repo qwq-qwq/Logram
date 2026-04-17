@@ -232,9 +232,19 @@ void LogTableView::OnPaint() {
             brush_->SetColor(ToD2D(badgeColor));
             rt_->FillRoundedRectangle(badge, brush_);
             brush_->SetColor(ToD2D(theme.foreground));
-            D2D1_RECT_F badgeTextRect = {x + 4, y, x + badgeWidth, y + rowHeight_};
-            rt_->DrawText(wlabel.c_str(), static_cast<UINT32>(wlabel.size()),
-                          textFormat_, badgeTextRect, brush_);
+            {
+                float bh = static_cast<float>(rowHeight_) - 4.0f;
+                IDWriteTextLayout* badgeLayout = nullptr;
+                LogramApp::Get()->DWriteFactory()->CreateTextLayout(
+                    wlabel.c_str(), static_cast<UINT32>(wlabel.size()),
+                    textFormat_, badgeWidth, bh, &badgeLayout);
+                if (badgeLayout) {
+                    badgeLayout->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_CENTER);
+                    badgeLayout->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_CENTER);
+                    rt_->DrawTextLayout({x, y + 2}, badgeLayout, brush_);
+                    badgeLayout->Release();
+                }
+            }
             x += badgeWidth + 8.0f;
 
             // Duration column (right-aligned, before message)

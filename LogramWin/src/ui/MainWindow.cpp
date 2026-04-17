@@ -215,6 +215,7 @@ void MainWindow::OnCreate() {
                             reinterpret_cast<WPARAM>(hToolbarFont_), TRUE);
     SendMessageW(hwndSearch_, EM_SETCUEBANNER, TRUE,
                  reinterpret_cast<LPARAM>(L"Search..."));
+    SendMessageW(hwndSearch_, EM_SETMARGINS, EC_LEFTMARGIN, MAKELPARAM(Scale(4), 0));
 
     // Navigation buttons next to search
     auto makeBtn = [&](const wchar_t* label, int id) -> HWND {
@@ -227,10 +228,10 @@ void MainWindow::OnCreate() {
                                         reinterpret_cast<WPARAM>(hToolbarFont_), TRUE);
         return btn;
     };
-    hwndBtnFindPrev_ = makeBtn(L"\x25B2", IDC_BTN_FINDPREV);   // ▲
-    hwndBtnFindNext_ = makeBtn(L"\x25BC", IDC_BTN_FINDNEXT);   // ▼
-    hwndBtnErrPrev_  = makeBtn(L"Err\x25B2", IDC_BTN_ERRPREV); // Err▲
-    hwndBtnErrNext_  = makeBtn(L"Err\x25BC", IDC_BTN_ERRNEXT); // Err▼
+    hwndBtnFindPrev_ = makeBtn(L"\x25B2", IDC_BTN_FINDPREV);     // ▲
+    hwndBtnFindNext_ = makeBtn(L"\x25BC", IDC_BTN_FINDNEXT);     // ▼
+    hwndBtnErrPrev_  = makeBtn(L"Err \x25B2", IDC_BTN_ERRPREV);  // Err ▲
+    hwndBtnErrNext_  = makeBtn(L"Err \x25BC", IDC_BTN_ERRNEXT);  // Err ▼
 
     // Populate sidebarWidth_ / detailHeight_ from stored prefs (values are
     // physical pixels as last persisted). detailHeight_=-1 means "auto 70%"
