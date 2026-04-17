@@ -226,9 +226,7 @@ void MainWindow::OnCreate() {
     // Populate sidebarWidth_ / detailHeight_ from stored prefs (values are
     // physical pixels as last persisted). detailHeight_=-1 means "auto 70%"
     // which is resolved in the first LayoutChildren call once we know the window size.
-    int saved = Settings::Instance().GetSplitterPos(0 /*sidebar*/);
-    sidebarWidth_ = (saved > 0) ? saved : Scale(sidebarWidth_);
-    // detailHeight_ always starts as -1 (auto 30%) — resolved in first LayoutChildren.
+    // Sidebar and detail heights always start as -1 (auto) — resolved in first LayoutChildren.
 
     // Filter sidebar (left)
     filterSidebar_ = std::make_unique<FilterSidebar>();
@@ -244,14 +242,11 @@ void MainWindow::OnCreate() {
 
     // Splitters (exact geometry set in LayoutChildren)
     sidebarSplitter_ = std::make_unique<Splitter>(Splitter::Orientation::Vertical);
-    sidebarSplitter_->Create(hwnd_, hInst,
-        Scale(sidebarWidth_), Scale(kToolbarHeightDip),
+    sidebarSplitter_->Create(hwnd_, hInst, 0, Scale(kToolbarHeightDip),
         Scale(kSplitterThicknessDip), Scale(100));
-    sidebarSplitter_->SetPosition(Scale(sidebarWidth_));
 
     detailSplitter_ = std::make_unique<Splitter>(Splitter::Orientation::Horizontal);
-    detailSplitter_->Create(hwnd_, hInst,
-        Scale(sidebarWidth_) + Scale(kSplitterThicknessDip), 0,
+    detailSplitter_->Create(hwnd_, hInst, 0, 0,
         Scale(100), Scale(kSplitterThicknessDip));
 }
 
@@ -260,13 +255,12 @@ void MainWindow::OnSize(int width, int height) {
 
     // Splitter drag re-enters here via SendMessage(parent, WM_SIZE). Pull
     // current positions into our bookkeeping before laying children out.
-    if (sidebarSplitter_) {
+    // Skip reading before first LayoutChildren resolves auto (-1) values.
+    if (sidebarSplitter_ && sidebarWidth_ > 0) {
         int p = sidebarSplitter_->GetPosition();
         if (p > 0) sidebarWidth_ = p;
     }
     if (detailSplitter_ && detailHeight_ > 0) {
-        // Only read splitter position after the first layout has resolved
-        // detailHeight_ from its -1 (auto 70%) sentinel.
         int p = detailSplitter_->GetPosition();
         if (p > 0) {
             RECT rc; GetClientRect(hwnd_, &rc);
@@ -310,6 +304,9 @@ void MainWindow::LayoutChildren() {
     int workH = std::max(0, totalH - toolbarPx - sbH);
     int workY = toolbarPx;
     int workBottom = workY + workH;
+
+    // First layout: sidebar = 15% of window width.
+    if (sidebarWidth_ < 0) sidebarWidth_ = totalW * 15 / 100;
 
     if (sidebarWidth_ < minSidebarPx) sidebarWidth_ = minSidebarPx;
     if (sidebarWidth_ > totalW - minTablePx)
@@ -466,8 +463,7 @@ void MainWindow::OnDropFiles(HDROP hDrop) {
 }
 
 void MainWindow::OnDestroy() {
-    // Persist sidebar width only — detail height always starts at 30%.
-    Settings::Instance().SetSplitterPos(0 /*sidebar*/, sidebarWidth_);
+    // Splitter positions are not persisted — always start at defaults.
     if (loadThread_.joinable()) loadThread_.request_stop();
 }
 

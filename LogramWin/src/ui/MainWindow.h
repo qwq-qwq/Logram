@@ -78,6 +78,6 @@ private:
     static constexpr int kSplitterThicknessDip = 4;
     static constexpr int kMinSidebarWidthDip  = 120;
     static constexpr int kMinDetailHeightDip  = 80;
-    int sidebarWidth_ = 220;   // left pane width (DIP)
-    int detailHeight_ = -1;    // -1 = auto (70% of work area on first layout)
+    int sidebarWidth_ = -1;    // -1 = auto (15% of window width on first layout)
+    int detailHeight_ = -1;    // -1 = auto (30% of work area on first layout)
 };
