@@ -201,7 +201,9 @@ struct ContentView: View {
                     .foregroundStyle(.secondary)
             }
             Spacer()
-            Text("\(document.filteredCount) / \(document.allLines.count) lines")
+            Text(document.filteredCount == document.allLines.count
+                 ? "\(document.allLines.count) lines"
+                 : "\(document.filteredCount) / \(document.allLines.count) lines")
                 .font(.caption)
                 .foregroundStyle(.secondary)
             if document.errorCount > 0 {

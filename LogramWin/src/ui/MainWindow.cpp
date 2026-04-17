@@ -660,20 +660,26 @@ void MainWindow::UpdateStatusBar() {
     }
     SendMessageW(hwndStatus_, SB_SETTEXTW, 1, reinterpret_cast<LPARAM>(buf));
 
-    swprintf(buf, 64, L"%d / %d lines", doc_.FilteredCount(), doc_.TotalEvents());
+    int filtered = doc_.FilteredCount();
+    int total = doc_.TotalEvents();
+    if (filtered == total) {
+        swprintf(buf, 64, L"%d lines", total);
+    } else {
+        swprintf(buf, 64, L"%d / %d lines", filtered, total);
+    }
     SendMessageW(hwndStatus_, SB_SETTEXTW, 2, reinterpret_cast<LPARAM>(buf));
 
     int errors = doc_.ErrorCount();
     if (errors > 0) {
         swprintf(buf, 64, L"%d errors", errors);
     } else {
-        swprintf(buf, 64, L"No errors");
+        buf[0] = L'\0';
     }
     SendMessageW(hwndStatus_, SB_SETTEXTW, 3, reinterpret_cast<LPARAM>(buf));
 
     auto dur = doc_.DurationFormatted();
-    SendMessageW(hwndStatus_, SB_SETTEXTW, 4,
-                 reinterpret_cast<LPARAM>(Utf8ToWide(dur).c_str()));
+    swprintf(buf, 64, L"Duration: %s", Utf8ToWide(dur).c_str());
+    SendMessageW(hwndStatus_, SB_SETTEXTW, 4, reinterpret_cast<LPARAM>(buf));
 }
 
 void MainWindow::OnDocumentChanged(DocumentChanges changes) {
