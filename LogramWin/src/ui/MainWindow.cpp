@@ -214,8 +214,7 @@ void MainWindow::OnCreate() {
     if (hToolbarFont_) SendMessageW(hwndSearch_, WM_SETFONT,
                             reinterpret_cast<WPARAM>(hToolbarFont_), TRUE);
     SendMessageW(hwndSearch_, EM_SETCUEBANNER, TRUE,
-                 reinterpret_cast<LPARAM>(L"Search..."));
-    SendMessageW(hwndSearch_, EM_SETMARGINS, EC_LEFTMARGIN, MAKELPARAM(Scale(4), 0));
+                 reinterpret_cast<LPARAM>(L"  Search..."));
 
     // Navigation buttons next to search
     auto makeBtn = [&](const wchar_t* label, int id) -> HWND {
@@ -338,8 +337,8 @@ void MainWindow::LayoutChildren() {
     // Toolbar: search box + navigation buttons across the right pane.
     {
         const int pad = Scale(6);
-        const int btnY = Scale(4);
-        const int ctrlH = toolbarPx - Scale(8);
+        const int ctrlH = Scale(24);
+        const int btnY = (toolbarPx - ctrlH) / 2;
         const int btnW = Scale(36);
         const int errBtnW = Scale(50);
 

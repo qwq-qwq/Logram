@@ -18,7 +18,7 @@ static INT_PTR CALLBACK StatsDlgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
             col.cx = 180;
             ListView_InsertColumn(hList, 0, &col);
             col.pszText = const_cast<LPWSTR>(L"Value");
-            col.cx = 280;
+            col.cx = 420;
             ListView_InsertColumn(hList, 1, &col);
 
             auto addRow = [&](const wchar_t* key, const std::wstring& value) {
@@ -97,8 +97,8 @@ void ShowStatsDialog(HWND parent, const LogDocument& doc) {
     auto* dt = reinterpret_cast<DLGTEMPLATE*>(tmpl);
     dt->style = WS_POPUP | WS_CAPTION | WS_SYSMENU | WS_THICKFRAME | DS_MODALFRAME | DS_CENTER;
     dt->cdit = 2;   // list + OK button
-    dt->cx = 320;
-    dt->cy = 260;
+    dt->cx = 400;
+    dt->cy = 300;
 
     // Title "Statistics"
     auto* ptr = reinterpret_cast<WORD*>(dt + 1);
@@ -115,7 +115,7 @@ void ShowStatsDialog(HWND parent, const LogDocument& doc) {
     // Item 1: ListView (WC_LISTVIEW == SysListView32)
     auto* di1 = reinterpret_cast<DLGITEMTEMPLATE*>(ptr);
     di1->style = WS_CHILD | WS_VISIBLE | LVS_REPORT | LVS_SINGLESEL;
-    di1->x = 0; di1->y = 0; di1->cx = 320; di1->cy = 230;
+    di1->x = 0; di1->y = 0; di1->cx = 400; di1->cy = 270;
     di1->id = 101;
     ptr = reinterpret_cast<WORD*>(di1 + 1);
     // Class: SysListView32 (0xFFFF followed by classAtom doesn't apply; use string)
@@ -132,7 +132,7 @@ void ShowStatsDialog(HWND parent, const LogDocument& doc) {
     // Item 2: OK button
     auto* di2 = reinterpret_cast<DLGITEMTEMPLATE*>(ptr);
     di2->style = WS_CHILD | WS_VISIBLE | BS_DEFPUSHBUTTON;
-    di2->x = 260; di2->y = 238; di2->cx = 50; di2->cy = 14;
+    di2->x = 340; di2->y = 278; di2->cx = 50; di2->cy = 14;
     di2->id = IDOK;
     ptr = reinterpret_cast<WORD*>(di2 + 1);
     *ptr++ = 0xFFFF; *ptr++ = 0x0080; // button class
