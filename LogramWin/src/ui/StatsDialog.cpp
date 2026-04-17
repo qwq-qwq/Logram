@@ -1,34 +1,90 @@
 #include "ui/StatsDialog.h"
+#include "ui/ThemeColors.h"
 #include "infra/Utf.h"
+#include "infra/Clipboard.h"
 #include <commctrl.h>
 #include <cstdio>
 
-static INT_PTR CALLBACK StatsDlgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
-    switch (msg) {
-        case WM_INITDIALOG: {
-            auto* doc = reinterpret_cast<const LogDocument*>(lParam);
-            HWND hList = GetDlgItem(hwnd, 101);
-            if (!hList || !doc) break;
+static constexpr int IDC_LIST = 101;
+static constexpr int IDC_OK   = 102;
+static constexpr int IDC_COPY = 103;
 
-            SendMessageW(hList, WM_SETREDRAW, FALSE, 0);
+struct StatsDlgData {
+    HWND hwndList = nullptr;
+    HWND hwndOk = nullptr;
+    HWND hwndCopy = nullptr;
+    HFONT hFont = nullptr;
+    HBRUSH hBgBrush = nullptr;
+    std::wstring filePath; // for copy button
+};
+
+static LRESULT CALLBACK StatsWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
+    auto* data = reinterpret_cast<StatsDlgData*>(
+        GetWindowLongPtrW(hwnd, GWLP_USERDATA));
+
+    switch (msg) {
+        case WM_CREATE: {
+            auto* cs = reinterpret_cast<CREATESTRUCTW*>(lParam);
+            auto* doc = static_cast<const LogDocument*>(cs->lpCreateParams);
+            auto* d = new StatsDlgData();
+            SetWindowLongPtrW(hwnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(d));
+
+            UINT dpi = GetDpiForWindow(hwnd);
+            if (dpi == 0) dpi = 96;
+            d->hFont = CreateFontW(-MulDiv(11, dpi, 72), 0, 0, 0, FW_NORMAL,
+                FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS,
+                CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY,
+                VARIABLE_PITCH | FF_SWISS, L"Segoe UI");
+
+            auto& theme = CurrentTheme();
+            d->hBgBrush = CreateSolidBrush(ToCOLORREF(theme.background));
+
+            HINSTANCE hInst = reinterpret_cast<HINSTANCE>(
+                GetWindowLongPtrW(hwnd, GWLP_HINSTANCE));
+
+            d->hwndList = CreateWindowExW(0, WC_LISTVIEWW, nullptr,
+                WS_CHILD | WS_VISIBLE | LVS_REPORT | LVS_SINGLESEL | LVS_NOCOLUMNHEADER,
+                0, 0, 100, 100, hwnd, reinterpret_cast<HMENU>(IDC_LIST), hInst, nullptr);
+            ListView_SetExtendedListViewStyle(d->hwndList,
+                LVS_EX_FULLROWSELECT | LVS_EX_DOUBLEBUFFER);
+            ListView_SetBkColor(d->hwndList, ToCOLORREF(theme.background));
+            ListView_SetTextBkColor(d->hwndList, ToCOLORREF(theme.background));
+            ListView_SetTextColor(d->hwndList, ToCOLORREF(theme.foreground));
+            if (d->hFont) SendMessageW(d->hwndList, WM_SETFONT,
+                                       reinterpret_cast<WPARAM>(d->hFont), TRUE);
 
             LVCOLUMNW col = {};
             col.mask = LVCF_TEXT | LVCF_WIDTH;
             col.pszText = const_cast<LPWSTR>(L"Property");
-            col.cx = 180;
-            ListView_InsertColumn(hList, 0, &col);
+            col.cx = MulDiv(150, dpi, 96);
+            ListView_InsertColumn(d->hwndList, 0, &col);
             col.pszText = const_cast<LPWSTR>(L"Value");
-            col.cx = 420;
-            ListView_InsertColumn(hList, 1, &col);
+            col.cx = MulDiv(500, dpi, 96);
+            ListView_InsertColumn(d->hwndList, 1, &col);
 
+            d->hwndOk = CreateWindowExW(0, L"BUTTON", L"OK",
+                WS_CHILD | WS_VISIBLE | BS_OWNERDRAW,
+                0, 0, MulDiv(80, dpi, 96), MulDiv(28, dpi, 96),
+                hwnd, reinterpret_cast<HMENU>(IDC_OK), hInst, nullptr);
+            if (d->hFont) SendMessageW(d->hwndOk, WM_SETFONT,
+                                       reinterpret_cast<WPARAM>(d->hFont), TRUE);
+
+            d->hwndCopy = CreateWindowExW(0, L"BUTTON", L"Copy Path",
+                WS_CHILD | WS_VISIBLE | BS_OWNERDRAW,
+                0, 0, MulDiv(80, dpi, 96), MulDiv(28, dpi, 96),
+                hwnd, reinterpret_cast<HMENU>(IDC_COPY), hInst, nullptr);
+            if (d->hFont) SendMessageW(d->hwndCopy, WM_SETFONT,
+                                       reinterpret_cast<WPARAM>(d->hFont), TRUE);
+
+            // Populate data
             auto addRow = [&](const wchar_t* key, const std::wstring& value) {
-                int n = ListView_GetItemCount(hList);
+                int n = ListView_GetItemCount(d->hwndList);
                 LVITEMW item = {};
                 item.mask = LVIF_TEXT;
                 item.iItem = n;
                 item.pszText = const_cast<LPWSTR>(key);
-                ListView_InsertItem(hList, &item);
-                ListView_SetItemText(hList, n, 1, const_cast<LPWSTR>(value.c_str()));
+                ListView_InsertItem(d->hwndList, &item);
+                ListView_SetItemText(d->hwndList, n, 1, const_cast<LPWSTR>(value.c_str()));
             };
 
             if (!doc->UBVersion().empty())
@@ -36,6 +92,12 @@ static INT_PTR CALLBACK StatsDlgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
             if (!doc->HostInfo().empty())
                 addRow(L"Host", Utf8ToWide(doc->HostInfo()));
             addRow(L"File", Utf8ToWide(doc->FileName()));
+
+            auto fpath = doc->FilePath();
+            if (!fpath.empty()) {
+                addRow(L"Path", fpath);
+                d->filePath = fpath;
+            }
 
             char buf[64];
             double sizeMB = static_cast<double>(doc->FileSize()) / 1'000'000.0;
@@ -63,85 +125,118 @@ static INT_PTR CALLBACK StatsDlgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
             }
             addRow(L"Active Threads", Utf8ToWide(threads));
 
-            SendMessageW(hList, WM_SETREDRAW, TRUE, 0);
-            return TRUE;
+            return 0;
         }
 
-        case WM_COMMAND:
-            if (LOWORD(wParam) == IDOK || LOWORD(wParam) == IDCANCEL) {
-                EndDialog(hwnd, LOWORD(wParam));
+        case WM_SIZE: {
+            if (!data) break;
+            RECT rc;
+            GetClientRect(hwnd, &rc);
+            UINT dpi = GetDpiForWindow(hwnd);
+            if (dpi == 0) dpi = 96;
+            int barH = MulDiv(36, dpi, 96);
+            int pad = MulDiv(6, dpi, 96);
+            int btnW = MulDiv(80, dpi, 96);
+            int btnH = MulDiv(26, dpi, 96);
+
+            if (data->hwndList)
+                MoveWindow(data->hwndList, 0, 0, rc.right, rc.bottom - barH, TRUE);
+            if (data->hwndCopy)
+                MoveWindow(data->hwndCopy, pad, rc.bottom - barH + pad/2, btnW, btnH, TRUE);
+            if (data->hwndOk)
+                MoveWindow(data->hwndOk, rc.right - btnW - pad,
+                           rc.bottom - barH + pad/2, btnW, btnH, TRUE);
+            return 0;
+        }
+
+        case WM_DRAWITEM: {
+            auto* dis = reinterpret_cast<DRAWITEMSTRUCT*>(lParam);
+            if (dis && dis->CtlType == ODT_BUTTON) {
+                DrawThemedButton(dis);
                 return TRUE;
             }
             break;
-
-        case WM_SIZE: {
-            RECT rc;
-            GetClientRect(hwnd, &rc);
-            HWND hList = GetDlgItem(hwnd, 101);
-            if (hList) MoveWindow(hList, 0, 0, rc.right, rc.bottom - 40, TRUE);
-            HWND hOk = GetDlgItem(hwnd, IDOK);
-            if (hOk) MoveWindow(hOk, rc.right - 90, rc.bottom - 34, 80, 28, TRUE);
-            return TRUE;
         }
 
+        case WM_ERASEBKGND: {
+            auto& theme = CurrentTheme();
+            RECT rc;
+            GetClientRect(hwnd, &rc);
+            HBRUSH brush = CreateSolidBrush(ToCOLORREF(theme.background));
+            FillRect(reinterpret_cast<HDC>(wParam), &rc, brush);
+            DeleteObject(brush);
+            return 1;
+        }
+
+        case WM_COMMAND:
+            if (LOWORD(wParam) == IDC_OK) {
+                SendMessageW(hwnd, WM_CLOSE, 0, 0);
+                return 0;
+            }
+            if (LOWORD(wParam) == IDC_COPY && data) {
+                CopyToClipboard(hwnd, WideToUtf8(data->filePath.c_str()));
+                return 0;
+            }
+            break;
+
         case WM_CLOSE:
-            EndDialog(hwnd, IDCANCEL);
-            return TRUE;
+            if (data) {
+                if (data->hFont) DeleteObject(data->hFont);
+                if (data->hBgBrush) DeleteObject(data->hBgBrush);
+                delete data;
+                SetWindowLongPtrW(hwnd, GWLP_USERDATA, 0);
+            }
+            DestroyWindow(hwnd);
+            return 0;
+
+        case WM_DESTROY:
+            if (data) {
+                if (data->hFont) DeleteObject(data->hFont);
+                if (data->hBgBrush) DeleteObject(data->hBgBrush);
+                delete data;
+                SetWindowLongPtrW(hwnd, GWLP_USERDATA, 0);
+            }
+            return 0;
     }
-    return FALSE;
+    return DefWindowProcW(hwnd, msg, wParam, lParam);
 }
 
+static const wchar_t* kStatsClassName = L"LogramStatsWindow";
+static bool g_statsClassRegistered = false;
+
 void ShowStatsDialog(HWND parent, const LogDocument& doc) {
-    // Build a template in memory — avoids needing a .rc dialog resource.
-    alignas(4) char tmpl[1024] = {};
-    auto* dt = reinterpret_cast<DLGTEMPLATE*>(tmpl);
-    dt->style = WS_POPUP | WS_CAPTION | WS_SYSMENU | WS_THICKFRAME | DS_MODALFRAME | DS_CENTER;
-    dt->cdit = 2;   // list + OK button
-    dt->cx = 400;
-    dt->cy = 300;
+    if (!g_statsClassRegistered) {
+        WNDCLASSEXW wc = {};
+        wc.cbSize = sizeof(wc);
+        wc.lpfnWndProc = StatsWndProc;
+        wc.hInstance = reinterpret_cast<HINSTANCE>(
+            GetWindowLongPtrW(parent, GWLP_HINSTANCE));
+        wc.hCursor = LoadCursorW(nullptr, IDC_ARROW);
+        wc.lpszClassName = kStatsClassName;
+        RegisterClassExW(&wc);
+        g_statsClassRegistered = true;
+    }
 
-    // Title "Statistics"
-    auto* ptr = reinterpret_cast<WORD*>(dt + 1);
-    *ptr++ = 0; // menu
-    *ptr++ = 0; // class
-    const wchar_t* title = L"Statistics";
-    size_t titleLen = wcslen(title) + 1;
-    memcpy(ptr, title, titleLen * sizeof(WORD));
-    ptr += titleLen;
+    UINT dpi = GetDpiForWindow(parent);
+    if (dpi == 0) dpi = 96;
+    int w = MulDiv(650, dpi, 96);
+    int h = MulDiv(420, dpi, 96);
 
-    // Align to DWORD
-    ptr = reinterpret_cast<WORD*>((reinterpret_cast<uintptr_t>(ptr) + 3) & ~uintptr_t(3));
+    // Modal behavior: disable parent, show stats, re-enable on close
+    EnableWindow(parent, FALSE);
+    HWND hwnd = CreateWindowExW(0, kStatsClassName, L"Statistics",
+        WS_OVERLAPPEDWINDOW | WS_VISIBLE,
+        CW_USEDEFAULT, CW_USEDEFAULT, w, h,
+        parent, nullptr,
+        reinterpret_cast<HINSTANCE>(GetWindowLongPtrW(parent, GWLP_HINSTANCE)),
+        const_cast<LogDocument*>(&doc));
 
-    // Item 1: ListView (WC_LISTVIEW == SysListView32)
-    auto* di1 = reinterpret_cast<DLGITEMTEMPLATE*>(ptr);
-    di1->style = WS_CHILD | WS_VISIBLE | LVS_REPORT | LVS_SINGLESEL;
-    di1->x = 0; di1->y = 0; di1->cx = 400; di1->cy = 270;
-    di1->id = 101;
-    ptr = reinterpret_cast<WORD*>(di1 + 1);
-    // Class: SysListView32 (0xFFFF followed by classAtom doesn't apply; use string)
-    const wchar_t* lvClass = L"SysListView32";
-    size_t lvLen = wcslen(lvClass) + 1;
-    memcpy(ptr, lvClass, lvLen * sizeof(WORD));
-    ptr += lvLen;
-    *ptr++ = 0; // title (empty)
-    *ptr++ = 0; // extra data
-
-    // Align
-    ptr = reinterpret_cast<WORD*>((reinterpret_cast<uintptr_t>(ptr) + 3) & ~uintptr_t(3));
-
-    // Item 2: OK button
-    auto* di2 = reinterpret_cast<DLGITEMTEMPLATE*>(ptr);
-    di2->style = WS_CHILD | WS_VISIBLE | BS_DEFPUSHBUTTON;
-    di2->x = 340; di2->y = 278; di2->cx = 50; di2->cy = 14;
-    di2->id = IDOK;
-    ptr = reinterpret_cast<WORD*>(di2 + 1);
-    *ptr++ = 0xFFFF; *ptr++ = 0x0080; // button class
-    const wchar_t* ok = L"OK";
-    memcpy(ptr, ok, 3 * sizeof(WORD));
-    ptr += 3;
-    *ptr++ = 0; // extra
-
-    DialogBoxIndirectParamW(GetModuleHandleW(nullptr),
-        dt, parent, StatsDlgProc,
-        reinterpret_cast<LPARAM>(&doc));
+    // Run a local message loop for modal behavior
+    MSG msg;
+    while (IsWindow(hwnd) && GetMessageW(&msg, nullptr, 0, 0)) {
+        TranslateMessage(&msg);
+        DispatchMessageW(&msg);
+    }
+    EnableWindow(parent, TRUE);
+    SetForegroundWindow(parent);
 }

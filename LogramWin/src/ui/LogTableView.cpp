@@ -483,4 +483,18 @@ void LogTableView::OnDocumentChanged(DocumentChanges changes) {
         UpdateScrollInfo();
         InvalidateRect(hwnd_, nullptr, FALSE);
     }
+
+    // After filter change or explicit selection, scroll to the selected line.
+    if (changes.Has(DocumentChanges::SelectionChanged) && doc_) {
+        int selId = doc_->SelectedLineId();
+        if (selId >= 0) {
+            const auto& indices = doc_->FilteredIndices();
+            for (size_t i = 0; i < indices.size(); ++i) {
+                if (static_cast<int>(indices[i]) == selId) {
+                    SelectLine(static_cast<int>(i));
+                    break;
+                }
+            }
+        }
+    }
 }

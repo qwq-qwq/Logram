@@ -5,14 +5,13 @@
 #include <cstdio>
 #include <algorithm>
 
-static constexpr int kMaxDisplay = 1000;
 static constexpr int IDC_LIST = 101;
 static constexpr int IDC_GOTO = 102;
 
 struct TimingDlgData {
     LogDocument* doc;
     std::vector<const MethodTiming*> sorted;
-    int sortCol = 0;
+    int sortCol = 2;      // default sort by Duration
     bool sortAsc = false;
     HWND hwndList = nullptr;
     HWND hwndGoto = nullptr;
@@ -26,10 +25,11 @@ static void SortTimings(TimingDlgData* data) {
         [&](const MethodTiming* a, const MethodTiming* b) {
             int cmp = 0;
             switch (data->sortCol) {
-                case 0: cmp = (a->durationMS < b->durationMS) ? -1 :
-                              (a->durationMS > b->durationMS) ? 1 : 0; break;
+                case 0: cmp = (a->lineId < b->lineId) ? -1 : (a->lineId > b->lineId) ? 1 : 0; break;
                 case 1: cmp = a->thread - b->thread; break;
-                case 2: cmp = a->method.compare(b->method); break;
+                case 2: cmp = (a->durationMS < b->durationMS) ? -1 :
+                              (a->durationMS > b->durationMS) ? 1 : 0; break;
+                case 3: cmp = a->method.compare(b->method); break;
             }
             return data->sortAsc ? (cmp < 0) : (cmp > 0);
         });
@@ -45,14 +45,17 @@ static void GoToSelected(HWND hwnd, TimingDlgData* data) {
     // Filter to show only this thread (like Mac version)
     data->doc->SetEnabledThreadMask(uint64_t(1) << t->thread);
     data->doc->ApplyFilters();
-
     data->doc->SetSelectedLineId(static_cast<int>(t->lineId));
 
+    // Notify filters changed + selection — listeners will scroll to line
     DocumentChanges ch;
     ch.flags = DocumentChanges::FiltersChanged | DocumentChanges::SelectionChanged;
     data->doc->listeners.Notify(ch);
 
-    // Close the timing window
+    // Focus the main window so the user sees the result
+    HWND parent = GetParent(hwnd);
+    if (parent) SetForegroundWindow(parent);
+
     SendMessageW(hwnd, WM_CLOSE, 0, 0);
 }
 
@@ -94,17 +97,21 @@ static LRESULT CALLBACK TimingWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM
             LVCOLUMNW col = {};
             col.mask = LVCF_TEXT | LVCF_WIDTH | LVCF_FMT;
             col.fmt = LVCFMT_RIGHT;
-            col.pszText = const_cast<LPWSTR>(L"Duration");
-            col.cx = MulDiv(100, dpi, 96);
+            col.pszText = const_cast<LPWSTR>(L"#");
+            col.cx = MulDiv(70, dpi, 96);
             ListView_InsertColumn(d->hwndList, 0, &col);
             col.fmt = LVCFMT_CENTER;
             col.pszText = const_cast<LPWSTR>(L"Thread");
             col.cx = MulDiv(50, dpi, 96);
             ListView_InsertColumn(d->hwndList, 1, &col);
+            col.fmt = LVCFMT_RIGHT;
+            col.pszText = const_cast<LPWSTR>(L"Duration");
+            col.cx = MulDiv(100, dpi, 96);
+            ListView_InsertColumn(d->hwndList, 2, &col);
             col.fmt = LVCFMT_LEFT;
             col.pszText = const_cast<LPWSTR>(L"Method");
-            col.cx = MulDiv(450, dpi, 96);
-            ListView_InsertColumn(d->hwndList, 2, &col);
+            col.cx = MulDiv(430, dpi, 96);
+            ListView_InsertColumn(d->hwndList, 3, &col);
 
             d->hwndGoto = CreateWindowExW(0, L"BUTTON", L"Go to Line",
                 WS_CHILD | WS_VISIBLE | BS_OWNERDRAW,
@@ -123,21 +130,19 @@ static LRESULT CALLBACK TimingWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM
             // Build timings and populate
             doc->BuildMethodTimings();
             const auto& timings = doc->Timings();
-            size_t count = std::min(timings.size(), static_cast<size_t>(kMaxDisplay));
-            d->sorted.reserve(count);
-            for (size_t i = 0; i < count; ++i) d->sorted.push_back(&timings[i]);
+            d->sorted.reserve(timings.size());
+            for (const auto& t : timings) d->sorted.push_back(&t);
             SortTimings(d);
 
             ListView_SetItemCountEx(d->hwndList, static_cast<int>(d->sorted.size()),
                                     LVSICF_NOSCROLL);
 
             wchar_t title[128];
-            swprintf(title, 128, L"Method Timing — %zu of %zu methods >= 10ms",
-                     count, timings.size());
+            swprintf(title, 128, L"Method Timing — %zu methods >= 10ms", timings.size());
             SetWindowTextW(hwnd, title);
 
             wchar_t status[64];
-            swprintf(status, 64, L"%zu methods", count);
+            swprintf(status, 64, L"%zu methods", timings.size());
             SetWindowTextW(d->hwndStatus, status);
 
             return 0;
@@ -213,10 +218,7 @@ static LRESULT CALLBACK TimingWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM
                 if (di->item.mask & LVIF_TEXT) {
                     switch (di->item.iSubItem) {
                         case 0:
-                            if (t->durationMS >= 1000.0)
-                                swprintf(buf, 512, L"%.1f s", t->durationMS / 1000.0);
-                            else
-                                swprintf(buf, 512, L"%.0f ms", t->durationMS);
+                            swprintf(buf, 512, L"%u", t->lineId + 1);
                             di->item.pszText = buf;
                             break;
                         case 1: {
@@ -225,7 +227,14 @@ static LRESULT CALLBACK TimingWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM
                             di->item.pszText = buf;
                             break;
                         }
-                        case 2: {
+                        case 2:
+                            if (t->durationMS >= 1000.0)
+                                swprintf(buf, 512, L"%.1f s", t->durationMS / 1000.0);
+                            else
+                                swprintf(buf, 512, L"%.0f ms", t->durationMS);
+                            di->item.pszText = buf;
+                            break;
+                        case 3: {
                             auto w = Utf8ToWide(t->method);
                             wcsncpy(buf, w.c_str(), 511);
                             buf[511] = L'\0';
@@ -243,7 +252,7 @@ static LRESULT CALLBACK TimingWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM
                     data->sortAsc = !data->sortAsc;
                 else {
                     data->sortCol = nm->iSubItem;
-                    data->sortAsc = (nm->iSubItem == 2);
+                    data->sortAsc = (nm->iSubItem == 3); // method asc, others desc
                 }
                 SortTimings(data);
                 InvalidateRect(data->hwndList, nullptr, FALSE);
