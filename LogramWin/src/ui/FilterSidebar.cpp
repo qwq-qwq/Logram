@@ -77,7 +77,7 @@ void FilterSidebar::CreatePresetButtons(HINSTANCE hInstance) {
     int gap   = Scale(3);
     for (int i = 0; i < 5; ++i) {
         hwndPreset_[i] = CreateWindowExW(0, L"BUTTON", labels[i],
-            WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
+            WS_CHILD | WS_VISIBLE | BS_OWNERDRAW,
             xBase + i * (btnW + gap), btnY, btnW, btnH,
             hwnd_, reinterpret_cast<HMENU>(static_cast<LONG_PTR>(kPresetButtonBase + i)),
             hInstance, nullptr);
@@ -312,6 +312,15 @@ LRESULT FilterSidebar::HandleMessage(UINT msg, WPARAM wParam, LPARAM lParam) {
             FillRect(reinterpret_cast<HDC>(wParam), &rc, brush);
             DeleteObject(brush);
             return 1;
+        }
+
+        case WM_DRAWITEM: {
+            auto* dis = reinterpret_cast<DRAWITEMSTRUCT*>(lParam);
+            if (dis && dis->CtlType == ODT_BUTTON) {
+                DrawThemedButton(dis);
+                return TRUE;
+            }
+            break;
         }
 
         case WM_COMMAND: {

@@ -63,9 +63,9 @@ HWND DetailPanel::Create(HWND parent, HINSTANCE hInstance, LogDocument* doc) {
     if (hFontSmall_) SendMessageW(hwndHeader_, WM_SETFONT,
                                   reinterpret_cast<WPARAM>(hFontSmall_), TRUE);
 
-    // Params button
+    // Params button (toggle — we track state manually with paramsEnabled_)
     hwndParams_ = CreateWindowExW(0, L"BUTTON", L"Params",
-        WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX | BS_PUSHLIKE,
+        WS_CHILD | WS_VISIBLE | BS_OWNERDRAW,
         0, 0, btnW, headerH - Scale(4), hwnd_,
         reinterpret_cast<HMENU>(static_cast<LONG_PTR>(IDC_PARAMS_BTN)),
         hInstance, nullptr);
@@ -74,7 +74,7 @@ HWND DetailPanel::Create(HWND parent, HINSTANCE hInstance, LogDocument* doc) {
 
     // Copy button
     hwndCopy_ = CreateWindowExW(0, L"BUTTON", L"Copy",
-        WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
+        WS_CHILD | WS_VISIBLE | BS_OWNERDRAW,
         0, 0, btnW, headerH - Scale(4), hwnd_,
         reinterpret_cast<HMENU>(static_cast<LONG_PTR>(IDC_COPY_BTN)),
         hInstance, nullptr);
@@ -485,6 +485,18 @@ LRESULT DetailPanel::HandleMessage(UINT msg, WPARAM wParam, LPARAM lParam) {
             LayoutInternal();
             return 0;
 
+        case WM_DRAWITEM: {
+            auto* dis = reinterpret_cast<DRAWITEMSTRUCT*>(lParam);
+            if (dis && dis->CtlType == ODT_BUTTON) {
+                // For Params toggle, inject checked state into itemState
+                if (dis->CtlID == IDC_PARAMS_BTN && paramsEnabled_)
+                    dis->itemState |= ODS_SELECTED;
+                DrawThemedButton(dis);
+                return TRUE;
+            }
+            break;
+        }
+
         case WM_CTLCOLOREDIT:
         case WM_CTLCOLORSTATIC: {
             auto& theme = CurrentTheme();
@@ -507,7 +519,8 @@ LRESULT DetailPanel::HandleMessage(UINT msg, WPARAM wParam, LPARAM lParam) {
         case WM_COMMAND: {
             int id = LOWORD(wParam);
             if (id == IDC_PARAMS_BTN) {
-                paramsEnabled_ = (SendMessageW(hwndParams_, BM_GETCHECK, 0, 0) == BST_CHECKED);
+                paramsEnabled_ = !paramsEnabled_;
+                InvalidateRect(hwndParams_, nullptr, FALSE);
                 if (lastLineId_ >= 0) ShowLine(lastLineId_);
                 return 0;
             }

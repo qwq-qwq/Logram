@@ -292,3 +292,58 @@ ColorRGBA DurationColor(int64_t durationUS) {
     if (durationUS >= 100'000)    return tiers[1];
     return tiers[0];
 }
+
+#ifdef _WIN32
+#include <windows.h>
+
+void DrawThemedButton(const DRAWITEMSTRUCT* dis) {
+    auto& theme = CurrentTheme();
+    HDC hdc = dis->hDC;
+    RECT rc = dis->rcItem;
+
+    // Background: slightly lighter than theme bg; pressed = even lighter
+    float lift = 0.08f;
+    if (dis->itemState & ODS_SELECTED) lift = 0.15f;
+
+    ColorRGBA bg;
+    bg.r = std::min(1.0f, theme.background.r + lift);
+    bg.g = std::min(1.0f, theme.background.g + lift);
+    bg.b = std::min(1.0f, theme.background.b + lift);
+    bg.a = 1.0f;
+
+    HBRUSH hBrush = CreateSolidBrush(ToCOLORREF(bg));
+    FillRect(hdc, &rc, hBrush);
+    DeleteObject(hBrush);
+
+    // Border: secondary color (subtle)
+    HPEN hPen = CreatePen(PS_SOLID, 1, ToCOLORREF(theme.secondary));
+    HPEN hOld = static_cast<HPEN>(SelectObject(hdc, hPen));
+    HBRUSH hNull = static_cast<HBRUSH>(GetStockObject(NULL_BRUSH));
+    HBRUSH hOldBr = static_cast<HBRUSH>(SelectObject(hdc, hNull));
+    RoundRect(hdc, rc.left, rc.top, rc.right, rc.bottom, 4, 4);
+    SelectObject(hdc, hOldBr);
+    SelectObject(hdc, hOld);
+    DeleteObject(hPen);
+
+    // Text
+    wchar_t text[64];
+    int len = GetWindowTextW(dis->hwndItem, text, 64);
+    SetBkMode(hdc, TRANSPARENT);
+
+    // Checked state (for Params toggle) — use accent color
+    bool checked = (dis->itemState & ODS_SELECTED) ||
+                   (SendMessageW(dis->hwndItem, BM_GETCHECK, 0, 0) == BST_CHECKED);
+    ColorRGBA textColor = checked ? theme.levelBadge[static_cast<int>(LogLevel::Sql)]
+                                  : theme.foreground;
+    SetTextColor(hdc, ToCOLORREF(textColor));
+
+    // Focus rect — subtle dotted inside
+    if (dis->itemState & ODS_FOCUS) {
+        RECT focus = rc;
+        InflateRect(&focus, -2, -2);
+        DrawFocusRect(hdc, &focus);
+    }
+
+    DrawTextW(hdc, text, len, &rc, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
+}
+#endif

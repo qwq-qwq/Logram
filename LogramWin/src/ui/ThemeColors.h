@@ -58,3 +58,8 @@ ThemeId CurrentThemeId();
 
 ColorRGBA ThreadColor(int threadIdx);
 ColorRGBA DurationColor(int64_t durationUS);
+
+#ifdef _WIN32
+// Owner-drawn dark-themed button helper. Call from WM_DRAWITEM handler.
+void DrawThemedButton(const DRAWITEMSTRUCT* dis);
+#endif

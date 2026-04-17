@@ -154,6 +154,15 @@ LRESULT MainWindow::HandleMessage(UINT msg, WPARAM wParam, LPARAM lParam) {
             return 1;
         }
 
+        case WM_DRAWITEM: {
+            auto* dis = reinterpret_cast<DRAWITEMSTRUCT*>(lParam);
+            if (dis && dis->CtlType == ODT_BUTTON) {
+                DrawThemedButton(dis);
+                return TRUE;
+            }
+            break;
+        }
+
         case WM_CTLCOLOREDIT: {
             auto& theme = CurrentTheme();
             HDC hdc = reinterpret_cast<HDC>(wParam);
@@ -210,7 +219,7 @@ void MainWindow::OnCreate() {
     // Navigation buttons next to search
     auto makeBtn = [&](const wchar_t* label, int id) -> HWND {
         HWND btn = CreateWindowExW(0, L"BUTTON", label,
-            WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
+            WS_CHILD | WS_VISIBLE | BS_OWNERDRAW,
             0, 0, Scale(32), Scale(kToolbarHeightDip - 12),
             hwnd_, reinterpret_cast<HMENU>(static_cast<LONG_PTR>(id)),
             hInst, nullptr);
