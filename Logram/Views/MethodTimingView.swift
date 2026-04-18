@@ -4,6 +4,7 @@ struct MethodTimingView: View {
     @Bindable var document: LogDocument
     let theme: ColorTheme
     @Environment(\.dismiss) private var dismiss
+    @AppStorage("showDuration") private var showDuration = false
     @State private var selected: Int?
     @State private var sortedItems: [LogDocument.MethodTiming] = []
     @State private var sortOrder = [KeyPathComparator(\LogDocument.MethodTiming.durationMS, order: .reverse)]
@@ -90,6 +91,7 @@ struct MethodTimingView: View {
             document.enabledThreads = [timing.thread]
             document.applyFilters()
         }
+        showDuration = true
         document.selectedLineId = lineId
         dismiss()
     }
