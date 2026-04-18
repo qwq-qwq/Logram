@@ -129,6 +129,18 @@ void DetailPanel::SetDocument(LogDocument* doc) {
     if (doc_) doc_->listeners.Add(this);
 }
 
+void DetailPanel::OnThemeChanged() {
+    auto& theme = CurrentTheme();
+    if (hBgBrush_) { DeleteObject(hBgBrush_); hBgBrush_ = nullptr; }
+    hBgBrush_ = CreateSolidBrush(ToCOLORREF(theme.background));
+    if (hwndEdit_) {
+        SendMessageW(hwndEdit_, EM_SETBKGNDCOLOR, 0, ToCOLORREF(theme.background));
+    }
+    // Re-render current line so syntax highlighting colors are reapplied.
+    if (lastLineId_ >= 0) ShowLine(lastLineId_);
+    if (hwnd_) InvalidateRect(hwnd_, nullptr, TRUE);
+}
+
 // Find Cust1 (Params) line before a SQL line on the same thread.
 // Mirrors the Mac version: search backwards up to 50000 lines, counting
 // only same-thread lines (stop after 200 same-thread misses).  Stop at

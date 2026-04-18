@@ -16,6 +16,7 @@ public:
     HWND Create(HWND parent, HINSTANCE hInstance, LogDocument* doc);
     HWND GetHwnd() const { return hwnd_; }
     void SetDocument(LogDocument* doc);
+    void OnThemeChanged();
     void OnDocumentChanged(DocumentChanges changes) override;
 
     // Called by MainWindow on WM_SIZE / splitter drag.

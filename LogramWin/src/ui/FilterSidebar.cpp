@@ -99,6 +99,16 @@ void FilterSidebar::Resize(int w, int h) {
     LayoutInternal();
 }
 
+void FilterSidebar::OnThemeChanged() {
+    auto& theme = CurrentTheme();
+    if (hwndList_) {
+        ListView_SetBkColor(hwndList_, ToCOLORREF(theme.background));
+        ListView_SetTextBkColor(hwndList_, ToCOLORREF(theme.background));
+        ListView_SetTextColor(hwndList_, ToCOLORREF(theme.foreground));
+    }
+    if (hwnd_) InvalidateRect(hwnd_, nullptr, TRUE);
+}
+
 void FilterSidebar::LayoutInternal() {
     const int barH = Scale(kPresetBarHeightDip);
     if (hwndList_) {

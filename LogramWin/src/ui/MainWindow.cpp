@@ -426,12 +426,12 @@ void MainWindow::OnCommand(int id, int code, HWND ctrl) {
         case ID_THEME_TOKYONIGHT:
             SetCurrentTheme(ThemeId::TokyoNight);
             Settings::Instance().SetTheme("TokyoNight");
-            InvalidateRect(hwnd_, nullptr, TRUE);
+            OnThemeChanged();
             break;
         case ID_THEME_TTY:
             SetCurrentTheme(ThemeId::TTY);
             Settings::Instance().SetTheme("TTY");
-            InvalidateRect(hwnd_, nullptr, TRUE);
+            OnThemeChanged();
             break;
         case ID_NAV_FIND:
             if (hwndSearch_) {
@@ -482,6 +482,16 @@ void MainWindow::OnDropFiles(HDROP hDrop) {
 void MainWindow::OnDestroy() {
     // Splitter positions are not persisted — always start at defaults.
     if (loadThread_.joinable()) loadThread_.request_stop();
+}
+
+void MainWindow::OnThemeChanged() {
+    // Invalidate cached brushes that were created with the previous theme's colors.
+    if (hBgBrush_) { DeleteObject(hBgBrush_); hBgBrush_ = nullptr; }
+    if (filterSidebar_) filterSidebar_->OnThemeChanged();
+    if (detailPanel_) detailPanel_->OnThemeChanged();
+    // Force a full repaint of the main window and all its children.
+    RedrawWindow(hwnd_, nullptr, nullptr,
+                 RDW_INVALIDATE | RDW_ERASE | RDW_ALLCHILDREN | RDW_UPDATENOW);
 }
 
 void MainWindow::RunSearch(bool forward) {

@@ -14,6 +14,7 @@ public:
     HWND GetHwnd() const { return hwnd_; }
     void SetDocument(LogDocument* doc);
     void ShowLine(int lineId);
+    void OnThemeChanged();
     void OnDocumentChanged(DocumentChanges changes) override;
 
 private:

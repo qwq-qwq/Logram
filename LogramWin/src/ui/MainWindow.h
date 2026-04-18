@@ -42,6 +42,7 @@ private:
     void OnNotify(NMHDR* hdr);
     void OnDropFiles(HDROP hDrop);
     void OnDestroy();
+    void OnThemeChanged();
     void UpdateTitle();
     void UpdateStatusBar();
     void LayoutChildren();
