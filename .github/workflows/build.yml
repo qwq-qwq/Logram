@@ -19,7 +19,17 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Select Xcode 26
-        run: sudo xcode-select -s /Applications/Xcode_26.app
+        run: |
+          XCODE=$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -1)
+          if [ -z "$XCODE" ]; then
+            echo "Xcode 26 not found. Available:"
+            ls -d /Applications/Xcode*.app || true
+            exit 1
+          fi
+          echo "Selecting $XCODE"
+          sudo xcode-select -s "$XCODE"
+          xcodebuild -version
+          xcrun --show-sdk-version
 
       - name: Build Logram.app
         run: |
