@@ -11,15 +11,15 @@ on:
 jobs:
   macos:
     name: Build macOS (.app)
-    runs-on: macos-15
+    runs-on: macos-26
     permissions:
       contents: write
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Select Xcode 16
-        run: sudo xcode-select -s /Applications/Xcode_16.app
+      - name: Select Xcode 26
+        run: sudo xcode-select -s /Applications/Xcode_26.app
 
       - name: Build Logram.app
         run: |
@@ -50,6 +50,22 @@ jobs:
         with:
           files: Logram-macos.zip
           generate_release_notes: true
+          body: |
+            ## macOS
+
+            Приложение подписано ad-hoc (без Apple Developer ID), поэтому при первом запуске macOS скажет, что файл «повреждён». Это карантин Gatekeeper — снимается одной командой в Терминале после того, как перетащили `Logram.app` в `/Applications`:
+
+            ```bash
+            xattr -dr com.apple.quarantine /Applications/Logram.app
+            ```
+
+            После этого приложение запускается обычным двойным кликом.
+
+            ## Windows
+
+            Распакуйте `Logram-windows.zip`, запустите `Logram.exe`. SmartScreen может показать предупреждение — **More info** → **Run anyway**.
+
+            ---
 
   windows:
     name: Build Windows (.exe)
@@ -88,4 +104,3 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: Logram-windows.zip
-          generate_release_notes: true
