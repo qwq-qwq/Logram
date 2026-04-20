@@ -6,7 +6,7 @@ Opens multi-gigabyte UB server logs and turns them into a readable stream with f
 
 **[logram.perek.rest](https://logram.perek.rest)** &middot; [Download latest release](https://github.com/qwq-qwq/Logram/releases/latest)
 
-![Logram main window: filter sidebar with level icons, log stream, and SQL detail panel](https://logram.perek.rest/assets/screenshot.png)
+![Logram main window: filter sidebar with level icons, log stream, and SQL detail panel](docs/screenshot.jpg)
 
 ---
 
