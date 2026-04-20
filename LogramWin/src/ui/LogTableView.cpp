@@ -5,6 +5,8 @@
 #include "infra/Clipboard.h"
 #include "infra/Dpi.h"
 #include "infra/Settings.h"
+#include <windowsx.h>
+#include <algorithm>
 
 LogTableView::LogTableView() {}
 LogTableView::~LogTableView() {
@@ -118,6 +120,20 @@ LRESULT LogTableView::HandleMessage(UINT msg, WPARAM wParam, LPARAM lParam) {
         case WM_LBUTTONDOWN:
             OnLButtonDown(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam), wParam);
             SetFocus(hwnd_);
+            return 0;
+        case WM_MOUSEMOVE:
+            OnMouseMove(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam), wParam);
+            return 0;
+        case WM_LBUTTONUP:
+            OnLButtonUp(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+            return 0;
+        case WM_CAPTURECHANGED:
+            // Capture lost (another window grabbed it, Esc, etc.) — bail out of drag.
+            if (dragging_) {
+                dragging_ = false;
+                StopAutoScroll();
+                CommitSelectionAnchor();
+            }
             return 0;
         case WM_KEYDOWN:
             OnKeyDown(wParam, lParam);
@@ -367,16 +383,19 @@ void LogTableView::OnLButtonDown(int x, int y, WPARAM keys) {
     int row = HitTestRow(y);
     if (row < 0 || !doc_) return;
     int total = static_cast<int>(doc_->FilteredIndices().size());
-    if (row >= total) return;
+    if (row >= total) row = total - 1;
+    if (row < 0) return;
 
     if (keys & MK_SHIFT) {
-        // Range selection
+        // Range selection from anchor to clicked row. Ctrl+Shift extends the
+        // current selection; plain Shift replaces it.
         size_t from = std::min(anchorRow_, static_cast<size_t>(row));
-        size_t to = std::max(anchorRow_, static_cast<size_t>(row));
+        size_t to   = std::max(anchorRow_, static_cast<size_t>(row));
         if (!(keys & MK_CONTROL)) selectedRows_.clear();
         for (size_t i = from; i <= to; ++i) selectedRows_.insert(i);
     } else if (keys & MK_CONTROL) {
-        // Toggle selection
+        // Ctrl-click: toggle just this row; move anchor here so a subsequent
+        // drag extends the toggled bit.
         if (selectedRows_.count(row)) selectedRows_.erase(row);
         else selectedRows_.insert(row);
         anchorRow_ = row;
@@ -386,13 +405,116 @@ void LogTableView::OnLButtonDown(int x, int y, WPARAM keys) {
         anchorRow_ = row;
     }
 
-    // Notify selection
+    // Begin a drag-select so moving the mouse while the button is down grows
+    // or shrinks a rubber-band range anchored at the initial click.
+    dragging_ = true;
+    dragAdditive_ = (keys & MK_CONTROL) != 0;
+    preDragSelection_ = selectedRows_;
+    dragLastMouseY_ = y;
+    SetCapture(hwnd_);
+
+    // Update the active line id + notify listeners so the detail panel refreshes.
     doc_->SetSelectedLineId(static_cast<int>(doc_->FilteredIndices()[row]));
     DocumentChanges changes;
     changes.flags = DocumentChanges::SelectionChanged;
     doc_->listeners.Notify(changes);
-
     InvalidateRect(hwnd_, nullptr, FALSE);
+}
+
+void LogTableView::ExtendSelectionTo(int row) {
+    if (!doc_) return;
+    int total = static_cast<int>(doc_->FilteredIndices().size());
+    if (total == 0) return;
+    row = std::clamp(row, 0, total - 1);
+
+    size_t from = std::min(anchorRow_, static_cast<size_t>(row));
+    size_t to   = std::max(anchorRow_, static_cast<size_t>(row));
+
+    if (dragAdditive_) {
+        selectedRows_ = preDragSelection_;
+    } else {
+        selectedRows_.clear();
+    }
+    for (size_t i = from; i <= to; ++i) selectedRows_.insert(i);
+
+    doc_->SetSelectedLineId(static_cast<int>(doc_->FilteredIndices()[row]));
+}
+
+void LogTableView::CommitSelectionAnchor() {
+    // Retained as a capture-lost hook; nothing to do now since selection
+    // changes are already broadcast during the drag.
+}
+
+void LogTableView::OnMouseMove(int x, int y, WPARAM keys) {
+    if (!dragging_ || !(keys & MK_LBUTTON)) return;
+    dragLastMouseY_ = y;
+
+    int yDip = static_cast<int>(y / (dpiScale_ > 0.0f ? dpiScale_ : 1.0f));
+    int clientHDip = clientHeight_;
+
+    // Above the top or below the bottom edge → start auto-scrolling toward
+    // the cursor so the drag can extend past what's visible.
+    if (yDip < 0 || yDip >= clientHDip) {
+        if (autoScrollTimer_ == 0) {
+            autoScrollTimer_ = SetTimer(hwnd_, kAutoScrollTimerId, 40, DragAutoScrollProc);
+        }
+    } else {
+        StopAutoScroll();
+    }
+
+    int row = HitTestRow(y);
+    if (row < 0) row = topRow_;
+    ExtendSelectionTo(row);
+
+    DocumentChanges changes;
+    changes.flags = DocumentChanges::SelectionChanged;
+    if (doc_) doc_->listeners.Notify(changes);
+    InvalidateRect(hwnd_, nullptr, FALSE);
+}
+
+void LogTableView::OnLButtonUp(int, int) {
+    if (!dragging_) return;
+    dragging_ = false;
+    StopAutoScroll();
+    if (GetCapture() == hwnd_) ReleaseCapture();
+}
+
+VOID CALLBACK LogTableView::DragAutoScrollProc(HWND hwnd, UINT, UINT_PTR, DWORD) {
+    auto* self = reinterpret_cast<LogTableView*>(GetWindowLongPtrW(hwnd, GWLP_USERDATA));
+    if (!self || !self->dragging_ || !self->doc_) return;
+
+    int yDip = static_cast<int>(self->dragLastMouseY_ /
+        (self->dpiScale_ > 0.0f ? self->dpiScale_ : 1.0f));
+    int clientHDip = self->clientHeight_;
+    int totalRows = static_cast<int>(self->doc_->FilteredIndices().size());
+    int pageSize = (self->rowHeight_ > 0) ? std::max(1, clientHDip / self->rowHeight_) : 1;
+
+    int step = 0;
+    if (yDip < 0) {
+        // Farther past the edge → faster scroll, clamped to 5 rows/tick.
+        step = std::max(-5, (yDip / 8) - 1);
+    } else if (yDip >= clientHDip) {
+        step = std::min(5, ((yDip - clientHDip) / 8) + 1);
+    }
+    if (step == 0) return;
+
+    self->topRow_ = std::clamp(self->topRow_ + step, 0, std::max(0, totalRows - pageSize));
+    SetScrollPos(hwnd, SB_VERT, self->topRow_, TRUE);
+
+    int row = self->HitTestRow(self->dragLastMouseY_);
+    if (row < 0) row = self->topRow_;
+    self->ExtendSelectionTo(row);
+    DocumentChanges changes;
+    changes.flags = DocumentChanges::SelectionChanged;
+    self->doc_->listeners.Notify(changes);
+    InvalidateRect(hwnd, nullptr, FALSE);
+}
+
+void LogTableView::StopAutoScroll() {
+    if (autoScrollTimer_ != 0) {
+        KillTimer(hwnd_, kAutoScrollTimerId);
+        autoScrollTimer_ = 0;
+    }
 }
 
 void LogTableView::OnKeyDown(WPARAM vk, LPARAM) {
