@@ -30,51 +30,53 @@
 #define WM_APP_DOC_CHANGED  (WM_APP + 1)
 #define WM_APP_DOC_LOADED   (WM_APP + 2)
 
-// Level icons (RCDATA = raw PNG; decoded via WIC at runtime)
+// Level icons (RCDATA = raw PNG; decoded via WIC at runtime).
+// NOTE: rc.exe does not evaluate parenthesized expressions in resource IDs,
+// so these must be plain integer literals.
 #define IDI_LEVEL_BASE      200
-#define IDI_LEVEL_0         (IDI_LEVEL_BASE + 0)
-#define IDI_LEVEL_1         (IDI_LEVEL_BASE + 1)
-#define IDI_LEVEL_2         (IDI_LEVEL_BASE + 2)
-#define IDI_LEVEL_3         (IDI_LEVEL_BASE + 3)
-#define IDI_LEVEL_4         (IDI_LEVEL_BASE + 4)
-#define IDI_LEVEL_5         (IDI_LEVEL_BASE + 5)
-#define IDI_LEVEL_6         (IDI_LEVEL_BASE + 6)
-#define IDI_LEVEL_7         (IDI_LEVEL_BASE + 7)
-#define IDI_LEVEL_8         (IDI_LEVEL_BASE + 8)
-#define IDI_LEVEL_9         (IDI_LEVEL_BASE + 9)
-#define IDI_LEVEL_10        (IDI_LEVEL_BASE + 10)
-#define IDI_LEVEL_11        (IDI_LEVEL_BASE + 11)
-#define IDI_LEVEL_12        (IDI_LEVEL_BASE + 12)
-#define IDI_LEVEL_13        (IDI_LEVEL_BASE + 13)
-#define IDI_LEVEL_14        (IDI_LEVEL_BASE + 14)
-#define IDI_LEVEL_15        (IDI_LEVEL_BASE + 15)
-#define IDI_LEVEL_16        (IDI_LEVEL_BASE + 16)
-#define IDI_LEVEL_17        (IDI_LEVEL_BASE + 17)
-#define IDI_LEVEL_18        (IDI_LEVEL_BASE + 18)
-#define IDI_LEVEL_19        (IDI_LEVEL_BASE + 19)
-#define IDI_LEVEL_20        (IDI_LEVEL_BASE + 20)
-#define IDI_LEVEL_21        (IDI_LEVEL_BASE + 21)
-#define IDI_LEVEL_22        (IDI_LEVEL_BASE + 22)
-#define IDI_LEVEL_23        (IDI_LEVEL_BASE + 23)
-#define IDI_LEVEL_24        (IDI_LEVEL_BASE + 24)
-#define IDI_LEVEL_25        (IDI_LEVEL_BASE + 25)
-#define IDI_LEVEL_26        (IDI_LEVEL_BASE + 26)
-#define IDI_LEVEL_27        (IDI_LEVEL_BASE + 27)
-#define IDI_LEVEL_28        (IDI_LEVEL_BASE + 28)
-#define IDI_LEVEL_29        (IDI_LEVEL_BASE + 29)
-#define IDI_LEVEL_30        (IDI_LEVEL_BASE + 30)
-#define IDI_LEVEL_31        (IDI_LEVEL_BASE + 31)
+#define IDI_LEVEL_0         200
+#define IDI_LEVEL_1         201
+#define IDI_LEVEL_2         202
+#define IDI_LEVEL_3         203
+#define IDI_LEVEL_4         204
+#define IDI_LEVEL_5         205
+#define IDI_LEVEL_6         206
+#define IDI_LEVEL_7         207
+#define IDI_LEVEL_8         208
+#define IDI_LEVEL_9         209
+#define IDI_LEVEL_10        210
+#define IDI_LEVEL_11        211
+#define IDI_LEVEL_12        212
+#define IDI_LEVEL_13        213
+#define IDI_LEVEL_14        214
+#define IDI_LEVEL_15        215
+#define IDI_LEVEL_16        216
+#define IDI_LEVEL_17        217
+#define IDI_LEVEL_18        218
+#define IDI_LEVEL_19        219
+#define IDI_LEVEL_20        220
+#define IDI_LEVEL_21        221
+#define IDI_LEVEL_22        222
+#define IDI_LEVEL_23        223
+#define IDI_LEVEL_24        224
+#define IDI_LEVEL_25        225
+#define IDI_LEVEL_26        226
+#define IDI_LEVEL_27        227
+#define IDI_LEVEL_28        228
+#define IDI_LEVEL_29        229
+#define IDI_LEVEL_30        230
+#define IDI_LEVEL_31        231
 
 // UI icons (toolbar + detail panel)
 #define IDI_UI_BASE         300
-#define IDI_UI_CHEVUP       (IDI_UI_BASE + 0)
-#define IDI_UI_CHEVDOWN     (IDI_UI_BASE + 1)
-#define IDI_UI_CHEVUPERR    (IDI_UI_BASE + 2)
-#define IDI_UI_CHEVDNERR    (IDI_UI_BASE + 3)
-#define IDI_UI_SEARCH       (IDI_UI_BASE + 4)
-#define IDI_UI_COPY         (IDI_UI_BASE + 5)
-#define IDI_UI_EYE          (IDI_UI_BASE + 6)
-#define IDI_UI_EYEOFF       (IDI_UI_BASE + 7)
-#define IDI_UI_TIMING       (IDI_UI_BASE + 8)
-#define IDI_UI_STATS        (IDI_UI_BASE + 9)
-#define IDI_UI_OPENFILE     (IDI_UI_BASE + 10)
+#define IDI_UI_CHEVUP       300
+#define IDI_UI_CHEVDOWN     301
+#define IDI_UI_CHEVUPERR    302
+#define IDI_UI_CHEVDNERR    303
+#define IDI_UI_SEARCH       304
+#define IDI_UI_COPY         305
+#define IDI_UI_EYE          306
+#define IDI_UI_EYEOFF       307
+#define IDI_UI_TIMING       308
+#define IDI_UI_STATS        309
+#define IDI_UI_OPENFILE     310
