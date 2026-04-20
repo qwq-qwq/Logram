@@ -463,6 +463,12 @@ void LogTableView::ScrollToLine(int filteredIdx) {
     UpdateScrollInfo();
 }
 
+void LogTableView::ScrollToLineCentered(int filteredIdx) {
+    int pageSize = (rowHeight_ > 0) ? std::max(1, (clientHeight_ - rowHeight_) / rowHeight_) : 1;
+    topRow_ = std::max(0, filteredIdx - pageSize / 2);
+    UpdateScrollInfo();
+}
+
 void LogTableView::SelectLine(int filteredIdx) {
     selectedRows_.clear();
     selectedRows_.insert(filteredIdx);
@@ -472,17 +478,47 @@ void LogTableView::SelectLine(int filteredIdx) {
 }
 
 void LogTableView::OnDocumentChanged(DocumentChanges changes) {
-    if (changes.Has(DocumentChanges::DataLoaded) ||
-        changes.Has(DocumentChanges::FiltersChanged)) {
+    if (changes.Has(DocumentChanges::DataLoaded)) {
         topRow_ = 0;
         selectedRows_.clear();
+        anchorRow_ = 0;
         UpdateScrollInfo();
         InvalidateRect(hwnd_, nullptr, FALSE);
+    } else if (changes.Has(DocumentChanges::FiltersChanged) && doc_) {
+        // Re-map the active selection through absolute line IDs so the user's
+        // focus row stays put when toggling filter checkboxes. Any row whose
+        // absolute ID is no longer in the filtered view is dropped silently;
+        // the document still remembers SelectedLineId so it can re-appear if
+        // the filter is toggled back.
+        int selId = doc_->SelectedLineId();
+        const auto& indices = doc_->FilteredIndices();
+        int newSelectedIdx = -1;
+        if (selId >= 0) {
+            for (size_t i = 0; i < indices.size(); ++i) {
+                if (static_cast<int>(indices[i]) == selId) {
+                    newSelectedIdx = static_cast<int>(i);
+                    break;
+                }
+            }
+        }
+        selectedRows_.clear();
+        if (newSelectedIdx >= 0) {
+            selectedRows_.insert(static_cast<size_t>(newSelectedIdx));
+            anchorRow_ = static_cast<size_t>(newSelectedIdx);
+            ScrollToLineCentered(newSelectedIdx);
+        } else {
+            topRow_ = 0;
+            anchorRow_ = 0;
+            UpdateScrollInfo();
+        }
+        InvalidateRect(hwnd_, nullptr, FALSE);
+        return;
     }
 
-    // After filter change or explicit selection, scroll to the selected line.
-    // Preserve multi-selection: if the active row is already part of
-    // selectedRows_, just scroll and repaint — don't collapse to a single row.
+    // After an explicit selection change (e.g. click in TimingDialog, Find,
+    // keyboard nav), scroll to the selected line. Preserve multi-selection:
+    // if the active row is already part of selectedRows_, just scroll and
+    // repaint — don't collapse to a single row.
     if (changes.Has(DocumentChanges::SelectionChanged) && doc_) {
         int selId = doc_->SelectedLineId();
         if (selId >= 0) {

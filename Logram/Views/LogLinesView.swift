@@ -115,16 +115,32 @@ struct LogTableView: NSViewRepresentable {
             tableView.reloadData()
         }
 
-        // Scroll to selected row
-        if let selectedId = selectedId {
-            if let rowIndex = indices.firstIndex(of: selectedId) {
-                let currentSelection = tableView.selectedRow
-                if currentSelection != rowIndex {
-                    tableView.selectRowIndexes(IndexSet(integer: rowIndex), byExtendingSelection: false)
-                    tableView.scrollRowToVisible(rowIndex)
-                }
+        // Scroll to selected row. When the visible row set changes (filter
+        // toggle), re-select via absolute ID and center the row so the user's
+        // focus line doesn't jump around as HTTP/DB/etc. checkboxes flip.
+        if let selectedId = selectedId, let rowIndex = indices.firstIndex(of: selectedId) {
+            let currentSelection = tableView.selectedRow
+            if currentSelection != rowIndex {
+                tableView.selectRowIndexes(IndexSet(integer: rowIndex), byExtendingSelection: false)
+            }
+            if dataChanged {
+                LogTableView.scrollRowToCenter(tableView: tableView, row: rowIndex)
+            } else if currentSelection != rowIndex {
+                tableView.scrollRowToVisible(rowIndex)
             }
         }
+    }
+
+    static func scrollRowToCenter(tableView: NSTableView, row: Int) {
+        guard let clipView = tableView.enclosingScrollView?.contentView else { return }
+        let rowRect = tableView.rect(ofRow: row)
+        guard !rowRect.isEmpty else { return }
+        let visibleHeight = clipView.bounds.height
+        var origin = clipView.bounds.origin
+        origin.y = rowRect.midY - visibleHeight / 2
+        origin.y = max(0, min(origin.y, tableView.bounds.height - visibleHeight))
+        clipView.setBoundsOrigin(origin)
+        tableView.enclosingScrollView?.reflectScrolledClipView(clipView)
     }
 
     // MARK: - Coordinator

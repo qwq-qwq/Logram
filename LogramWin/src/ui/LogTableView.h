@@ -17,6 +17,7 @@ public:
 
     void SetDocument(LogDocument* doc);
     void ScrollToLine(int filteredIdx);
+    void ScrollToLineCentered(int filteredIdx);
     void SelectLine(int filteredIdx);
 
     // IDocumentListener
