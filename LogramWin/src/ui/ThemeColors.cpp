@@ -301,21 +301,77 @@ void DrawThemedButton(const DRAWITEMSTRUCT* dis) {
     HDC hdc = dis->hDC;
     RECT rc = dis->rcItem;
 
-    // Background: slightly lighter than theme bg; pressed = even lighter
-    float lift = 0.08f;
-    if (dis->itemState & ODS_SELECTED) lift = 0.15f;
+    bool pressed = (dis->itemState & ODS_SELECTED) != 0;
 
+    wchar_t text[64] = {};
+    int len = GetWindowTextW(dis->hwndItem, text, 64);
+
+    bool isErr = (len >= 3 && text[0] == L'E' && text[1] == L'r' && text[2] == L'r');
+
+    if (isErr) {
+        ColorRGBA err = theme.levelBadge[static_cast<int>(LogLevel::Error)]; // #f7768e
+
+        // Background: dark red tint, stronger when pressed
+        float tint = pressed ? 0.14f : 0.06f;
+        ColorRGBA bg;
+        bg.r = std::min(1.0f, theme.background.r + err.r * tint + 0.04f);
+        bg.g = std::min(1.0f, theme.background.g + 0.03f);
+        bg.b = std::min(1.0f, theme.background.b + 0.03f);
+        bg.a = 1.0f;
+        HBRUSH hBrush = CreateSolidBrush(ToCOLORREF(bg));
+        FillRect(hdc, &rc, hBrush);
+        DeleteObject(hBrush);
+
+        // 2px left accent bar, inset 4px top/bottom
+        {
+            ColorRGBA barC = err;
+            if (!pressed) { barC.r *= 0.55f; barC.g *= 0.55f; barC.b *= 0.55f; }
+            RECT bar = { rc.left + 2, rc.top + 4, rc.left + 4, rc.bottom - 4 };
+            HBRUSH hBar = CreateSolidBrush(ToCOLORREF(barC));
+            FillRect(hdc, &bar, hBar);
+            DeleteObject(hBar);
+        }
+
+        // Border: accent when pressed, muted red otherwise
+        ColorRGBA border = err;
+        if (!pressed) { border.r *= 0.40f; border.g *= 0.40f; border.b *= 0.40f; }
+        HPEN hPen = CreatePen(PS_SOLID, 1, ToCOLORREF(border));
+        HPEN hOld = static_cast<HPEN>(SelectObject(hdc, hPen));
+        HBRUSH hNull = static_cast<HBRUSH>(GetStockObject(NULL_BRUSH));
+        HBRUSH hOldBr = static_cast<HBRUSH>(SelectObject(hdc, hNull));
+        RoundRect(hdc, rc.left, rc.top, rc.right, rc.bottom, 4, 4);
+        SelectObject(hdc, hOldBr);
+        SelectObject(hdc, hOld);
+        DeleteObject(hPen);
+
+        // Text: full accent when pressed, warm-tinted foreground otherwise
+        SetBkMode(hdc, TRANSPARENT);
+        ColorRGBA textC = theme.foreground;
+        if (pressed) {
+            textC = err;
+        } else {
+            textC.r = std::min(1.0f, textC.r + err.r * 0.20f);
+            textC.g *= 0.85f;
+            textC.b *= 0.85f;
+        }
+        SetTextColor(hdc, ToCOLORREF(textC));
+        RECT textRc = rc;
+        textRc.left += 4;
+        DrawTextW(hdc, text, len, &textRc, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
+        return;
+    }
+
+    // All other buttons — unchanged behaviour
+    float lift = pressed ? 0.15f : 0.08f;
     ColorRGBA bg;
     bg.r = std::min(1.0f, theme.background.r + lift);
     bg.g = std::min(1.0f, theme.background.g + lift);
     bg.b = std::min(1.0f, theme.background.b + lift);
     bg.a = 1.0f;
-
     HBRUSH hBrush = CreateSolidBrush(ToCOLORREF(bg));
     FillRect(hdc, &rc, hBrush);
     DeleteObject(hBrush);
 
-    // Border: secondary color (subtle)
     HPEN hPen = CreatePen(PS_SOLID, 1, ToCOLORREF(theme.secondary));
     HPEN hOld = static_cast<HPEN>(SelectObject(hdc, hPen));
     HBRUSH hNull = static_cast<HBRUSH>(GetStockObject(NULL_BRUSH));
@@ -325,19 +381,13 @@ void DrawThemedButton(const DRAWITEMSTRUCT* dis) {
     SelectObject(hdc, hOld);
     DeleteObject(hPen);
 
-    // Text
-    wchar_t text[64];
-    int len = GetWindowTextW(dis->hwndItem, text, 64);
     SetBkMode(hdc, TRANSPARENT);
-
-    // Checked state (for Params toggle) — use accent color
-    bool checked = (dis->itemState & ODS_SELECTED) ||
+    bool checked = pressed ||
                    (SendMessageW(dis->hwndItem, BM_GETCHECK, 0, 0) == BST_CHECKED);
     ColorRGBA textColor = checked ? theme.levelBadge[static_cast<int>(LogLevel::Sql)]
                                   : theme.foreground;
     SetTextColor(hdc, ToCOLORREF(textColor));
 
-    // Focus rect — subtle dotted inside
     if (dis->itemState & ODS_FOCUS) {
         RECT focus = rc;
         InflateRect(&focus, -2, -2);
