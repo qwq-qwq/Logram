@@ -31,15 +31,8 @@ private:
     void OnVScroll(int code, int pos);
     void OnMouseWheel(int delta);
     void OnLButtonDown(int x, int y, WPARAM keys);
-    void OnMouseMove(int x, int y, WPARAM keys);
-    void OnLButtonUp(int x, int y);
     void OnKeyDown(WPARAM vk, LPARAM flags);
     void OnSize(int w, int h);
-
-    void ExtendSelectionTo(int row);
-    void CommitSelectionAnchor();
-    static VOID CALLBACK DragAutoScrollProc(HWND, UINT, UINT_PTR, DWORD);
-    void StopAutoScroll();
 
     void CreateRenderTarget();
     void DiscardRenderTarget();
@@ -61,13 +54,6 @@ private:
     std::set<size_t> selectedRows_;
     size_t anchorRow_ = 0;
     bool showDuration_ = false;
-
-    bool dragging_ = false;
-    bool dragAdditive_ = false;  // Ctrl held at drag start: add to, don't clear existing selection
-    std::set<size_t> preDragSelection_;  // rows selected before drag started (for additive mode)
-    int dragLastMouseY_ = 0;
-    UINT_PTR autoScrollTimer_ = 0;
-    static constexpr UINT_PTR kAutoScrollTimerId = 0x1001;
 
     static constexpr const wchar_t* kClassName = L"LogramLogTable";
 };
