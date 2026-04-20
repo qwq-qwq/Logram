@@ -4,15 +4,18 @@ Native cross-platform UnityBase log analyzer for **macOS** and **Windows**.
 
 Opens multi-gigabyte UB server logs and turns them into a readable stream with filters, method timing, SQL highlighting, and cust1 parameter substitution.
 
-**[logram.perek.rest](https://logram.perek.rest)**
+**[logram.perek.rest](https://logram.perek.rest)** &middot; [Download latest release](https://github.com/qwq-qwq/Logram/releases/latest)
+
+![Logram main window: filter sidebar with level icons, log stream, and SQL detail panel](https://logram.perek.rest/assets/screenshot.png)
 
 ---
 
 ## Features
 
 - **4 log formats** auto-detected: mORMot 1, mORMot 2 HiRes, journald, console
-- **32 UB log levels** with colored badges
+- **32 UB log levels** with colored badges and glyph icons in the macOS sidebar
 - **Filter by level and thread** with one-click presets (Errors, SQL, HTTP, +/-)
+- **Sticky focus** — the selected line stays selected and centered when filter checkboxes are toggled
 - **Method timing** pairs `+` and `-` entries, sorted by duration
 - **SQL highlighting** with cust1 parameter substitution
 - **Tabs** native macOS window tabs (Cmd+N)
