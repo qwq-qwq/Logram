@@ -38,6 +38,19 @@ IDI_LEVEL_29 RCDATA "icons/levels/29-dddErr.png"
 IDI_LEVEL_30 RCDATA "icons/levels/30-dddIn.png"
 IDI_LEVEL_31 RCDATA "icons/levels/31-monitor.png"
 
+// Toolbar / detail-panel icons (neutral #C6CCD6, decoded via WIC)
+IDI_UI_CHEVUP    RCDATA "icons/ui/chevUp.png"
+IDI_UI_CHEVDOWN  RCDATA "icons/ui/chevDown.png"
+IDI_UI_CHEVUPERR RCDATA "icons/ui/chevUpErr.png"
+IDI_UI_CHEVDNERR RCDATA "icons/ui/chevDnErr.png"
+IDI_UI_SEARCH    RCDATA "icons/ui/search.png"
+IDI_UI_COPY      RCDATA "icons/ui/copy.png"
+IDI_UI_EYE       RCDATA "icons/ui/eye.png"
+IDI_UI_EYEOFF    RCDATA "icons/ui/eyeOff.png"
+IDI_UI_TIMING    RCDATA "icons/ui/timing.png"
+IDI_UI_STATS     RCDATA "icons/ui/stats.png"
+IDI_UI_OPENFILE  RCDATA "icons/ui/openFile.png"
+
 // Menu
 IDR_MAINMENU MENU
 BEGIN

@@ -41,11 +41,12 @@ add_executable(Logram WIN32
     src/infra/Clipboard.cpp
     src/infra/Utf.cpp
     src/infra/Dpi.cpp
+    src/infra/ImageUtils.cpp
     Logram.rc
 )
 target_link_libraries(Logram PRIVATE
     logram_core
-    d2d1 dwrite dwmapi comctl32 shlwapi uxtheme windowscodecs
+    d2d1 dwrite dwmapi comctl32 shlwapi uxtheme windowscodecs msimg32
 )
 target_include_directories(Logram PRIVATE src ${CMAKE_CURRENT_SOURCE_DIR})
 target_precompile_headers(Logram REUSE_FROM logram_core)

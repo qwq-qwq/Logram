@@ -1,13 +1,10 @@
 #include "ui/FilterSidebar.h"
 #include "ui/ThemeColors.h"
 #include "infra/Utf.h"
+#include "infra/ImageUtils.h"
 #include "../../resource.h"
 #include <commctrl.h>
 #include <windowsx.h>
-#include <wincodec.h>
-#include <wrl/client.h>
-
-using Microsoft::WRL::ComPtr;
 
 FilterSidebar::FilterSidebar() {}
 FilterSidebar::~FilterSidebar() {
@@ -81,73 +78,13 @@ HWND FilterSidebar::Create(HWND parent, HINSTANCE hInstance, LogDocument* doc) {
 
 void FilterSidebar::BuildLevelImageList(HINSTANCE hInstance) {
     const int iconSize = Scale(16);
-
-    ComPtr<IWICImagingFactory> factory;
-    HRESULT hr = CoCreateInstance(CLSID_WICImagingFactory, nullptr,
-                                  CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&factory));
-    if (FAILED(hr)) return;
-
     hLevelImages_ = ImageList_Create(iconSize, iconSize,
                                      ILC_COLOR32 | ILC_MASK, kLogLevelCount, 0);
     if (!hLevelImages_) return;
 
     for (int i = 0; i < kLogLevelCount; ++i) {
-        HRSRC hRes = FindResourceW(hInstance,
-            MAKEINTRESOURCEW(IDI_LEVEL_BASE + i), RT_RCDATA);
-        if (!hRes) continue;
-        HGLOBAL hMem = LoadResource(hInstance, hRes);
-        DWORD size = SizeofResource(hInstance, hRes);
-        void* data = LockResource(hMem);
-        if (!data || !size) continue;
-
-        ComPtr<IWICStream> stream;
-        if (FAILED(factory->CreateStream(&stream))) continue;
-        if (FAILED(stream->InitializeFromMemory(
-                static_cast<BYTE*>(data), size))) continue;
-
-        ComPtr<IWICBitmapDecoder> decoder;
-        if (FAILED(factory->CreateDecoderFromStream(
-                stream.Get(), nullptr,
-                WICDecodeMetadataCacheOnLoad, &decoder))) continue;
-
-        ComPtr<IWICBitmapFrameDecode> frame;
-        if (FAILED(decoder->GetFrame(0, &frame))) continue;
-
-        ComPtr<IWICFormatConverter> conv;
-        if (FAILED(factory->CreateFormatConverter(&conv))) continue;
-        if (FAILED(conv->Initialize(frame.Get(),
-                GUID_WICPixelFormat32bppBGRA,
-                WICBitmapDitherTypeNone, nullptr, 0.0,
-                WICBitmapPaletteTypeCustom))) continue;
-
-        ComPtr<IWICBitmapScaler> scaler;
-        if (FAILED(factory->CreateBitmapScaler(&scaler))) continue;
-        if (FAILED(scaler->Initialize(conv.Get(), iconSize, iconSize,
-                WICBitmapInterpolationModeHighQualityCubic))) continue;
-
-        BITMAPINFO bmi = {};
-        bmi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
-        bmi.bmiHeader.biWidth = iconSize;
-        bmi.bmiHeader.biHeight = -iconSize;  // top-down
-        bmi.bmiHeader.biPlanes = 1;
-        bmi.bmiHeader.biBitCount = 32;
-        bmi.bmiHeader.biCompression = BI_RGB;
-
-        void* bits = nullptr;
-        HDC hdc = GetDC(nullptr);
-        HBITMAP hbmp = CreateDIBSection(hdc, &bmi, DIB_RGB_COLORS,
-                                        &bits, nullptr, 0);
-        ReleaseDC(nullptr, hdc);
-        if (!hbmp || !bits) { if (hbmp) DeleteObject(hbmp); continue; }
-
-        const UINT stride = iconSize * 4;
-        const UINT bufSize = stride * iconSize;
-        if (FAILED(scaler->CopyPixels(nullptr, stride, bufSize,
-                                      static_cast<BYTE*>(bits)))) {
-            DeleteObject(hbmp);
-            continue;
-        }
-
+        HBITMAP hbmp = LoadPngResourceAsHBITMAP(hInstance, IDI_LEVEL_BASE + i, iconSize);
+        if (!hbmp) continue;
         ImageList_Add(hLevelImages_, hbmp, nullptr);
         DeleteObject(hbmp);
     }

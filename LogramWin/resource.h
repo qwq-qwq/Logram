@@ -64,3 +64,17 @@
 #define IDI_LEVEL_29        (IDI_LEVEL_BASE + 29)
 #define IDI_LEVEL_30        (IDI_LEVEL_BASE + 30)
 #define IDI_LEVEL_31        (IDI_LEVEL_BASE + 31)
+
+// UI icons (toolbar + detail panel)
+#define IDI_UI_BASE         300
+#define IDI_UI_CHEVUP       (IDI_UI_BASE + 0)
+#define IDI_UI_CHEVDOWN     (IDI_UI_BASE + 1)
+#define IDI_UI_CHEVUPERR    (IDI_UI_BASE + 2)
+#define IDI_UI_CHEVDNERR    (IDI_UI_BASE + 3)
+#define IDI_UI_SEARCH       (IDI_UI_BASE + 4)
+#define IDI_UI_COPY         (IDI_UI_BASE + 5)
+#define IDI_UI_EYE          (IDI_UI_BASE + 6)
+#define IDI_UI_EYEOFF       (IDI_UI_BASE + 7)
+#define IDI_UI_TIMING       (IDI_UI_BASE + 8)
+#define IDI_UI_STATS        (IDI_UI_BASE + 9)
+#define IDI_UI_OPENFILE     (IDI_UI_BASE + 10)
