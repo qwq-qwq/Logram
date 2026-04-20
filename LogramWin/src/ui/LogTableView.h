@@ -31,6 +31,8 @@ private:
     void OnVScroll(int code, int pos);
     void OnMouseWheel(int delta);
     void OnLButtonDown(int x, int y, WPARAM keys);
+    void OnMouseMove(int x, int y);
+    void OnLButtonUp(int x, int y);
     void OnKeyDown(WPARAM vk, LPARAM flags);
     void OnSize(int w, int h);
 
@@ -53,6 +55,8 @@ private:
     float dpiScale_ = 1.0f;
     std::set<size_t> selectedRows_;
     size_t anchorRow_ = 0;
+    bool isDragging_ = false;
+    int dragStartRow_ = -1;
     bool showDuration_ = false;
 
     static constexpr const wchar_t* kClassName = L"LogramLogTable";

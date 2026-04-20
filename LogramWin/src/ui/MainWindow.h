@@ -37,7 +37,7 @@ private:
     LRESULT HandleMessage(UINT msg, WPARAM wParam, LPARAM lParam);
 
     void OnCreate();
-    void OnSize(int width, int height);
+    void OnSize(WPARAM sizeType, int width, int height);
     void OnCommand(int id, int code, HWND ctrl);
     void OnNotify(NMHDR* hdr);
     void OnDropFiles(HDROP hDrop);
@@ -81,4 +81,6 @@ private:
     static constexpr int kMinDetailHeightDip  = 80;
     int sidebarWidth_ = -1;    // -1 = auto (15% of window width on first layout)
     int detailHeight_ = -1;    // -1 = auto (30% of work area on first layout)
+    int lastWidth_ = 0;
+    int lastHeight_ = 0;
 };

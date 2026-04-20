@@ -98,7 +98,7 @@ LRESULT MainWindow::HandleMessage(UINT msg, WPARAM wParam, LPARAM lParam) {
             return 0;
 
         case WM_SIZE:
-            OnSize(LOWORD(lParam), HIWORD(lParam));
+            OnSize(wParam, LOWORD(lParam), HIWORD(lParam));
             return 0;
 
         case WM_COMMAND:
@@ -245,7 +245,7 @@ void MainWindow::OnCreate() {
         Scale(100), Scale(kSplitterThicknessDip));
 }
 
-void MainWindow::OnSize(int width, int height) {
+void MainWindow::OnSize(WPARAM sizeType, int width, int height) {
     if (hwndStatus_) {
         SendMessageW(hwndStatus_, WM_SIZE, 0, 0);
         // Recalculate status bar part widths proportionally
@@ -262,14 +262,25 @@ void MainWindow::OnSize(int width, int height) {
         SendMessageW(hwndStatus_, SB_SETPARTS, 5, reinterpret_cast<LPARAM>(parts));
     }
 
-    // Splitter drag re-enters here via SendMessage(parent, WM_SIZE). Pull
-    // current positions into our bookkeeping before laying children out.
-    // Skip reading before first LayoutChildren resolves auto (-1) values.
-    if (sidebarSplitter_ && sidebarWidth_ > 0) {
+    // Don't touch layout bookkeeping while minimized — LayoutChildren would
+    // clamp detailHeight_ to zero against a zero-sized work area and corrupt
+    // the stored proportion for the subsequent restore.
+    if (sizeType == SIZE_MINIMIZED) return;
+
+    // Splitter drag re-enters here via SendMessage(parent, WM_SIZE) with the
+    // same dimensions as before. Maximize/restore sends a different size.
+    // Only update bookkeeping from stored splitter positions when the window
+    // size hasn't changed — that means the WM_SIZE came from a splitter drag,
+    // not from maximize/restore (where the stored positions would be stale).
+    bool fromSplitterDrag = (width == lastWidth_ && height == lastHeight_ && lastWidth_ > 0);
+    lastWidth_ = width;
+    lastHeight_ = height;
+
+    if (fromSplitterDrag && sidebarSplitter_ && sidebarWidth_ > 0) {
         int p = sidebarSplitter_->GetPosition();
         if (p > 0) sidebarWidth_ = p;
     }
-    if (detailSplitter_ && detailHeight_ > 0) {
+    if (fromSplitterDrag && detailSplitter_ && detailHeight_ > 0) {
         int p = detailSplitter_->GetPosition();
         if (p > 0) {
             RECT rc; GetClientRect(hwnd_, &rc);
@@ -286,7 +297,6 @@ void MainWindow::OnSize(int width, int height) {
         }
     }
 
-    (void)width; (void)height;
     LayoutChildren();
 }
 

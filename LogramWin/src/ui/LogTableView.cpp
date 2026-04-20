@@ -119,6 +119,15 @@ LRESULT LogTableView::HandleMessage(UINT msg, WPARAM wParam, LPARAM lParam) {
             OnLButtonDown(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam), wParam);
             SetFocus(hwnd_);
             return 0;
+        case WM_MOUSEMOVE:
+            OnMouseMove(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+            return 0;
+        case WM_LBUTTONUP:
+            OnLButtonUp(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+            return 0;
+        case WM_CAPTURECHANGED:
+            isDragging_ = false;
+            return 0;
         case WM_KEYDOWN:
             OnKeyDown(wParam, lParam);
             return 0;
@@ -384,6 +393,9 @@ void LogTableView::OnLButtonDown(int x, int y, WPARAM keys) {
         selectedRows_.clear();
         selectedRows_.insert(row);
         anchorRow_ = row;
+        dragStartRow_ = row;
+        isDragging_ = true;
+        SetCapture(hwnd_);
     }
 
     // Notify selection
@@ -393,6 +405,49 @@ void LogTableView::OnLButtonDown(int x, int y, WPARAM keys) {
     doc_->listeners.Notify(changes);
 
     InvalidateRect(hwnd_, nullptr, FALSE);
+}
+
+void LogTableView::OnMouseMove(int x, int y) {
+    if (!isDragging_ || !doc_) return;
+
+    int total = static_cast<int>(doc_->FilteredIndices().size());
+    if (total == 0) return;
+
+    int pageSize = std::max(1, clientHeight_ / rowHeight_);
+    int physClientH = static_cast<int>(clientHeight_ * dpiScale_);
+
+    // Auto-scroll when dragging near edges
+    if (y < 0 && topRow_ > 0) {
+        topRow_ = std::max(0, topRow_ - 1);
+        SetScrollPos(hwnd_, SB_VERT, topRow_, TRUE);
+    } else if (y > physClientH && topRow_ < total - pageSize) {
+        topRow_ = std::min(total - pageSize, topRow_ + 1);
+        SetScrollPos(hwnd_, SB_VERT, topRow_, TRUE);
+    }
+
+    int row = std::clamp(HitTestRow(y), 0, total - 1);
+
+    size_t from = static_cast<size_t>(std::min(dragStartRow_, row));
+    size_t to   = static_cast<size_t>(std::max(dragStartRow_, row));
+    selectedRows_.clear();
+    for (size_t i = from; i <= to; ++i) selectedRows_.insert(i);
+
+    InvalidateRect(hwnd_, nullptr, FALSE);
+}
+
+void LogTableView::OnLButtonUp(int x, int y) {
+    if (!isDragging_) return;
+    isDragging_ = false;
+    ReleaseCapture();
+
+    if (!doc_ || selectedRows_.empty()) return;
+
+    // Notify with the anchor row — it's always inside selectedRows_ so
+    // OnDocumentChanged won't collapse the multi-selection.
+    doc_->SetSelectedLineId(static_cast<int>(doc_->FilteredIndices()[anchorRow_]));
+    DocumentChanges changes;
+    changes.flags = DocumentChanges::SelectionChanged;
+    doc_->listeners.Notify(changes);
 }
 
 void LogTableView::OnKeyDown(WPARAM vk, LPARAM) {
