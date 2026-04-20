@@ -4,53 +4,6 @@
 // App icon (embedded into .exe; picked up by Explorer, taskbar, alt-tab)
 IDI_APPICON ICON "icons/Logram.ico"
 
-// Level icons (raw PNG from design bundle; decoded via WIC at runtime)
-IDI_LEVEL_0  RCDATA "icons/levels/00-unknown.png"
-IDI_LEVEL_1  RCDATA "icons/levels/01-info.png"
-IDI_LEVEL_2  RCDATA "icons/levels/02-debug.png"
-IDI_LEVEL_3  RCDATA "icons/levels/03-trace.png"
-IDI_LEVEL_4  RCDATA "icons/levels/04-warn.png"
-IDI_LEVEL_5  RCDATA "icons/levels/05-error.png"
-IDI_LEVEL_6  RCDATA "icons/levels/06-enter.png"
-IDI_LEVEL_7  RCDATA "icons/levels/07-leave.png"
-IDI_LEVEL_8  RCDATA "icons/levels/08-osError.png"
-IDI_LEVEL_9  RCDATA "icons/levels/09-exception.png"
-IDI_LEVEL_10 RCDATA "icons/levels/10-excOS.png"
-IDI_LEVEL_11 RCDATA "icons/levels/11-memory.png"
-IDI_LEVEL_12 RCDATA "icons/levels/12-stack.png"
-IDI_LEVEL_13 RCDATA "icons/levels/13-fail.png"
-IDI_LEVEL_14 RCDATA "icons/levels/14-sql.png"
-IDI_LEVEL_15 RCDATA "icons/levels/15-cache.png"
-IDI_LEVEL_16 RCDATA "icons/levels/16-result.png"
-IDI_LEVEL_17 RCDATA "icons/levels/17-db.png"
-IDI_LEVEL_18 RCDATA "icons/levels/18-http.png"
-IDI_LEVEL_19 RCDATA "icons/levels/19-client.png"
-IDI_LEVEL_20 RCDATA "icons/levels/20-server.png"
-IDI_LEVEL_21 RCDATA "icons/levels/21-call.png"
-IDI_LEVEL_22 RCDATA "icons/levels/22-rpcReturn.png"
-IDI_LEVEL_23 RCDATA "icons/levels/23-auth.png"
-IDI_LEVEL_24 RCDATA "icons/levels/24-params.png"
-IDI_LEVEL_25 RCDATA "icons/levels/25-slowSQL.png"
-IDI_LEVEL_26 RCDATA "icons/levels/26-custom3.png"
-IDI_LEVEL_27 RCDATA "icons/levels/27-custom4.png"
-IDI_LEVEL_28 RCDATA "icons/levels/28-logRotate.png"
-IDI_LEVEL_29 RCDATA "icons/levels/29-dddErr.png"
-IDI_LEVEL_30 RCDATA "icons/levels/30-dddIn.png"
-IDI_LEVEL_31 RCDATA "icons/levels/31-monitor.png"
-
-// Toolbar / detail-panel icons (neutral #C6CCD6, decoded via WIC)
-IDI_UI_CHEVUP    RCDATA "icons/ui/chevUp.png"
-IDI_UI_CHEVDOWN  RCDATA "icons/ui/chevDown.png"
-IDI_UI_CHEVUPERR RCDATA "icons/ui/chevUpErr.png"
-IDI_UI_CHEVDNERR RCDATA "icons/ui/chevDnErr.png"
-IDI_UI_SEARCH    RCDATA "icons/ui/search.png"
-IDI_UI_COPY      RCDATA "icons/ui/copy.png"
-IDI_UI_EYE       RCDATA "icons/ui/eye.png"
-IDI_UI_EYEOFF    RCDATA "icons/ui/eyeOff.png"
-IDI_UI_TIMING    RCDATA "icons/ui/timing.png"
-IDI_UI_STATS     RCDATA "icons/ui/stats.png"
-IDI_UI_OPENFILE  RCDATA "icons/ui/openFile.png"
-
 // Menu
 IDR_MAINMENU MENU
 BEGIN

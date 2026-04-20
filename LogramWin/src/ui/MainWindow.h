@@ -55,25 +55,8 @@ private:
     HWND hwndBtnFindPrev_ = nullptr;
     HWND hwndBtnErrNext_ = nullptr;
     HWND hwndBtnErrPrev_ = nullptr;
-    HWND hwndBtnOpen_    = nullptr;
-    HWND hwndBtnDuration_= nullptr;
-    HWND hwndBtnTiming_  = nullptr;
-    HWND hwndBtnStats_   = nullptr;
     HBRUSH hBgBrush_ = nullptr;
     HFONT hToolbarFont_ = nullptr;
-
-    // Toolbar icon bitmaps (16×16 pre-multiplied 32bpp)
-    HBITMAP hIcoFindPrev_ = nullptr;
-    HBITMAP hIcoFindNext_ = nullptr;
-    HBITMAP hIcoErrPrev_  = nullptr;
-    HBITMAP hIcoErrNext_  = nullptr;
-    HBITMAP hIcoSearch_   = nullptr;
-    HBITMAP hIcoEye_      = nullptr;
-    HBITMAP hIcoEyeOff_   = nullptr;
-    HBITMAP hIcoTiming_   = nullptr;
-    HBITMAP hIcoStats_    = nullptr;
-    HBITMAP hIcoOpenFile_ = nullptr;
-    int     iconSize_     = 16;
 
     std::unique_ptr<LogTableView>  tableView_;
     std::unique_ptr<FilterSidebar> filterSidebar_;

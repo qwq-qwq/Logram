@@ -5,7 +5,6 @@
 #include "ui/TimingDialog.h"
 #include "infra/Utf.h"
 #include "infra/Settings.h"
-#include "infra/ImageUtils.h"
 #include "resource.h"
 #include <shobjidl.h>
 #include <shellapi.h>
@@ -19,10 +18,6 @@ constexpr int IDC_BTN_FINDNEXT  = 9010;
 constexpr int IDC_BTN_FINDPREV  = 9011;
 constexpr int IDC_BTN_ERRNEXT   = 9012;
 constexpr int IDC_BTN_ERRPREV   = 9013;
-constexpr int IDC_BTN_OPEN      = 9014;
-constexpr int IDC_BTN_DURATION  = 9015;
-constexpr int IDC_BTN_TIMING    = 9016;
-constexpr int IDC_BTN_STATS     = 9017;
 } // namespace
 
 int MainWindow::Scale(int dip) const {
@@ -40,16 +35,6 @@ MainWindow::~MainWindow() {
     if (loadThread_.joinable()) loadThread_.join();
     if (hBgBrush_) DeleteObject(hBgBrush_);
     if (hToolbarFont_) DeleteObject(hToolbarFont_);
-    if (hIcoFindPrev_) DeleteObject(hIcoFindPrev_);
-    if (hIcoFindNext_) DeleteObject(hIcoFindNext_);
-    if (hIcoErrPrev_)  DeleteObject(hIcoErrPrev_);
-    if (hIcoErrNext_)  DeleteObject(hIcoErrNext_);
-    if (hIcoSearch_)   DeleteObject(hIcoSearch_);
-    if (hIcoEye_)      DeleteObject(hIcoEye_);
-    if (hIcoEyeOff_)   DeleteObject(hIcoEyeOff_);
-    if (hIcoTiming_)   DeleteObject(hIcoTiming_);
-    if (hIcoStats_)    DeleteObject(hIcoStats_);
-    if (hIcoOpenFile_) DeleteObject(hIcoOpenFile_);
 }
 
 void MainWindow::RegisterClass(HINSTANCE hInstance) {
@@ -160,54 +145,6 @@ LRESULT MainWindow::HandleMessage(UINT msg, WPARAM wParam, LPARAM lParam) {
         case WM_DRAWITEM: {
             auto* dis = reinterpret_cast<DRAWITEMSTRUCT*>(lParam);
             if (dis && dis->CtlType == ODT_BUTTON) {
-                // Map button IDs → bitmap. Icon-only buttons have empty text;
-                // labelled buttons (Open/Timing/Stats) draw icon then text.
-                HBITMAP icon = nullptr;
-                bool labelled = false;
-                switch (dis->CtlID) {
-                    case IDC_BTN_FINDPREV:  icon = hIcoFindPrev_; break;
-                    case IDC_BTN_FINDNEXT:  icon = hIcoFindNext_; break;
-                    case IDC_BTN_ERRPREV:   icon = hIcoErrPrev_;  break;
-                    case IDC_BTN_ERRNEXT:   icon = hIcoErrNext_;  break;
-                    case IDC_BTN_DURATION:
-                        icon = Settings::Instance().GetShowDuration() ? hIcoEye_ : hIcoEyeOff_;
-                        break;
-                    case IDC_BTN_OPEN:      icon = hIcoOpenFile_; labelled = true; break;
-                    case IDC_BTN_TIMING:    icon = hIcoTiming_;   labelled = true; break;
-                    case IDC_BTN_STATS:     icon = hIcoStats_;    labelled = true; break;
-                    default: break;
-                }
-                if (icon && !labelled) {
-                    DrawThemedIconButton(dis, icon, iconSize_);
-                    return TRUE;
-                }
-                if (icon && labelled) {
-                    // Draw theme background first, then overlay icon + existing text.
-                    DrawThemedButton(dis);
-                    HDC memDC = CreateCompatibleDC(dis->hDC);
-                    HGDIOBJ oldBmp = SelectObject(memDC, icon);
-                    RECT rc = dis->rcItem;
-                    int y = rc.top + (rc.bottom - rc.top - iconSize_) / 2;
-                    int x = rc.left + 8;
-                    BLENDFUNCTION bf = { AC_SRC_OVER, 0, 255, AC_SRC_ALPHA };
-                    AlphaBlend(dis->hDC, x, y, iconSize_, iconSize_,
-                               memDC, 0, 0, iconSize_, iconSize_, bf);
-                    SelectObject(memDC, oldBmp);
-                    DeleteDC(memDC);
-                    // Redraw text shifted right of the icon.
-                    wchar_t text[64];
-                    int len = GetWindowTextW(dis->hwndItem, text, 64);
-                    if (len > 0) {
-                        RECT trc = rc;
-                        trc.left += iconSize_ + 12;
-                        auto& theme = CurrentTheme();
-                        SetBkMode(dis->hDC, TRANSPARENT);
-                        SetTextColor(dis->hDC, ToCOLORREF(theme.foreground));
-                        DrawTextW(dis->hDC, text, len, &trc,
-                                  DT_LEFT | DT_VCENTER | DT_SINGLELINE);
-                    }
-                    return TRUE;
-                }
                 DrawThemedButton(dis);
                 return TRUE;
             }
@@ -265,38 +202,21 @@ void MainWindow::OnCreate() {
     SendMessageW(hwndSearch_, EM_SETCUEBANNER, TRUE,
                  reinterpret_cast<LPARAM>(L"  Search..."));
 
-    // Preload toolbar icons once (re-used via AlphaBlend in WM_DRAWITEM)
-    iconSize_ = Scale(16);
-    hIcoFindPrev_ = LoadPngResourceAsHBITMAP(hInst, IDI_UI_CHEVUP,    iconSize_);
-    hIcoFindNext_ = LoadPngResourceAsHBITMAP(hInst, IDI_UI_CHEVDOWN,  iconSize_);
-    hIcoErrPrev_  = LoadPngResourceAsHBITMAP(hInst, IDI_UI_CHEVUPERR, iconSize_);
-    hIcoErrNext_  = LoadPngResourceAsHBITMAP(hInst, IDI_UI_CHEVDNERR, iconSize_);
-    hIcoSearch_   = LoadPngResourceAsHBITMAP(hInst, IDI_UI_SEARCH,    iconSize_);
-    hIcoEye_      = LoadPngResourceAsHBITMAP(hInst, IDI_UI_EYE,       iconSize_);
-    hIcoEyeOff_   = LoadPngResourceAsHBITMAP(hInst, IDI_UI_EYEOFF,    iconSize_);
-    hIcoTiming_   = LoadPngResourceAsHBITMAP(hInst, IDI_UI_TIMING,    iconSize_);
-    hIcoStats_    = LoadPngResourceAsHBITMAP(hInst, IDI_UI_STATS,     iconSize_);
-    hIcoOpenFile_ = LoadPngResourceAsHBITMAP(hInst, IDI_UI_OPENFILE,  iconSize_);
-
     // Navigation buttons next to search
-    auto makeBtn = [&](const wchar_t* label, int id, int widthDip = 32) -> HWND {
+    auto makeBtn = [&](const wchar_t* label, int id) -> HWND {
         HWND btn = CreateWindowExW(0, L"BUTTON", label,
             WS_CHILD | WS_VISIBLE | BS_OWNERDRAW,
-            0, 0, Scale(widthDip), Scale(kToolbarHeightDip - 12),
+            0, 0, Scale(32), Scale(kToolbarHeightDip - 12),
             hwnd_, reinterpret_cast<HMENU>(static_cast<LONG_PTR>(id)),
             hInst, nullptr);
         if (hToolbarFont_) SendMessageW(btn, WM_SETFONT,
                                         reinterpret_cast<WPARAM>(hToolbarFont_), TRUE);
         return btn;
     };
-    hwndBtnOpen_     = makeBtn(L"Open",  IDC_BTN_OPEN,     70);
-    hwndBtnFindPrev_ = makeBtn(L"",      IDC_BTN_FINDPREV, 32);
-    hwndBtnFindNext_ = makeBtn(L"",      IDC_BTN_FINDNEXT, 32);
-    hwndBtnErrPrev_  = makeBtn(L"",      IDC_BTN_ERRPREV,  32);
-    hwndBtnErrNext_  = makeBtn(L"",      IDC_BTN_ERRNEXT,  32);
-    hwndBtnDuration_ = makeBtn(L"",      IDC_BTN_DURATION, 32);
-    hwndBtnTiming_   = makeBtn(L"Timing",IDC_BTN_TIMING,   82);
-    hwndBtnStats_    = makeBtn(L"Stats", IDC_BTN_STATS,    72);
+    hwndBtnFindPrev_ = makeBtn(L"\x25B2", IDC_BTN_FINDPREV);     // ▲
+    hwndBtnFindNext_ = makeBtn(L"\x25BC", IDC_BTN_FINDNEXT);     // ▼
+    hwndBtnErrPrev_  = makeBtn(L"Err \x25B2", IDC_BTN_ERRPREV);  // Err ▲
+    hwndBtnErrNext_  = makeBtn(L"Err \x25BC", IDC_BTN_ERRNEXT);  // Err ▼
 
     // Populate sidebarWidth_ / detailHeight_ from stored prefs (values are
     // physical pixels as last persisted). detailHeight_=-1 means "auto 70%"
@@ -414,39 +334,26 @@ void MainWindow::LayoutChildren() {
 
     int topH = std::max(0, workH - detailH - splitterPx);
 
-    // Toolbar: [Open] ... [Search][▲▼][errUp errDown] ... [👁 Timing Stats]
+    // Toolbar: search box + navigation buttons across the right pane.
     {
         const int pad = Scale(6);
         const int ctrlH = Scale(24);
         const int btnY = (toolbarPx - ctrlH) / 2;
         const int btnW = Scale(36);
-        const int labelW = Scale(92);
-        const int timingW = Scale(92);
-        const int statsW  = Scale(80);
+        const int errBtnW = Scale(50);
 
-        // Left-side Open button just after sidebar split.
-        int leftX = sidebarWidth_ + splitterPx + pad;
-        if (hwndBtnOpen_) {
-            MoveWindow(hwndBtnOpen_, leftX, btnY, labelW - Scale(14), ctrlH, TRUE);
-            leftX += labelW - Scale(14) + pad;
-        }
-
-        // Right-side action buttons: Stats, Timing, Duration eye (from right).
+        // Buttons from right edge: ErrNext, ErrPrev, FindNext, FindPrev
         int x = totalW - pad;
-        if (hwndBtnStats_)   { x -= statsW;  MoveWindow(hwndBtnStats_,   x, btnY, statsW,  ctrlH, TRUE); x -= pad/2; }
-        if (hwndBtnTiming_)  { x -= timingW; MoveWindow(hwndBtnTiming_,  x, btnY, timingW, ctrlH, TRUE); x -= pad; }
-        if (hwndBtnDuration_){ x -= btnW;    MoveWindow(hwndBtnDuration_,x, btnY, btnW,    ctrlH, TRUE); x -= pad; }
-
-        // Error / find navigation — packed, still right-aligned to remaining x.
-        if (hwndBtnErrNext_) { x -= btnW; MoveWindow(hwndBtnErrNext_, x, btnY, btnW, ctrlH, TRUE); x -= pad/2; }
-        if (hwndBtnErrPrev_) { x -= btnW; MoveWindow(hwndBtnErrPrev_, x, btnY, btnW, ctrlH, TRUE); x -= pad; }
+        if (hwndBtnErrNext_) { x -= errBtnW; MoveWindow(hwndBtnErrNext_, x, btnY, errBtnW, ctrlH, TRUE); x -= pad/2; }
+        if (hwndBtnErrPrev_) { x -= errBtnW; MoveWindow(hwndBtnErrPrev_, x, btnY, errBtnW, ctrlH, TRUE); x -= pad; }
         if (hwndBtnFindNext_) { x -= btnW; MoveWindow(hwndBtnFindNext_, x, btnY, btnW, ctrlH, TRUE); x -= pad/2; }
         if (hwndBtnFindPrev_) { x -= btnW; MoveWindow(hwndBtnFindPrev_, x, btnY, btnW, ctrlH, TRUE); x -= pad; }
 
-        // Search box fills remaining space between Open and nav buttons.
+        // Search box fills remaining space
         if (hwndSearch_) {
-            const int searchW = std::max(Scale(120), x - leftX);
-            MoveWindow(hwndSearch_, leftX, btnY, searchW, ctrlH, TRUE);
+            const int searchX = sidebarWidth_ + splitterPx + pad;
+            const int searchW = std::max(Scale(120), x - searchX);
+            MoveWindow(hwndSearch_, searchX, btnY, searchW, ctrlH, TRUE);
         }
     }
 
@@ -497,10 +404,6 @@ void MainWindow::OnCommand(int id, int code, HWND ctrl) {
         case IDC_BTN_FINDPREV:  RunSearch(false);          return;
         case IDC_BTN_ERRNEXT:   JumpToErrorRelative(+1);   return;
         case IDC_BTN_ERRPREV:   JumpToErrorRelative(-1);   return;
-        case IDC_BTN_OPEN:      ShowOpenDialog();          return;
-        case IDC_BTN_DURATION:  SendMessageW(hwnd_, WM_COMMAND, ID_VIEW_DURATION, 0); return;
-        case IDC_BTN_TIMING:    SendMessageW(hwnd_, WM_COMMAND, ID_VIEW_TIMING, 0);   return;
-        case IDC_BTN_STATS:     SendMessageW(hwnd_, WM_COMMAND, ID_VIEW_STATS, 0);    return;
         case ID_FILE_OPEN:
             ShowOpenDialog();
             break;
@@ -514,7 +417,6 @@ void MainWindow::OnCommand(int id, int code, HWND ctrl) {
             }
             Settings::Instance().SetShowDuration(newState);
             if (tableView_) InvalidateRect(tableView_->GetHwnd(), nullptr, FALSE);
-            if (hwndBtnDuration_) InvalidateRect(hwndBtnDuration_, nullptr, TRUE);
             break;
         }
         case ID_VIEW_STATS:

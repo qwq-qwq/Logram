@@ -1,8 +1,6 @@
 #include "ui/FilterSidebar.h"
 #include "ui/ThemeColors.h"
 #include "infra/Utf.h"
-#include "infra/ImageUtils.h"
-#include "../../resource.h"
 #include <commctrl.h>
 #include <windowsx.h>
 
@@ -10,7 +8,6 @@ FilterSidebar::FilterSidebar() {}
 FilterSidebar::~FilterSidebar() {
     if (doc_) doc_->listeners.Remove(this);
     if (hFont_) DeleteObject(hFont_);
-    if (hLevelImages_) ImageList_Destroy(hLevelImages_);
 }
 
 void FilterSidebar::RegisterClass(HINSTANCE hInstance) {
@@ -53,11 +50,6 @@ HWND FilterSidebar::Create(HWND parent, HINSTANCE hInstance, LogDocument* doc) {
     ListView_SetExtendedListViewStyle(hwndList_,
         LVS_EX_CHECKBOXES | LVS_EX_FULLROWSELECT | LVS_EX_DOUBLEBUFFER);
 
-    BuildLevelImageList(hInstance);
-    if (hLevelImages_) {
-        ListView_SetImageList(hwndList_, hLevelImages_, LVSIL_SMALL);
-    }
-
     // Dark background for the entire ListView surface.
     auto& theme = CurrentTheme();
     ListView_SetBkColor(hwndList_, ToCOLORREF(theme.background));
@@ -74,20 +66,6 @@ HWND FilterSidebar::Create(HWND parent, HINSTANCE hInstance, LogDocument* doc) {
 
     RebuildList();
     return hwnd_;
-}
-
-void FilterSidebar::BuildLevelImageList(HINSTANCE hInstance) {
-    const int iconSize = Scale(16);
-    hLevelImages_ = ImageList_Create(iconSize, iconSize,
-                                     ILC_COLOR32 | ILC_MASK, kLogLevelCount, 0);
-    if (!hLevelImages_) return;
-
-    for (int i = 0; i < kLogLevelCount; ++i) {
-        HBITMAP hbmp = LoadPngResourceAsHBITMAP(hInstance, IDI_LEVEL_BASE + i, iconSize);
-        if (!hbmp) continue;
-        ImageList_Add(hLevelImages_, hbmp, nullptr);
-        DeleteObject(hbmp);
-    }
 }
 
 void FilterSidebar::CreatePresetButtons(HINSTANCE hInstance) {
@@ -168,11 +146,10 @@ void FilterSidebar::RebuildList() {
         auto& info = GetLogLevelInfo(static_cast<LogLevel>(i));
         auto wlabel = Utf8ToWide(info.label);
         LVITEMW item = {};
-        item.mask = LVIF_TEXT | LVIF_PARAM | LVIF_GROUPID | LVIF_IMAGE;
+        item.mask = LVIF_TEXT | LVIF_PARAM | LVIF_GROUPID;
         item.iItem = row;
         item.iGroupId = 1;
         item.lParam = static_cast<LPARAM>(i);
-        item.iImage = hLevelImages_ ? i : I_IMAGENONE;
         item.pszText = const_cast<LPWSTR>(wlabel.c_str());
         ListView_InsertItem(hwndList_, &item);
         bool on = (levelMask >> i) & 1;
@@ -191,11 +168,10 @@ void FilterSidebar::RebuildList() {
             wchar_t thChar = static_cast<wchar_t>(t + 0x21); // !, ", #, $, %, &...
             swprintf(buf, 32, L"%c  Thread %d", thChar, t + 1);
             LVITEMW item = {};
-            item.mask = LVIF_TEXT | LVIF_PARAM | LVIF_GROUPID | LVIF_IMAGE;
+            item.mask = LVIF_TEXT | LVIF_PARAM | LVIF_GROUPID;
             item.iItem = row;
             item.iGroupId = 2;
             item.lParam = static_cast<LPARAM>(1000 + t);
-            item.iImage = I_IMAGENONE;
             item.pszText = buf;
             ListView_InsertItem(hwndList_, &item);
             bool on = (thMask >> t) & 1;

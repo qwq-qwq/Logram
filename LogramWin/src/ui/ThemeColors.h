@@ -62,8 +62,4 @@ ColorRGBA DurationColor(int64_t durationUS);
 #ifdef _WIN32
 // Owner-drawn dark-themed button helper. Call from WM_DRAWITEM handler.
 void DrawThemedButton(const DRAWITEMSTRUCT* dis);
-
-// Like DrawThemedButton but centres `icon` (pre-multiplied 32bpp BGRA HBITMAP)
-// in place of button text. Background/border/state rendering matches.
-void DrawThemedIconButton(const DRAWITEMSTRUCT* dis, HBITMAP icon, int iconSize);
 #endif

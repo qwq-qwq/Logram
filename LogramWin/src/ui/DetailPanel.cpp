@@ -2,12 +2,10 @@
 #include "ui/ThemeColors.h"
 #include "infra/Utf.h"
 #include "infra/Clipboard.h"
-#include "infra/ImageUtils.h"
 #include "sql/SqlStats.h"
 #include "sql/SqlFormatter.h"
 #include "sql/SqlParamSubst.h"
 #include "sql/JsonPretty.h"
-#include "../../resource.h"
 #include <richedit.h>
 
 DetailPanel::DetailPanel() {}
@@ -16,7 +14,6 @@ DetailPanel::~DetailPanel() {
     if (hFont_) DeleteObject(hFont_);
     if (hFontSmall_) DeleteObject(hFontSmall_);
     if (hBgBrush_) DeleteObject(hBgBrush_);
-    if (hIcoCopy_) DeleteObject(hIcoCopy_);
 }
 
 void DetailPanel::RegisterClass(HINSTANCE hInstance) {
@@ -100,9 +97,6 @@ HWND DetailPanel::Create(HWND parent, HINSTANCE hInstance, LogDocument* doc) {
     auto& theme = CurrentTheme();
     hBgBrush_ = CreateSolidBrush(ToCOLORREF(theme.background));
     SendMessageW(hwndEdit_, EM_SETBKGNDCOLOR, 0, ToCOLORREF(theme.background));
-
-    iconSize_ = Scale(16);
-    hIcoCopy_ = LoadPngResourceAsHBITMAP(hInstance, IDI_UI_COPY, iconSize_);
 
     return hwnd_;
 }
@@ -405,17 +399,8 @@ void DetailPanel::ShowLine(int lineId) {
     if (level == LogLevel::Sql || level == LogLevel::Cust2) {
         auto parsed = SqlStatsParse(msgStr);
         if (!parsed.entries.empty()) {
-            const char* primary[] = {"Rows", "Total", "Fetch"};
-            bool first = true;
-            for (const char* label : primary) {
-                for (auto& e : parsed.entries) {
-                    if (e.label == label) {
-                        if (!first) headerText += "   \xC2\xB7   "; // UTF-8 middle dot
-                        headerText += e.label + "  " + SqlStatsFormatValue(e);
-                        first = false;
-                        break;
-                    }
-                }
+            for (auto& e : parsed.entries) {
+                headerText += e.label + ": " + SqlStatsFormatValue(e) + "  ";
             }
         }
         lastSql_ = parsed.sql;
@@ -518,31 +503,6 @@ LRESULT DetailPanel::HandleMessage(UINT msg, WPARAM wParam, LPARAM lParam) {
                 // For Params toggle, inject checked state into itemState
                 if (dis->CtlID == IDC_PARAMS_BTN && paramsEnabled_)
                     dis->itemState |= ODS_SELECTED;
-                if (dis->CtlID == IDC_COPY_BTN && hIcoCopy_) {
-                    DrawThemedButton(dis);
-                    HDC memDC = CreateCompatibleDC(dis->hDC);
-                    HGDIOBJ oldBmp = SelectObject(memDC, hIcoCopy_);
-                    RECT rc = dis->rcItem;
-                    int x = rc.left + Scale(6);
-                    int y = rc.top + (rc.bottom - rc.top - iconSize_) / 2;
-                    BLENDFUNCTION bf = { AC_SRC_OVER, 0, 255, AC_SRC_ALPHA };
-                    AlphaBlend(dis->hDC, x, y, iconSize_, iconSize_,
-                               memDC, 0, 0, iconSize_, iconSize_, bf);
-                    SelectObject(memDC, oldBmp);
-                    DeleteDC(memDC);
-                    wchar_t text[32];
-                    int len = GetWindowTextW(dis->hwndItem, text, 32);
-                    if (len > 0) {
-                        RECT trc = rc;
-                        trc.left += iconSize_ + Scale(10);
-                        auto& theme = CurrentTheme();
-                        SetBkMode(dis->hDC, TRANSPARENT);
-                        SetTextColor(dis->hDC, ToCOLORREF(theme.foreground));
-                        DrawTextW(dis->hDC, text, len, &trc,
-                                  DT_LEFT | DT_VCENTER | DT_SINGLELINE);
-                    }
-                    return TRUE;
-                }
                 DrawThemedButton(dis);
                 return TRUE;
             }

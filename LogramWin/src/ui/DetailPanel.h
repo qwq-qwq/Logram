@@ -31,8 +31,6 @@ private:
     HFONT hFont_ = nullptr;
     HFONT hFontSmall_ = nullptr;
     HBRUSH hBgBrush_ = nullptr;
-    HBITMAP hIcoCopy_ = nullptr;
-    int iconSize_ = 16;
     LogDocument* doc_ = nullptr;
     int lastLineId_ = -1;
     bool paramsEnabled_ = false;
