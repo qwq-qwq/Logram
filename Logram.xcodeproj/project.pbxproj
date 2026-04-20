@@ -19,6 +19,7 @@
 		A1000A /* MethodTimingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000A; };
 		A1000B /* LineDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000B; };
 		A1000C /* ColorTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000C; };
+		A1000D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B1000D; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -35,6 +36,7 @@
 		B1000A /* MethodTimingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MethodTimingView.swift; sourceTree = "<group>"; };
 		B1000B /* LineDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LineDetailView.swift; sourceTree = "<group>"; };
 		B1000C /* ColorTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColorTheme.swift; sourceTree = "<group>"; };
+		B1000D /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -62,6 +64,7 @@
 				B10001 /* App.swift */,
 				E10003 /* Models */,
 				E10004 /* Views */,
+				B1000D /* Assets.xcassets */,
 			);
 			path = Logram;
 			sourceTree = "<group>";
@@ -108,6 +111,7 @@
 			buildPhases = (
 				F10002 /* Sources */,
 				D10001 /* Frameworks */,
+				F10004 /* Resources */,
 			);
 			buildRules = (
 			);
@@ -167,6 +171,17 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXResourcesBuildPhase section */
+		F10004 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A1000D /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
 
 /* Begin XCBuildConfiguration section */
 		G10004 /* Debug */ = {

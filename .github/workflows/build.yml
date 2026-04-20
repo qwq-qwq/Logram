@@ -106,7 +106,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Logram-windows
+          name: Logragm-windows
           path: Logram-windows.zip
 
       - name: Attach to Release

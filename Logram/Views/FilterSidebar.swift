@@ -99,9 +99,12 @@ struct FilterSidebar: View {
                 }
             )) {
                 HStack(spacing: 4) {
-                    RoundedRectangle(cornerRadius: 2)
-                        .fill(theme.levelBadgeColor(for: level))
-                        .frame(width: 12, height: 12)
+                    Image(level.iconName)
+                        .renderingMode(.template)
+                        .resizable()
+                        .interpolation(.high)
+                        .frame(width: 14, height: 14)
+                        .foregroundStyle(theme.levelBadgeColor(for: level))
                     Text(level.label)
                         .font(.system(size: 11, design: .monospaced))
                     Spacer()

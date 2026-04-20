@@ -92,6 +92,44 @@ enum LogLevel: Int, CaseIterable, Identifiable, Sendable {
         }
     }
 
+    /// Asset name in Assets.xcassets (Levels namespace, template SVG from design bundle)
+    var iconName: String {
+        switch self {
+        case .unknown: return "Levels/level_unknown"
+        case .info:    return "Levels/level_info"
+        case .debug:   return "Levels/level_debug"
+        case .trace:   return "Levels/level_trace"
+        case .warn:    return "Levels/level_warn"
+        case .error:   return "Levels/level_error"
+        case .enter:   return "Levels/level_enter"
+        case .leave:   return "Levels/level_leave"
+        case .osErr:   return "Levels/level_osErr"
+        case .exc:     return "Levels/level_exc"
+        case .excOs:   return "Levels/level_excOs"
+        case .mem:     return "Levels/level_mem"
+        case .stack:   return "Levels/level_stack"
+        case .fail:    return "Levels/level_fail"
+        case .sql:     return "Levels/level_sql"
+        case .cache:   return "Levels/level_cache"
+        case .res:     return "Levels/level_res"
+        case .db:      return "Levels/level_db"
+        case .http:    return "Levels/level_http"
+        case .clnt:    return "Levels/level_clnt"
+        case .srvr:    return "Levels/level_srvr"
+        case .call:    return "Levels/level_call"
+        case .ret:     return "Levels/level_ret"
+        case .auth:    return "Levels/level_auth"
+        case .cust1:   return "Levels/level_cust1"
+        case .cust2:   return "Levels/level_cust2"
+        case .cust3:   return "Levels/level_cust3"
+        case .cust4:   return "Levels/level_cust4"
+        case .rotat:   return "Levels/level_rotat"
+        case .dddER:   return "Levels/level_dddER"
+        case .dddIN:   return "Levels/level_dddIN"
+        case .mon:     return "Levels/level_mon"
+        }
+    }
+
     var isError: Bool {
         switch self {
         case .error, .exc, .excOs, .osErr, .fail, .dddER: return true

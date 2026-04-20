@@ -35,10 +35,13 @@ private:
     void CreatePresetButtons(HINSTANCE hInstance);
     void LayoutInternal();
 
+    void BuildLevelImageList(HINSTANCE hInstance);
+
     HWND hwnd_      = nullptr;
     HWND hwndList_  = nullptr;
     HWND hwndPreset_[5] = {nullptr, nullptr, nullptr, nullptr, nullptr};
     HFONT hFont_ = nullptr;
+    HIMAGELIST hLevelImages_ = nullptr;
     LogDocument* doc_ = nullptr;
 
     int clientW_ = 0;

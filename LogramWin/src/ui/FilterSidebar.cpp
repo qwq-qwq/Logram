@@ -1,13 +1,19 @@
 #include "ui/FilterSidebar.h"
 #include "ui/ThemeColors.h"
 #include "infra/Utf.h"
+#include "../../resource.h"
 #include <commctrl.h>
 #include <windowsx.h>
+#include <wincodec.h>
+#include <wrl/client.h>
+
+using Microsoft::WRL::ComPtr;
 
 FilterSidebar::FilterSidebar() {}
 FilterSidebar::~FilterSidebar() {
     if (doc_) doc_->listeners.Remove(this);
     if (hFont_) DeleteObject(hFont_);
+    if (hLevelImages_) ImageList_Destroy(hLevelImages_);
 }
 
 void FilterSidebar::RegisterClass(HINSTANCE hInstance) {
@@ -50,6 +56,11 @@ HWND FilterSidebar::Create(HWND parent, HINSTANCE hInstance, LogDocument* doc) {
     ListView_SetExtendedListViewStyle(hwndList_,
         LVS_EX_CHECKBOXES | LVS_EX_FULLROWSELECT | LVS_EX_DOUBLEBUFFER);
 
+    BuildLevelImageList(hInstance);
+    if (hLevelImages_) {
+        ListView_SetImageList(hwndList_, hLevelImages_, LVSIL_SMALL);
+    }
+
     // Dark background for the entire ListView surface.
     auto& theme = CurrentTheme();
     ListView_SetBkColor(hwndList_, ToCOLORREF(theme.background));
@@ -66,6 +77,80 @@ HWND FilterSidebar::Create(HWND parent, HINSTANCE hInstance, LogDocument* doc) {
 
     RebuildList();
     return hwnd_;
+}
+
+void FilterSidebar::BuildLevelImageList(HINSTANCE hInstance) {
+    const int iconSize = Scale(16);
+
+    ComPtr<IWICImagingFactory> factory;
+    HRESULT hr = CoCreateInstance(CLSID_WICImagingFactory, nullptr,
+                                  CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&factory));
+    if (FAILED(hr)) return;
+
+    hLevelImages_ = ImageList_Create(iconSize, iconSize,
+                                     ILC_COLOR32 | ILC_MASK, kLogLevelCount, 0);
+    if (!hLevelImages_) return;
+
+    for (int i = 0; i < kLogLevelCount; ++i) {
+        HRSRC hRes = FindResourceW(hInstance,
+            MAKEINTRESOURCEW(IDI_LEVEL_BASE + i), RT_RCDATA);
+        if (!hRes) continue;
+        HGLOBAL hMem = LoadResource(hInstance, hRes);
+        DWORD size = SizeofResource(hInstance, hRes);
+        void* data = LockResource(hMem);
+        if (!data || !size) continue;
+
+        ComPtr<IWICStream> stream;
+        if (FAILED(factory->CreateStream(&stream))) continue;
+        if (FAILED(stream->InitializeFromMemory(
+                static_cast<BYTE*>(data), size))) continue;
+
+        ComPtr<IWICBitmapDecoder> decoder;
+        if (FAILED(factory->CreateDecoderFromStream(
+                stream.Get(), nullptr,
+                WICDecodeMetadataCacheOnLoad, &decoder))) continue;
+
+        ComPtr<IWICBitmapFrameDecode> frame;
+        if (FAILED(decoder->GetFrame(0, &frame))) continue;
+
+        ComPtr<IWICFormatConverter> conv;
+        if (FAILED(factory->CreateFormatConverter(&conv))) continue;
+        if (FAILED(conv->Initialize(frame.Get(),
+                GUID_WICPixelFormat32bppBGRA,
+                WICBitmapDitherTypeNone, nullptr, 0.0,
+                WICBitmapPaletteTypeCustom))) continue;
+
+        ComPtr<IWICBitmapScaler> scaler;
+        if (FAILED(factory->CreateBitmapScaler(&scaler))) continue;
+        if (FAILED(scaler->Initialize(conv.Get(), iconSize, iconSize,
+                WICBitmapInterpolationModeHighQualityCubic))) continue;
+
+        BITMAPINFO bmi = {};
+        bmi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+        bmi.bmiHeader.biWidth = iconSize;
+        bmi.bmiHeader.biHeight = -iconSize;  // top-down
+        bmi.bmiHeader.biPlanes = 1;
+        bmi.bmiHeader.biBitCount = 32;
+        bmi.bmiHeader.biCompression = BI_RGB;
+
+        void* bits = nullptr;
+        HDC hdc = GetDC(nullptr);
+        HBITMAP hbmp = CreateDIBSection(hdc, &bmi, DIB_RGB_COLORS,
+                                        &bits, nullptr, 0);
+        ReleaseDC(nullptr, hdc);
+        if (!hbmp || !bits) { if (hbmp) DeleteObject(hbmp); continue; }
+
+        const UINT stride = iconSize * 4;
+        const UINT bufSize = stride * iconSize;
+        if (FAILED(scaler->CopyPixels(nullptr, stride, bufSize,
+                                      static_cast<BYTE*>(bits)))) {
+            DeleteObject(hbmp);
+            continue;
+        }
+
+        ImageList_Add(hLevelImages_, hbmp, nullptr);
+        DeleteObject(hbmp);
+    }
 }
 
 void FilterSidebar::CreatePresetButtons(HINSTANCE hInstance) {
@@ -146,10 +231,11 @@ void FilterSidebar::RebuildList() {
         auto& info = GetLogLevelInfo(static_cast<LogLevel>(i));
         auto wlabel = Utf8ToWide(info.label);
         LVITEMW item = {};
-        item.mask = LVIF_TEXT | LVIF_PARAM | LVIF_GROUPID;
+        item.mask = LVIF_TEXT | LVIF_PARAM | LVIF_GROUPID | LVIF_IMAGE;
         item.iItem = row;
         item.iGroupId = 1;
         item.lParam = static_cast<LPARAM>(i);
+        item.iImage = hLevelImages_ ? i : I_IMAGENONE;
         item.pszText = const_cast<LPWSTR>(wlabel.c_str());
         ListView_InsertItem(hwndList_, &item);
         bool on = (levelMask >> i) & 1;
@@ -168,10 +254,11 @@ void FilterSidebar::RebuildList() {
             wchar_t thChar = static_cast<wchar_t>(t + 0x21); // !, ", #, $, %, &...
             swprintf(buf, 32, L"%c  Thread %d", thChar, t + 1);
             LVITEMW item = {};
-            item.mask = LVIF_TEXT | LVIF_PARAM | LVIF_GROUPID;
+            item.mask = LVIF_TEXT | LVIF_PARAM | LVIF_GROUPID | LVIF_IMAGE;
             item.iItem = row;
             item.iGroupId = 2;
             item.lParam = static_cast<LPARAM>(1000 + t);
+            item.iImage = I_IMAGENONE;
             item.pszText = buf;
             ListView_InsertItem(hwndList_, &item);
             bool on = (thMask >> t) & 1;
