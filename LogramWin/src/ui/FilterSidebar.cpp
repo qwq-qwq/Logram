@@ -128,8 +128,22 @@ void FilterSidebar::RebuildList() {
     ListView_EnableGroupView(hwndList_, TRUE);
 
     // Determine whether "All" or "None" should appear on each group header.
-    uint64_t levelMaskCur = doc_ ? doc_->EnabledLevelMask() : ~uint64_t(0);
-    uint64_t thMaskCur    = doc_ ? doc_->EnabledThreadMask() : ~uint64_t(0);
+    // Compute over VISIBLE rows only — absent levels keep their bit in the
+    // mask (so their lines aren't accidentally hidden), but they shouldn't
+    // affect the toggle label.
+    uint64_t visibleLevelMask = 0;
+    if (doc_) {
+        const int* counts = doc_->PerLevelCount();
+        for (int i = 0; i < kLogLevelCount; ++i)
+            if (counts[i] > 0) visibleLevelMask |= (uint64_t(1) << i);
+    }
+    uint64_t visibleThreadMask = 0;
+    if (doc_) {
+        for (int t : doc_->ActiveThreads())
+            visibleThreadMask |= (uint64_t(1) << t);
+    }
+    uint64_t levelMaskCur = doc_ ? (doc_->EnabledLevelMask()  & visibleLevelMask)  : visibleLevelMask;
+    uint64_t thMaskCur    = doc_ ? (doc_->EnabledThreadMask() & visibleThreadMask) : visibleThreadMask;
     const wchar_t* levelsTask  = (levelMaskCur == 0) ? L"All" : L"None";
     const wchar_t* threadsTask = (thMaskCur    == 0) ? L"All" : L"None";
 
@@ -427,26 +441,30 @@ LRESULT FilterSidebar::HandleMessage(UINT msg, WPARAM wParam, LPARAM lParam) {
                 auto* lk = reinterpret_cast<NMLVLINK*>(lParam);
                 if (!doc_) return 0;
                 int groupId = lk->iSubItem;
-                suppressNotify_ = true;
                 int total = ListView_GetItemCount(hwndList_);
-                if (groupId == 1) {
-                    // Log Levels: toggle all
-                    bool anyOn = doc_->EnabledLevelMask() != 0;
-                    for (int row = 0; row < total; ++row) {
-                        LVITEMW li = {}; li.mask = LVIF_PARAM; li.iItem = row;
-                        ListView_GetItem(hwndList_, &li);
-                        if (li.lParam < 1000)
-                            ListView_SetCheckState(hwndList_, row, !anyOn);
+                bool isLevel = (groupId == 1);
+
+                // Compute "anyOn" by inspecting only the visible rows of the
+                // target group — the document mask can't be trusted because
+                // absent levels stay set in it.
+                bool anyOn = false;
+                for (int row = 0; row < total; ++row) {
+                    LVITEMW li = {}; li.mask = LVIF_PARAM; li.iItem = row;
+                    ListView_GetItem(hwndList_, &li);
+                    bool inGroup = isLevel ? (li.lParam < 1000) : (li.lParam >= 1000);
+                    if (inGroup && ListView_GetCheckState(hwndList_, row)) {
+                        anyOn = true;
+                        break;
                     }
-                } else if (groupId == 2) {
-                    // Threads: toggle all
-                    bool anyOn = doc_->EnabledThreadMask() != 0;
-                    for (int row = 0; row < total; ++row) {
-                        LVITEMW li = {}; li.mask = LVIF_PARAM; li.iItem = row;
-                        ListView_GetItem(hwndList_, &li);
-                        if (li.lParam >= 1000)
-                            ListView_SetCheckState(hwndList_, row, !anyOn);
-                    }
+                }
+
+                suppressNotify_ = true;
+                for (int row = 0; row < total; ++row) {
+                    LVITEMW li = {}; li.mask = LVIF_PARAM; li.iItem = row;
+                    ListView_GetItem(hwndList_, &li);
+                    bool inGroup = isLevel ? (li.lParam < 1000) : (li.lParam >= 1000);
+                    if (inGroup)
+                        ListView_SetCheckState(hwndList_, row, !anyOn);
                 }
                 suppressNotify_ = false;
                 ReadCheckStatesIntoDoc();
