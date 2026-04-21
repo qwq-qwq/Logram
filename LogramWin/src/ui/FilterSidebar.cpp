@@ -363,6 +363,7 @@ void FilterSidebar::ApplyPreset(Preset p) {
     DocumentChanges changes;
     changes.flags = DocumentChanges::FiltersChanged;
     doc_->listeners.Notify(changes);
+    UpdateGroupLabels();
 }
 
 LRESULT FilterSidebar::OnCustomDraw(LPNMLVCUSTOMDRAW cd) {
