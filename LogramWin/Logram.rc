@@ -38,6 +38,8 @@ BEGIN
     END
     POPUP "&Help"
     BEGIN
+        MENUITEM "&Documentation",      ID_HELP_DOCS
+        MENUITEM SEPARATOR
         MENUITEM "&About Logram",       ID_HELP_ABOUT
     END
 END

@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Документация — Logram</title>
+<meta name="description" content="Как пользоваться Logram: форматы UB-логов, фильтры, поиск, method timing, SQL с cust1, горячие клавиши." />
+
+<link rel="canonical" href="https://logram.perek.rest/ru/docs/" />
+<link rel="alternate" hreflang="uk" href="https://logram.perek.rest/docs/" />
+<link rel="alternate" hreflang="ru" href="https://logram.perek.rest/ru/docs/" />
+<link rel="alternate" hreflang="en" href="https://logram.perek.rest/en/docs/" />
+<link rel="alternate" hreflang="x-default" href="https://logram.perek.rest/docs/" />
+
+<meta name="theme-color" content="#0f1016" />
+<meta name="color-scheme" content="dark" />
+
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://logram.perek.rest/ru/docs/" />
+<meta property="og:title" content="Документация — Logram" />
+<meta property="og:description" content="Как пользоваться Logram: форматы UB-логов, фильтры, method timing, SQL, горячие клавиши." />
+<meta property="og:image" content="https://logram.perek.rest/assets/screenshot.png" />
+<meta property="og:locale" content="ru_RU" />
+
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%230f1016'/><circle cx='16' cy='16' r='6' fill='%239ece6a'/><circle cx='16' cy='16' r='10' fill='none' stroke='%239ece6a' stroke-opacity='.25' stroke-width='2'/></svg>" />
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/styles.css">
+</head>
+<body>
+
+<nav id="nav">
+  <a class="brand" href="/ru/"><span class="dot"></span>LOGRAM</a>
+  <div class="nav-links">
+    <a href="/ru/#formats">Форматы</a>
+    <a href="/ru/#features">Возможности</a>
+    <a href="/ru/docs/" aria-current="page">Документация</a>
+    <a href="/ru/#download">Скачать</a>
+  </div>
+  <div class="nav-right">
+    <div class="lang-switch" role="group" aria-label="Язык">
+      <a href="/docs/"    hreflang="uk">UA</a>
+      <a href="/ru/docs/" aria-current="true" hreflang="ru">RU</a>
+      <a href="/en/docs/" hreflang="en">EN</a>
+    </div>
+    <div class="nav-meta">v1.1 / macOS + Win</div>
+  </div>
+</nav>
+
+<header class="doc-hero">
+  <h1>Документация<em>.</em></h1>
+  <p>Короткий справочник: как открывать файлы, управлять фильтрами, находить медленные методы, читать SQL с подставленными <code>cust1</code>-параметрами и какие клавиши что делают.</p>
+
+  <nav class="doc-toc" aria-label="Содержание">
+    <a href="#open"><span class="num">01</span>Открытие лога</a>
+    <a href="#formats"><span class="num">02</span>Форматы UB-логов</a>
+    <a href="#filters"><span class="num">03</span>Фильтры и пресеты</a>
+    <a href="#search"><span class="num">04</span>Поиск</a>
+    <a href="#timing"><span class="num">05</span>Method Timing</a>
+    <a href="#sql"><span class="num">06</span>SQL и cust1</a>
+    <a href="#themes"><span class="num">07</span>Темы и колонки</a>
+    <a href="#tabs"><span class="num">08</span>Вкладки и окна</a>
+    <a href="#shortcuts"><span class="num">09</span>Горячие клавиши</a>
+  </nav>
+</header>
+
+<section class="doc" id="open">
+  <h2>01 &middot; Открытие <em>лога</em></h2>
+  <p>Logram сразу работает с <b>многогигабайтными</b> файлами: на Windows используется memory-mapped&nbsp;I/O, на macOS&nbsp;&mdash; потоковое чтение в <code>Data</code>. Формат определяется автоматически по заголовку файла &mdash; никаких мастеров импорта не существует.</p>
+
+  <div class="doc-where">
+    <div class="w-col">
+      <span class="w-os">macOS</span>
+      <span class="w-path">Кнопка <b>Open</b> в тулбаре или <kbd>&#8984;</kbd><kbd>O</kbd></span>
+    </div>
+    <div class="w-col">
+      <span class="w-os">Windows</span>
+      <span class="w-path">Меню <code>File → Open</code> или <kbd>Ctrl</kbd><kbd>O</kbd></span>
+    </div>
+  </div>
+
+  <p>Также сработает:</p>
+  <ul>
+    <li><b>Перетаскивание</b> файла в окно приложения.</li>
+    <li><b>Командная строка</b> &mdash; путь первым аргументом: <code>Logram.exe path\app.log</code> или <code>open -a Logram ~/logs/app.log</code>.</li>
+    <li><b>Ассоциация с файлами</b> &mdash; двойной клик по <code>.log</code> в Finder/Explorer, если приложение назначено по умолчанию.</li>
+  </ul>
+</section>
+
+<section class="doc" id="formats">
+  <h2>02 &middot; Форматы <em>UB-логов</em></h2>
+  <p>Поддерживаются четыре диалекта. Строка всегда имеет структуру: <code>[дата] [поток] [уровень]  &lt;TAB&gt; сообщение</code>. Номер потока кодируется одним ASCII-символом: <code>!</code>&nbsp;=&nbsp;0, <code>"</code>&nbsp;=&nbsp;1, <code>#</code>&nbsp;=&nbsp;2 и далее (<code>charCode − 0x21</code>).</p>
+
+  <h3>mORMot 1 &mdash; основной формат UB</h3>
+  <div class="doc-sample"><span class="d">20210727 08260933</span>  <span class="h">$</span> <span class="l">SQL   </span>	<span class="t">SELECT id FROM uba_user WHERE name=:name</span></div>
+  <p>Временная метка: <code>YYYYMMDD HHMMSSCC</code> (сотые доли секунды в конце).</p>
+
+  <h3>mORMot 2 HiRes &mdash; высокоточный таймер</h3>
+  <div class="doc-sample"><span class="d">0000000000000C72</span>  <span class="h">!</span> <span class="l">info  </span>	<span class="t">UB server started on port 8881</span></div>
+  <p>16-значный hex-счётчик вместо даты &mdash; удобно для микро-бенчмарков.</p>
+
+  <h3>journald &mdash; systemd</h3>
+  <div class="doc-sample"><span class="d">2022-10-27T00:00:00.358664+0300</span> ub[657518]:  <span class="h">$</span> <span class="l">SQL   </span>	<span class="t">COMMIT</span></div>
+  <p>ISO-8601 с микросекундами и префиксом <code>ub[pid]:</code>.</p>
+
+  <h3>console &mdash; stdin без даты</h3>
+  <div class="doc-sample">  <span class="h">$</span> <span class="l">EXC   </span>	<span class="t">EUBSecurityException at auth.js:142</span></div>
+  <p>Когда UB запущен в режиме разработки и пишет прямо в терминал.</p>
+
+  <h3>Уровни</h3>
+  <p>Logram распознаёт 32 уровня UB-логов: <code>info</code>, <code>SQL</code>, <code>EXC</code>, <code>WRN</code>, <code>ERR</code>, <code>DBG</code>, <code>HTTP</code>, <code>+</code>/<code>-</code> (вход/выход метода), <code>MON</code>, <code>CAC</code> и другие. Каждому назначен цвет badge и оттенок строки; палитру задаёт тема (<a href="#themes">п.&nbsp;7</a>).</p>
+</section>
+
+<section class="doc" id="filters">
+  <h2>03 &middot; Фильтры и <em>пресеты</em></h2>
+  <p>В боковой панели &mdash; две группы чекбоксов и пресеты над ними:</p>
+  <ul>
+    <li><b>Log Levels</b> &mdash; включить/выключить строки определённого уровня. Рядом с каждым уровнем &mdash; счётчик событий.</li>
+    <li><b>Threads</b> &mdash; показывать строки только выбранных воркеров. Удобно, когда нужно следить за одним HTTP-запросом.</li>
+  </ul>
+  <p>Фильтрация O(n) &mdash; один проход по всем строкам: уровни → потоки → текст. На Windows используются битовые маски уровней, поэтому миллион строк перефильтровывается за ~50&nbsp;мс.</p>
+
+  <h3>Пресеты</h3>
+
+  <div class="doc-where">
+    <div class="w-col">
+      <span class="w-os">macOS</span>
+      <span class="w-path">Pills <b>Errors · SQL · HTTP · +/-</b> над чекбоксами уровней</span>
+    </div>
+    <div class="w-col">
+      <span class="w-os">Windows</span>
+      <span class="w-path">Кнопки <b>All · Errors · SQL · HTTP · +/-</b> в панели фильтров</span>
+    </div>
+  </div>
+
+  <p>Что включает каждый пресет:</p>
+  <ul>
+    <li><b>All</b> (только Windows) &mdash; все уровни.</li>
+    <li><b>Errors</b> &mdash; <code>Error</code>, <code>EXC</code>, <code>EXC OS</code>, <code>OS ERR</code>, <code>Fail</code> (на Windows ещё <code>DddER</code>). Быстро увидеть «что сломалось».</li>
+    <li><b>SQL</b> &mdash; <code>SQL</code>, <code>cust1</code>, <code>cust2</code>. Обзор запросов к БД вместе с параметрами.</li>
+    <li><b>HTTP</b> &mdash; <code>HTTP</code> (на Windows ещё <code>Clnt</code>, <code>Srvr</code>). Трассировка внешних запросов.</li>
+    <li><b>+/-</b> &mdash; уровни <code>+</code> (вход в метод) и <code>-</code> (выход). Полезно перед открытием <a href="#timing">Method Timing</a>.</li>
+  </ul>
+  <p>Пресет обнуляет текущие чекбоксы уровней и включает только указанные. На macOS повторный клик (когда все уровни пресета уже активны) &mdash; выключает их. Текстовый фильтр и фильтр по потокам пресеты не трогают.</p>
+  <p>На macOS под списком есть кнопки <b>Reset</b> / <b>Apply</b> &mdash; <b>Reset</b> возвращает все чекбоксы в состояние «включено всё», <b>Apply</b> применяет изменения.</p>
+</section>
+
+<section class="doc" id="search">
+  <h2>04 &middot; <em>Поиск</em></h2>
+  <p>Находит подстроку в текущем видимом наборе строк (после фильтров). Регистронезависимый; регулярные выражения пока не поддерживаются.</p>
+
+  <div class="doc-where">
+    <div class="w-col">
+      <span class="w-os">macOS</span>
+      <span class="w-path">Поле <b>Search</b> в тулбаре (всегда видимое)</span>
+    </div>
+    <div class="w-col">
+      <span class="w-os">Windows</span>
+      <span class="w-path">Поле <b>Search</b> в тулбаре · <kbd>Ctrl</kbd><kbd>F</kbd> фокусирует поле</span>
+    </div>
+  </div>
+
+  <p>Навигация между совпадениями:</p>
+  <ul>
+    <li><b>macOS</b> &mdash; стрелки <kbd>&uarr;</kbd>/<kbd>&darr;</kbd> в тулбаре (рядом с полем поиска) или <kbd>Enter</kbd> / <kbd>Shift</kbd>+<kbd>Enter</kbd>.</li>
+    <li><b>Windows</b> &mdash; <kbd>F3</kbd> / <kbd>Shift</kbd>+<kbd>F3</kbd>, либо кнопки <b>Find Next</b> / <b>Find Previous</b> в тулбаре.</li>
+  </ul>
+  <p>При достижении края поиск <b>закольцовывается</b> с противоположной стороны и сопровождается коротким звуком. Если совпадений нет вообще &mdash; звук предупреждения.</p>
+  <p>Рядом с навигацией совпадений есть ещё пара стрелок с индикатором ошибки &mdash; они прыгают к следующей/предыдущей ошибке (см. <a href="#timing">Method Timing</a> про строки <code>Error</code>/<code>EXC</code>).</p>
+</section>
+
+<section class="doc" id="timing">
+  <h2>05 &middot; Method <em>Timing</em></h2>
+  <p>UnityBase логирует вход в метод строкой уровня <code>+</code> и выход &mdash; строкой <code>-</code> на том же потоке. Logram для каждого <code>+</code> находит парный <code>-</code> с учётом вложенности и считает длительность.</p>
+
+  <h3>Колонка Duration</h3>
+  <p>По умолчанию скрыта (построение таймингов стоит времени на больших файлах). При первом включении Logram строит тайминги и кэширует &mdash; следующие переключения мгновенные. На новом файле настройка сбрасывается.</p>
+
+  <div class="doc-where">
+    <div class="w-col">
+      <span class="w-os">macOS</span>
+      <span class="w-path">Кнопка-таймер <b>⏱</b> в тулбаре</span>
+    </div>
+    <div class="w-col">
+      <span class="w-os">Windows</span>
+      <span class="w-path">Меню <code>View → Toggle Duration</code></span>
+    </div>
+  </div>
+
+  <h3>Сводка методов</h3>
+  <p>Отдельное окно с таблицей всех пар <code>+</code>/<code>-</code> и сортировкой по длительности. Двойной клик по строке &mdash; переход к соответствующему месту в логе. Можно оставить открытым рядом с главным окном.</p>
+
+  <div class="doc-where">
+    <div class="w-col">
+      <span class="w-os">macOS</span>
+      <span class="w-path">Кнопка <b>Timing</b> в тулбаре (справа)</span>
+    </div>
+    <div class="w-col">
+      <span class="w-os">Windows</span>
+      <span class="w-path">Меню <code>View → Method Timing...</code></span>
+    </div>
+  </div>
+
+  <h3>Прыжок к паре</h3>
+  <p>Если вы стоите на строке <code>+</code> или <code>-</code>, <kbd>&#8984;</kbd><kbd>J</kbd> / <kbd>Ctrl</kbd><kbd>J</kbd> переносит к парной строке на том же потоке. На macOS тот же переход доступен через кнопку со стрелкой <b>↓</b>/<b>↑</b> в тулбаре (появляется когда выбрана строка <code>+</code> или <code>-</code>).</p>
+
+  <h3>Навигация по ошибкам</h3>
+  <p>Прыжок к следующей/предыдущей строке уровня <code>Error</code>/<code>EXC</code>:</p>
+  <div class="doc-where">
+    <div class="w-col">
+      <span class="w-os">macOS</span>
+      <span class="w-path">Стрелки <kbd>&uarr;</kbd>/<kbd>&darr;</kbd> возле красного <b>⚠︎</b> в тулбаре</span>
+    </div>
+    <div class="w-col">
+      <span class="w-os">Windows</span>
+      <span class="w-path">Меню <code>Navigate → Next/Prev Error</code> · <kbd>Ctrl</kbd><kbd>Shift</kbd><kbd>&darr;</kbd>/<kbd>&uarr;</kbd></span>
+    </div>
+  </div>
+</section>
+
+<section class="doc" id="sql">
+  <h2>06 &middot; SQL и <em>cust1</em></h2>
+  <p>Когда вы выбираете строку уровня <code>SQL</code>, в панели деталей снизу запрос подсвечивается (ключевые слова, строки, числа, функции) и форматируется для читабельности. Если на том же потоке перед запросом есть строка <code>cust1</code> с JSON-параметрами вида <code>{"P1":&hellip;,"P2s8":"&hellip;"}</code>, Logram <b>автоматически подставляет</b> их в плейсхолдеры <code>:1</code>/<code>:2</code> (Oracle) либо позиционные <code>?</code>.</p>
+  <p>Ключи JSON — это маркеры типа, которые генерирует UB-драйвер:</p>
+  <ul>
+    <li><code>P<i>N</i></code> &mdash; параметр номер <i>N</i> (число, булево значение или <code>null</code>). Пример: <code>P1</code> &rarr; <code>:1</code>.</li>
+    <li><code>P<i>N</i>s<i>len</i></code> &mdash; строка длиной <i>len</i> байт. Значение оборачивается в кавычки: <code>P2s8</code>: <code>"demo user"</code> &rarr; <code>:2 = 'demo user'</code>.</li>
+    <li><code>P<i>N</i>d</code> &mdash; дата/время в ISO-формате. Пример: <code>P3d</code>: <code>"2025-01-01"</code> &rarr; <code>:3 = '2025-01-01'</code>.</li>
+  </ul>
+  <p>То есть <code>P2s8</code> означает: «параметр №2, строка из 8 символов». Сам суффикс в подстановке не участвует &mdash; Logram смотрит только на номер после буквы <code>P</code>.</p>
+  <p>Результат &mdash; готовый для копирования SQL, который можно выполнить в psql/DBeaver. Переключатель <b>Show params / Hide params</b> в панели управляет подстановкой.</p>
+  <p>JSON в деталях (например, тело HTTP-запроса) тоже форматируется pretty-print.</p>
+</section>
+
+<section class="doc" id="themes">
+  <h2>07 &middot; Темы и <em>колонки</em></h2>
+  <p>Две встроенные темы: <b>Tokyo Night</b> (приглушённая, для долгих сессий) и <b>TTY</b> (яркая, похожая на терминал). Переключаются без перезагрузки.</p>
+
+  <div class="doc-where">
+    <div class="w-col">
+      <span class="w-os">macOS</span>
+      <span class="w-path">Иконка-палитра в тулбаре (меню с темами)</span>
+    </div>
+    <div class="w-col">
+      <span class="w-os">Windows</span>
+      <span class="w-path">Меню <code>View → Theme → Tokyo Night / TTY</code></span>
+    </div>
+  </div>
+
+  <p>Цвета применяются к:</p>
+  <ul>
+    <li>Badge уровня и оттенку строки (<code>EXC</code>, <code>Error</code> &mdash; красные; <code>SQL</code> &mdash; фиолетовый; <code>Warn</code> &mdash; жёлтый; <code>HTTP</code> &mdash; бирюзовый, и т.д.).</li>
+    <li>Колонки потока &mdash; каждый поток имеет стабильный цвет от своего номера.</li>
+    <li>SQL-подсветке в панели деталей (ключевые слова, строки, числа, функции).</li>
+  </ul>
+  <p>Настройка темы запоминается между запусками. Колонка <b>Duration</b> &mdash; тоже, но сбрасывается в <code>off</code> при открытии нового файла.</p>
+</section>
+
+<section class="doc" id="tabs">
+  <h2>08 &middot; Вкладки и <em>окна</em></h2>
+
+  <div class="doc-where">
+    <div class="w-col">
+      <span class="w-os">macOS</span>
+      <span class="w-path">Нативные вкладки macOS · <kbd>&#8984;</kbd><kbd>N</kbd> &mdash; новая вкладка · кнопка <b>+</b> в титульной полосе</span>
+    </div>
+    <div class="w-col">
+      <span class="w-os">Windows</span>
+      <span class="w-path">Каждый <code>Logram.exe</code> &mdash; отдельное окно</span>
+    </div>
+  </div>
+
+  <p><b>macOS</b>: вкладки работают через <code>WindowGroup</code>. <kbd>&#8984;</kbd><kbd>O</kbd> открывает файл в <i>активной</i> вкладке (фокус маршрутизируется через <code>@FocusedValue</code>). Вкладки перетаскиваются в отдельные окна и обратно.</p>
+  <p><b>Windows</b>: открывайте параллельно сколько нужно &mdash; благодаря memory-mapped&nbsp;I/O стоимость дополнительной копии лога мала.</p>
+</section>
+
+<section class="doc" id="shortcuts">
+  <h2>09 &middot; Горячие <em>клавиши</em></h2>
+
+  <table class="doc-table">
+    <thead>
+      <tr>
+        <th>Действие</th>
+        <th>macOS</th>
+        <th>Windows</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Открыть файл</td>
+        <td class="k"><kbd>&#8984;</kbd><kbd>O</kbd></td>
+        <td class="k"><kbd>Ctrl</kbd><kbd>O</kbd></td>
+      </tr>
+      <tr>
+        <td>Новая вкладка</td>
+        <td class="k"><kbd>&#8984;</kbd><kbd>N</kbd></td>
+        <td class="k">&mdash;</td>
+      </tr>
+      <tr>
+        <td>Фокус поля поиска</td>
+        <td class="k">&mdash;</td>
+        <td class="k"><kbd>Ctrl</kbd><kbd>F</kbd></td>
+      </tr>
+      <tr>
+        <td>Следующее совпадение / предыдущее</td>
+        <td class="k"><kbd>Enter</kbd> / <kbd>Shift</kbd><kbd>Enter</kbd> в поле поиска</td>
+        <td class="k"><kbd>F3</kbd> / <kbd>Shift</kbd><kbd>F3</kbd></td>
+      </tr>
+      <tr>
+        <td>Прыжок к парному <code>+</code>/<code>-</code></td>
+        <td class="k"><kbd>&#8984;</kbd><kbd>J</kbd></td>
+        <td class="k"><kbd>Ctrl</kbd><kbd>J</kbd></td>
+      </tr>
+      <tr>
+        <td>Следующая / предыдущая ошибка</td>
+        <td class="k">&mdash;</td>
+        <td class="k"><kbd>Ctrl</kbd><kbd>Shift</kbd><kbd>&darr;</kbd> / <kbd>&uarr;</kbd></td>
+      </tr>
+      <tr>
+        <td>Копировать выделенное</td>
+        <td class="k"><kbd>&#8984;</kbd><kbd>C</kbd></td>
+        <td class="k"><kbd>Ctrl</kbd><kbd>C</kbd></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p style="margin-top:32px">Остальные действия доступны через главное меню (<b>File / View / Navigate / Help</b>). Шорткаты показаны рядом с пунктами.</p>
+</section>
+
+<section class="final">
+  <h2>Дальше<br><em>&mdash; логи.</em></h2>
+  <p>Если нашли баг, неожиданное поведение или формат, который Logram не распознаёт &mdash; откройте issue на GitHub, приложите фрагмент файла (3-5 строк заголовка).</p>
+  <div class="cta-row">
+    <a class="btn btn-primary" href="https://github.com/qwq-qwq/Logram/issues" target="_blank" rel="noopener">Сообщить о проблеме <span class="arr">&rarr;</span></a>
+    <a class="btn btn-ghost" href="/ru/">На главную</a>
+  </div>
+</section>
+
+<footer>
+  <div>&copy; 2026 &middot; LOGRAM</div>
+  <div class="mid">Сергей Перекрестов &middot; для разработчиков UnityBase</div>
+  <div class="right">MIT &middot; Swift 5.9 + C++20</div>
+</footer>
+
+<script src="/assets/app.js" defer></script>
+</body>
+</html>

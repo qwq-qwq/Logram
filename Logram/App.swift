@@ -43,6 +43,23 @@ struct LogramApp: App {
                     ])
                 }
             }
+            CommandGroup(replacing: .help) {
+                Button("Logram Documentation") {
+                    if let url = URL(string: localizedDocsURL()) {
+                        NSWorkspace.shared.open(url)
+                    }
+                }
+                .keyboardShortcut("?", modifiers: .command)
+            }
         }
+    }
+}
+
+private func localizedDocsURL() -> String {
+    let code = Locale.current.language.languageCode?.identifier ?? "en"
+    switch code {
+    case "uk": return "https://logram.perek.rest/docs/"
+    case "ru": return "https://logram.perek.rest/ru/docs/"
+    default:   return "https://logram.perek.rest/en/docs/"
     }
 }

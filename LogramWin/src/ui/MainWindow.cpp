@@ -475,6 +475,15 @@ void MainWindow::OnCommand(int id, int code, HWND ctrl) {
                 L"https://logram.perek.rest",
                 L"About Logram", MB_OK | MB_ICONINFORMATION);
             break;
+        case ID_HELP_DOCS: {
+            wchar_t lang[16] = L"";
+            GetUserDefaultLocaleName(lang, 16);
+            const wchar_t* url = L"https://logram.perek.rest/en/docs/";
+            if (lang[0] == L'u' && lang[1] == L'k') url = L"https://logram.perek.rest/docs/";
+            else if (lang[0] == L'r' && lang[1] == L'u') url = L"https://logram.perek.rest/ru/docs/";
+            ShellExecuteW(hwnd_, L"open", url, nullptr, nullptr, SW_SHOWNORMAL);
+            break;
+        }
     }
 }
 

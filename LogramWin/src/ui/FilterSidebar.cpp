@@ -122,19 +122,31 @@ void FilterSidebar::RebuildList() {
     if (!hwndList_) return;
     suppressNotify_ = true;
     ListView_DeleteAllItems(hwndList_);
+    ListView_RemoveAllGroups(hwndList_);
 
     // Enable group view for "Log Levels" / "Threads" headers.
     ListView_EnableGroupView(hwndList_, TRUE);
 
+    // Determine whether "All" or "None" should appear on each group header.
+    uint64_t levelMaskCur = doc_ ? doc_->EnabledLevelMask() : ~uint64_t(0);
+    uint64_t thMaskCur    = doc_ ? doc_->EnabledThreadMask() : ~uint64_t(0);
+    const wchar_t* levelsTask  = (levelMaskCur == 0) ? L"All" : L"None";
+    const wchar_t* threadsTask = (thMaskCur    == 0) ? L"All" : L"None";
+
     LVGROUP grp = {};
     grp.cbSize = sizeof(grp);
-    grp.mask = LVGF_HEADER | LVGF_GROUPID;
+    grp.mask = LVGF_HEADER | LVGF_GROUPID | LVGF_TASK | LVGF_ALIGN;
+    grp.uAlign = LVGA_HEADER_LEFT;
     grp.pszHeader = const_cast<LPWSTR>(L"Log Levels");
-    grp.iGroupId = 1;
+    grp.pszTask   = const_cast<LPWSTR>(levelsTask);
+    grp.cchTask   = static_cast<UINT>(wcslen(levelsTask));
+    grp.iGroupId  = 1;
     ListView_InsertGroup(hwndList_, -1, &grp);
 
     grp.pszHeader = const_cast<LPWSTR>(L"Threads");
-    grp.iGroupId = 2;
+    grp.pszTask   = const_cast<LPWSTR>(threadsTask);
+    grp.cchTask   = static_cast<UINT>(wcslen(threadsTask));
+    grp.iGroupId  = 2;
     ListView_InsertGroup(hwndList_, -1, &grp);
 
     // 1) Level rows — only levels present in the loaded file
@@ -409,6 +421,37 @@ LRESULT FilterSidebar::HandleMessage(UINT msg, WPARAM wParam, LPARAM lParam) {
                 auto result = OnCustomDraw(reinterpret_cast<LPNMLVCUSTOMDRAW>(lParam));
                 SetWindowLongPtrW(hwnd_, DWLP_MSGRESULT, result);
                 return result;
+            }
+
+            if (hdr->code == LVN_LINKCLICK) {
+                auto* lk = reinterpret_cast<NMLVLINK*>(lParam);
+                if (!doc_) return 0;
+                int groupId = lk->iSubItem;
+                suppressNotify_ = true;
+                int total = ListView_GetItemCount(hwndList_);
+                if (groupId == 1) {
+                    // Log Levels: toggle all
+                    bool anyOn = doc_->EnabledLevelMask() != 0;
+                    for (int row = 0; row < total; ++row) {
+                        LVITEMW li = {}; li.mask = LVIF_PARAM; li.iItem = row;
+                        ListView_GetItem(hwndList_, &li);
+                        if (li.lParam < 1000)
+                            ListView_SetCheckState(hwndList_, row, !anyOn);
+                    }
+                } else if (groupId == 2) {
+                    // Threads: toggle all
+                    bool anyOn = doc_->EnabledThreadMask() != 0;
+                    for (int row = 0; row < total; ++row) {
+                        LVITEMW li = {}; li.mask = LVIF_PARAM; li.iItem = row;
+                        ListView_GetItem(hwndList_, &li);
+                        if (li.lParam >= 1000)
+                            ListView_SetCheckState(hwndList_, row, !anyOn);
+                    }
+                }
+                suppressNotify_ = false;
+                ReadCheckStatesIntoDoc();
+                RebuildList();  // refresh task labels (None ↔ All)
+                return 0;
             }
             return 0;
         }

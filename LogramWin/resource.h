@@ -25,6 +25,7 @@
 
 // Help
 #define ID_HELP_ABOUT       4001
+#define ID_HELP_DOCS        4002
 
 // Custom messages
 #define WM_APP_DOC_CHANGED  (WM_APP + 1)

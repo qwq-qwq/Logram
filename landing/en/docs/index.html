@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Documentation — Logram</title>
+<meta name="description" content="How to use Logram: UB log formats, filters, search, method timing, SQL with cust1, keyboard shortcuts." />
+
+<link rel="canonical" href="https://logram.perek.rest/en/docs/" />
+<link rel="alternate" hreflang="uk" href="https://logram.perek.rest/docs/" />
+<link rel="alternate" hreflang="ru" href="https://logram.perek.rest/ru/docs/" />
+<link rel="alternate" hreflang="en" href="https://logram.perek.rest/en/docs/" />
+<link rel="alternate" hreflang="x-default" href="https://logram.perek.rest/docs/" />
+
+<meta name="theme-color" content="#0f1016" />
+<meta name="color-scheme" content="dark" />
+
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://logram.perek.rest/en/docs/" />
+<meta property="og:title" content="Documentation — Logram" />
+<meta property="og:description" content="How to use Logram: UB log formats, filters, method timing, SQL, keyboard shortcuts." />
+<meta property="og:image" content="https://logram.perek.rest/assets/screenshot.png" />
+<meta property="og:locale" content="en_US" />
+
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%230f1016'/><circle cx='16' cy='16' r='6' fill='%239ece6a'/><circle cx='16' cy='16' r='10' fill='none' stroke='%239ece6a' stroke-opacity='.25' stroke-width='2'/></svg>" />
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/styles.css">
+</head>
+<body>
+
+<nav id="nav">
+  <a class="brand" href="/en/"><span class="dot"></span>LOGRAM</a>
+  <div class="nav-links">
+    <a href="/en/#formats">Formats</a>
+    <a href="/en/#features">Features</a>
+    <a href="/en/docs/" aria-current="page">Docs</a>
+    <a href="/en/#download">Download</a>
+  </div>
+  <div class="nav-right">
+    <div class="lang-switch" role="group" aria-label="Language">
+      <a href="/docs/"    hreflang="uk">UA</a>
+      <a href="/ru/docs/" hreflang="ru">RU</a>
+      <a href="/en/docs/" aria-current="true" hreflang="en">EN</a>
+    </div>
+    <div class="nav-meta">v1.1 / macOS + Win</div>
+  </div>
+</nav>
+
+<header class="doc-hero">
+  <h1>Documentation<em>.</em></h1>
+  <p>A short reference: how to open files, manage filters, find slow methods, read SQL with substituted <code>cust1</code> parameters, and which keys do what.</p>
+
+  <nav class="doc-toc" aria-label="Table of contents">
+    <a href="#open"><span class="num">01</span>Opening a log</a>
+    <a href="#formats"><span class="num">02</span>UB log formats</a>
+    <a href="#filters"><span class="num">03</span>Filters &amp; presets</a>
+    <a href="#search"><span class="num">04</span>Search</a>
+    <a href="#timing"><span class="num">05</span>Method timing</a>
+    <a href="#sql"><span class="num">06</span>SQL and cust1</a>
+    <a href="#themes"><span class="num">07</span>Themes &amp; columns</a>
+    <a href="#tabs"><span class="num">08</span>Tabs &amp; windows</a>
+    <a href="#shortcuts"><span class="num">09</span>Keyboard shortcuts</a>
+  </nav>
+</header>
+
+<section class="doc" id="open">
+  <h2>01 &middot; Opening a <em>log</em></h2>
+  <p>Logram works with <b>multi-gigabyte</b> files out of the box: Windows uses memory-mapped&nbsp;I/O, macOS&nbsp;&mdash; streaming read into <code>Data</code>. The format is auto-detected from the file header &mdash; no import wizards involved.</p>
+
+  <div class="doc-where">
+    <div class="w-col">
+      <span class="w-os">macOS</span>
+      <span class="w-path"><b>Open</b> button in the toolbar or <kbd>&#8984;</kbd><kbd>O</kbd></span>
+    </div>
+    <div class="w-col">
+      <span class="w-os">Windows</span>
+      <span class="w-path"><code>File → Open</code> menu or <kbd>Ctrl</kbd><kbd>O</kbd></span>
+    </div>
+  </div>
+
+  <p>These also work:</p>
+  <ul>
+    <li><b>Drag and drop</b> a file onto the app window.</li>
+    <li><b>Command line</b> &mdash; path as the first argument: <code>Logram.exe path\app.log</code> or <code>open -a Logram ~/logs/app.log</code>.</li>
+    <li><b>File association</b> &mdash; double-click <code>.log</code> in Finder/Explorer, if the app is set as default.</li>
+  </ul>
+</section>
+
+<section class="doc" id="formats">
+  <h2>02 &middot; UB <em>log formats</em></h2>
+  <p>Four dialects are supported. A line always has the structure: <code>[date] [thread] [level]  &lt;TAB&gt; message</code>. The thread number is encoded as a single ASCII character: <code>!</code>&nbsp;=&nbsp;0, <code>"</code>&nbsp;=&nbsp;1, <code>#</code>&nbsp;=&nbsp;2 and so on (<code>charCode − 0x21</code>).</p>
+
+  <h3>mORMot 1 &mdash; the main UB format</h3>
+  <div class="doc-sample"><span class="d">20210727 08260933</span>  <span class="h">$</span> <span class="l">SQL   </span>	<span class="t">SELECT id FROM uba_user WHERE name=:name</span></div>
+  <p>Timestamp: <code>YYYYMMDD HHMMSSCC</code> (hundredths of a second at the end).</p>
+
+  <h3>mORMot 2 HiRes &mdash; high-resolution timer</h3>
+  <div class="doc-sample"><span class="d">0000000000000C72</span>  <span class="h">!</span> <span class="l">info  </span>	<span class="t">UB server started on port 8881</span></div>
+  <p>A 16-digit hex counter instead of a date &mdash; handy for micro-benchmarks.</p>
+
+  <h3>journald &mdash; systemd</h3>
+  <div class="doc-sample"><span class="d">2022-10-27T00:00:00.358664+0300</span> ub[657518]:  <span class="h">$</span> <span class="l">SQL   </span>	<span class="t">COMMIT</span></div>
+  <p>ISO-8601 with microseconds and the <code>ub[pid]:</code> prefix.</p>
+
+  <h3>console &mdash; stdin without a date</h3>
+  <div class="doc-sample">  <span class="h">$</span> <span class="l">EXC   </span>	<span class="t">EUBSecurityException at auth.js:142</span></div>
+  <p>When UB runs in development mode and writes straight to the terminal.</p>
+
+  <h3>Levels</h3>
+  <p>Logram recognises 32 UB log levels: <code>info</code>, <code>SQL</code>, <code>EXC</code>, <code>WRN</code>, <code>ERR</code>, <code>DBG</code>, <code>HTTP</code>, <code>+</code>/<code>-</code> (method enter/exit), <code>MON</code>, <code>CAC</code> and others. Each one has a badge colour and a row tint; the palette is set by the theme (<a href="#themes">section&nbsp;7</a>).</p>
+</section>
+
+<section class="doc" id="filters">
+  <h2>03 &middot; Filters &amp; <em>presets</em></h2>
+  <p>The sidebar has two checkbox groups and presets above them:</p>
+  <ul>
+    <li><b>Log Levels</b> &mdash; show/hide rows of a given level. Each level shows a hit counter next to it.</li>
+    <li><b>Threads</b> &mdash; show rows only from selected workers. Useful when tracing a single HTTP request.</li>
+  </ul>
+  <p>Filtering is O(n) &mdash; a single pass over all rows: levels → threads → text. Windows uses level bitmasks, so a million rows re-filter in ~50&nbsp;ms.</p>
+
+  <h3>Presets</h3>
+
+  <div class="doc-where">
+    <div class="w-col">
+      <span class="w-os">macOS</span>
+      <span class="w-path">Pills <b>Errors · SQL · HTTP · +/-</b> above the level checkboxes</span>
+    </div>
+    <div class="w-col">
+      <span class="w-os">Windows</span>
+      <span class="w-path">Buttons <b>All · Errors · SQL · HTTP · +/-</b> in the filter panel</span>
+    </div>
+  </div>
+
+  <p>What each preset enables:</p>
+  <ul>
+    <li><b>All</b> (Windows only) &mdash; every level.</li>
+    <li><b>Errors</b> &mdash; <code>Error</code>, <code>EXC</code>, <code>EXC OS</code>, <code>OS ERR</code>, <code>Fail</code> (plus <code>DddER</code> on Windows). Quickly spot "what broke".</li>
+    <li><b>SQL</b> &mdash; <code>SQL</code>, <code>cust1</code>, <code>cust2</code>. DB query overview together with parameters.</li>
+    <li><b>HTTP</b> &mdash; <code>HTTP</code> (plus <code>Clnt</code>, <code>Srvr</code> on Windows). Tracing outbound requests.</li>
+    <li><b>+/-</b> &mdash; levels <code>+</code> (method enter) and <code>-</code> (exit). Useful before opening <a href="#timing">Method Timing</a>.</li>
+  </ul>
+  <p>A preset resets the current level checkboxes and enables only the listed ones. On macOS, clicking the same preset again (when all its levels are already active) disables them. The text filter and thread filter are not touched by presets.</p>
+  <p>On macOS, <b>Reset</b> / <b>Apply</b> buttons sit below the list &mdash; <b>Reset</b> sets every checkbox back to "all on", <b>Apply</b> commits the change.</p>
+</section>
+
+<section class="doc" id="search">
+  <h2>04 &middot; <em>Search</em></h2>
+  <p>Finds a substring in the currently visible set of rows (after filters). Case-insensitive; regular expressions are not supported yet.</p>
+
+  <div class="doc-where">
+    <div class="w-col">
+      <span class="w-os">macOS</span>
+      <span class="w-path"><b>Search</b> field in the toolbar (always visible)</span>
+    </div>
+    <div class="w-col">
+      <span class="w-os">Windows</span>
+      <span class="w-path"><b>Search</b> field in the toolbar · <kbd>Ctrl</kbd><kbd>F</kbd> focuses the field</span>
+    </div>
+  </div>
+
+  <p>Navigating between matches:</p>
+  <ul>
+    <li><b>macOS</b> &mdash; arrows <kbd>&uarr;</kbd>/<kbd>&darr;</kbd> in the toolbar (next to the search field) or <kbd>Enter</kbd> / <kbd>Shift</kbd>+<kbd>Enter</kbd>.</li>
+    <li><b>Windows</b> &mdash; <kbd>F3</kbd> / <kbd>Shift</kbd>+<kbd>F3</kbd>, or the <b>Find Next</b> / <b>Find Previous</b> buttons in the toolbar.</li>
+  </ul>
+  <p>When the end is reached, search <b>wraps around</b> from the opposite side and plays a short beep. If there are no matches at all &mdash; a warning beep.</p>
+  <p>Next to the match navigation there is another pair of arrows with an error indicator &mdash; they jump to the next/previous error (see <a href="#timing">Method Timing</a> regarding <code>Error</code>/<code>EXC</code> rows).</p>
+</section>
+
+<section class="doc" id="timing">
+  <h2>05 &middot; Method <em>Timing</em></h2>
+  <p>UnityBase logs a method entry with a <code>+</code>-level line and the exit with a <code>-</code> line on the same thread. For every <code>+</code>, Logram finds its matching <code>-</code>, respecting nesting, and computes the duration.</p>
+
+  <h3>Duration column</h3>
+  <p>Hidden by default (building timings costs time on large files). The first time you enable it, Logram computes and caches the timings &mdash; subsequent toggles are instant. The setting resets on a new file.</p>
+
+  <div class="doc-where">
+    <div class="w-col">
+      <span class="w-os">macOS</span>
+      <span class="w-path">Timer button <b>⏱</b> in the toolbar</span>
+    </div>
+    <div class="w-col">
+      <span class="w-os">Windows</span>
+      <span class="w-path"><code>View → Toggle Duration</code> menu</span>
+    </div>
+  </div>
+
+  <h3>Method summary</h3>
+  <p>A separate window with a table of all <code>+</code>/<code>-</code> pairs sorted by duration. Double-click a row to jump to that place in the log. Can be left open next to the main window.</p>
+
+  <div class="doc-where">
+    <div class="w-col">
+      <span class="w-os">macOS</span>
+      <span class="w-path"><b>Timing</b> button in the toolbar (right side)</span>
+    </div>
+    <div class="w-col">
+      <span class="w-os">Windows</span>
+      <span class="w-path"><code>View → Method Timing...</code> menu</span>
+    </div>
+  </div>
+
+  <h3>Jump to pair</h3>
+  <p>If you're on a <code>+</code> or <code>-</code> row, <kbd>&#8984;</kbd><kbd>J</kbd> / <kbd>Ctrl</kbd><kbd>J</kbd> jumps to the paired line on the same thread. On macOS the same jump is available via an arrow button <b>↓</b>/<b>↑</b> in the toolbar (appears when a <code>+</code> or <code>-</code> row is selected).</p>
+
+  <h3>Error navigation</h3>
+  <p>Jump to the next/previous <code>Error</code>/<code>EXC</code> line:</p>
+  <div class="doc-where">
+    <div class="w-col">
+      <span class="w-os">macOS</span>
+      <span class="w-path">Arrows <kbd>&uarr;</kbd>/<kbd>&darr;</kbd> next to the red <b>⚠︎</b> in the toolbar</span>
+    </div>
+    <div class="w-col">
+      <span class="w-os">Windows</span>
+      <span class="w-path"><code>Navigate → Next/Prev Error</code> menu · <kbd>Ctrl</kbd><kbd>Shift</kbd><kbd>&darr;</kbd>/<kbd>&uarr;</kbd></span>
+    </div>
+  </div>
+</section>
+
+<section class="doc" id="sql">
+  <h2>06 &middot; SQL and <em>cust1</em></h2>
+  <p>When you select a <code>SQL</code>-level row, the query is highlighted in the detail panel below (keywords, strings, numbers, functions) and formatted for readability. If there's a preceding <code>cust1</code> line on the same thread with a JSON object like <code>{"P1":&hellip;,"P2s8":"&hellip;"}</code>, Logram <b>automatically substitutes</b> the values into <code>:1</code>/<code>:2</code> (Oracle) or positional <code>?</code> placeholders.</p>
+  <p>JSON keys are type markers produced by the UB driver:</p>
+  <ul>
+    <li><code>P<i>N</i></code> &mdash; parameter number <i>N</i> (number, boolean, or <code>null</code>). Example: <code>P1</code> &rarr; <code>:1</code>.</li>
+    <li><code>P<i>N</i>s<i>len</i></code> &mdash; string of <i>len</i> bytes. The value is wrapped in quotes: <code>P2s8</code>: <code>"demo user"</code> &rarr; <code>:2 = 'demo user'</code>.</li>
+    <li><code>P<i>N</i>d</code> &mdash; date/time in ISO format. Example: <code>P3d</code>: <code>"2025-01-01"</code> &rarr; <code>:3 = '2025-01-01'</code>.</li>
+  </ul>
+  <p>So <code>P2s8</code> means "parameter #2, an 8-character string". The suffix itself isn't used for substitution &mdash; Logram only looks at the number after the <code>P</code>.</p>
+  <p>The result is a copy-ready SQL you can run in psql/DBeaver. The <b>Show params / Hide params</b> toggle in the panel controls substitution.</p>
+  <p>JSON in details (e.g. HTTP body) is pretty-printed too.</p>
+</section>
+
+<section class="doc" id="themes">
+  <h2>07 &middot; Themes &amp; <em>columns</em></h2>
+  <p>Two built-in themes: <b>Tokyo Night</b> (muted, for long sessions) and <b>TTY</b> (bright, terminal-like). Switched without a restart.</p>
+
+  <div class="doc-where">
+    <div class="w-col">
+      <span class="w-os">macOS</span>
+      <span class="w-path">Palette icon in the toolbar (theme menu)</span>
+    </div>
+    <div class="w-col">
+      <span class="w-os">Windows</span>
+      <span class="w-path"><code>View → Theme → Tokyo Night / TTY</code> menu</span>
+    </div>
+  </div>
+
+  <p>Colours are applied to:</p>
+  <ul>
+    <li>Level badge and row tint (<code>EXC</code>, <code>Error</code> &mdash; red; <code>SQL</code> &mdash; purple; <code>Warn</code> &mdash; yellow; <code>HTTP</code> &mdash; teal, etc.).</li>
+    <li>Thread column &mdash; each thread gets a stable colour derived from its number.</li>
+    <li>SQL highlighting in the detail panel (keywords, strings, numbers, functions).</li>
+  </ul>
+  <p>The theme choice is remembered between runs. The <b>Duration</b> column too &mdash; but it resets to <code>off</code> whenever a new file is opened.</p>
+</section>
+
+<section class="doc" id="tabs">
+  <h2>08 &middot; Tabs &amp; <em>windows</em></h2>
+
+  <div class="doc-where">
+    <div class="w-col">
+      <span class="w-os">macOS</span>
+      <span class="w-path">Native macOS tabs · <kbd>&#8984;</kbd><kbd>N</kbd> &mdash; new tab · <b>+</b> button in the title bar</span>
+    </div>
+    <div class="w-col">
+      <span class="w-os">Windows</span>
+      <span class="w-path">Each <code>Logram.exe</code> is a separate window</span>
+    </div>
+  </div>
+
+  <p><b>macOS</b>: tabs work via <code>WindowGroup</code>. <kbd>&#8984;</kbd><kbd>O</kbd> opens a file in the <i>active</i> tab (focus is routed through <code>@FocusedValue</code>). Tabs can be dragged into standalone windows and back.</p>
+  <p><b>Windows</b>: open as many in parallel as you need &mdash; thanks to memory-mapped&nbsp;I/O the cost of an extra log copy is low.</p>
+</section>
+
+<section class="doc" id="shortcuts">
+  <h2>09 &middot; Keyboard <em>shortcuts</em></h2>
+
+  <table class="doc-table">
+    <thead>
+      <tr>
+        <th>Action</th>
+        <th>macOS</th>
+        <th>Windows</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Open file</td>
+        <td class="k"><kbd>&#8984;</kbd><kbd>O</kbd></td>
+        <td class="k"><kbd>Ctrl</kbd><kbd>O</kbd></td>
+      </tr>
+      <tr>
+        <td>New tab</td>
+        <td class="k"><kbd>&#8984;</kbd><kbd>N</kbd></td>
+        <td class="k">&mdash;</td>
+      </tr>
+      <tr>
+        <td>Focus search field</td>
+        <td class="k">&mdash;</td>
+        <td class="k"><kbd>Ctrl</kbd><kbd>F</kbd></td>
+      </tr>
+      <tr>
+        <td>Next match / previous</td>
+        <td class="k"><kbd>Enter</kbd> / <kbd>Shift</kbd><kbd>Enter</kbd> in the search field</td>
+        <td class="k"><kbd>F3</kbd> / <kbd>Shift</kbd><kbd>F3</kbd></td>
+      </tr>
+      <tr>
+        <td>Jump to paired <code>+</code>/<code>-</code></td>
+        <td class="k"><kbd>&#8984;</kbd><kbd>J</kbd></td>
+        <td class="k"><kbd>Ctrl</kbd><kbd>J</kbd></td>
+      </tr>
+      <tr>
+        <td>Next / previous error</td>
+        <td class="k">&mdash;</td>
+        <td class="k"><kbd>Ctrl</kbd><kbd>Shift</kbd><kbd>&darr;</kbd> / <kbd>&uarr;</kbd></td>
+      </tr>
+      <tr>
+        <td>Copy selection</td>
+        <td class="k"><kbd>&#8984;</kbd><kbd>C</kbd></td>
+        <td class="k"><kbd>Ctrl</kbd><kbd>C</kbd></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p style="margin-top:32px">The rest of the actions are available from the main menu (<b>File / View / Navigate / Help</b>). Shortcuts are shown next to the items.</p>
+</section>
+
+<section class="final">
+  <h2>Onto<br><em>&mdash; the logs.</em></h2>
+  <p>If you find a bug, unexpected behaviour or a format Logram doesn't recognise &mdash; open an issue on GitHub and include a file snippet (3-5 header lines).</p>
+  <div class="cta-row">
+    <a class="btn btn-primary" href="https://github.com/qwq-qwq/Logram/issues" target="_blank" rel="noopener">Report an issue <span class="arr">&rarr;</span></a>
+    <a class="btn btn-ghost" href="/en/">Home</a>
+  </div>
+</section>
+
+<footer>
+  <div>&copy; 2026 &middot; LOGRAM</div>
+  <div class="mid">Serhii Perekrestov &middot; for UnityBase developers</div>
+  <div class="right">MIT &middot; Swift 5.9 + C++20</div>
+</footer>
+
+<script src="/assets/app.js" defer></script>
+</body>
+</html>
