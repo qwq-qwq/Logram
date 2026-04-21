@@ -127,39 +127,17 @@ void FilterSidebar::RebuildList() {
     // Enable group view for "Log Levels" / "Threads" headers.
     ListView_EnableGroupView(hwndList_, TRUE);
 
-    // Determine whether "All" or "None" should appear on each group header.
-    // Compute over VISIBLE rows only — absent levels keep their bit in the
-    // mask (so their lines aren't accidentally hidden), but they shouldn't
-    // affect the toggle label.
-    uint64_t visibleLevelMask = 0;
-    if (doc_) {
-        const int* counts = doc_->PerLevelCount();
-        for (int i = 0; i < kLogLevelCount; ++i)
-            if (counts[i] > 0) visibleLevelMask |= (uint64_t(1) << i);
-    }
-    uint64_t visibleThreadMask = 0;
-    if (doc_) {
-        for (int t : doc_->ActiveThreads())
-            visibleThreadMask |= (uint64_t(1) << t);
-    }
-    uint64_t levelMaskCur = doc_ ? (doc_->EnabledLevelMask()  & visibleLevelMask)  : visibleLevelMask;
-    uint64_t thMaskCur    = doc_ ? (doc_->EnabledThreadMask() & visibleThreadMask) : visibleThreadMask;
-    const wchar_t* levelsTask  = (levelMaskCur == 0) ? L"All" : L"None";
-    const wchar_t* threadsTask = (thMaskCur    == 0) ? L"All" : L"None";
-
     LVGROUP grp = {};
     grp.cbSize = sizeof(grp);
     grp.mask = LVGF_HEADER | LVGF_GROUPID | LVGF_TASK | LVGF_ALIGN;
     grp.uAlign = LVGA_HEADER_LEFT;
     grp.pszHeader = const_cast<LPWSTR>(L"Log Levels");
-    grp.pszTask   = const_cast<LPWSTR>(levelsTask);
-    grp.cchTask   = static_cast<UINT>(wcslen(levelsTask));
+    grp.pszTask   = const_cast<LPWSTR>(L"");
+    grp.cchTask   = 0;
     grp.iGroupId  = 1;
     ListView_InsertGroup(hwndList_, -1, &grp);
 
     grp.pszHeader = const_cast<LPWSTR>(L"Threads");
-    grp.pszTask   = const_cast<LPWSTR>(threadsTask);
-    grp.cchTask   = static_cast<UINT>(wcslen(threadsTask));
     grp.iGroupId  = 2;
     ListView_InsertGroup(hwndList_, -1, &grp);
 
@@ -207,6 +185,7 @@ void FilterSidebar::RebuildList() {
     }
 
     suppressNotify_ = false;
+    UpdateGroupLabels();
 }
 
 void FilterSidebar::UpdateGroupLabels() {
