@@ -209,6 +209,37 @@ void FilterSidebar::RebuildList() {
     suppressNotify_ = false;
 }
 
+void FilterSidebar::UpdateGroupLabels() {
+    if (!hwndList_ || !doc_) return;
+
+    uint64_t visibleLevelMask = 0;
+    const int* counts = doc_->PerLevelCount();
+    for (int i = 0; i < kLogLevelCount; ++i)
+        if (counts[i] > 0) visibleLevelMask |= (uint64_t(1) << i);
+
+    uint64_t visibleThreadMask = 0;
+    for (int t : doc_->ActiveThreads())
+        visibleThreadMask |= (uint64_t(1) << t);
+
+    uint64_t levelMaskCur = doc_->EnabledLevelMask() & visibleLevelMask;
+    uint64_t thMaskCur    = doc_->EnabledThreadMask() & visibleThreadMask;
+
+    const wchar_t* levelsTask  = (levelMaskCur == 0) ? L"All" : L"None";
+    const wchar_t* threadsTask = (thMaskCur    == 0) ? L"All" : L"None";
+
+    LVGROUP grp = {};
+    grp.cbSize = sizeof(grp);
+    grp.mask   = LVGF_TASK;
+
+    grp.pszTask = const_cast<LPWSTR>(levelsTask);
+    grp.cchTask = static_cast<UINT>(wcslen(levelsTask));
+    ListView_SetGroupInfo(hwndList_, 1, &grp);
+
+    grp.pszTask = const_cast<LPWSTR>(threadsTask);
+    grp.cchTask = static_cast<UINT>(wcslen(threadsTask));
+    ListView_SetGroupInfo(hwndList_, 2, &grp);
+}
+
 void FilterSidebar::ReadCheckStatesIntoDoc() {
     if (!doc_ || !hwndList_) return;
     int total = ListView_GetItemCount(hwndList_);
@@ -427,6 +458,7 @@ LRESULT FilterSidebar::HandleMessage(UINT msg, WPARAM wParam, LPARAM lParam) {
                     (ch->uChanged & LVIF_STATE) &&
                     ((ch->uOldState ^ ch->uNewState) & LVIS_STATEIMAGEMASK)) {
                     ReadCheckStatesIntoDoc();
+                    UpdateGroupLabels();
                 }
                 return 0;
             }
@@ -468,7 +500,7 @@ LRESULT FilterSidebar::HandleMessage(UINT msg, WPARAM wParam, LPARAM lParam) {
                 }
                 suppressNotify_ = false;
                 ReadCheckStatesIntoDoc();
-                RebuildList();  // refresh task labels (None ↔ All)
+                UpdateGroupLabels();
                 return 0;
             }
             return 0;

@@ -30,6 +30,7 @@ private:
     LRESULT HandleMessage(UINT msg, WPARAM wParam, LPARAM lParam);
 
     void RebuildList();                       // re-fill ListView (levels + active threads)
+    void UpdateGroupLabels();                 // refresh None/All task text without full rebuild
     void ReadCheckStatesIntoDoc();            // collapse checkboxes into level/thread masks
     void ApplyPreset(Preset p);
     void CreatePresetButtons(HINSTANCE hInstance);
