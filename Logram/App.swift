@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 
 // FocusedValue key so Cmd+O reaches the active window
 struct OpenLogFileKey: FocusedValueKey {
@@ -12,14 +13,59 @@ extension FocusedValues {
     }
 }
 
+// Bridges system "open file" Apple Events into SwiftUI windows.
+// Empty windows register as "takers" — they get URLs first; if none accepts,
+// a new window is opened. Avoids the cold-start "empty + file" duplicate.
+@MainActor
+final class LogramAppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
+    private var pending: [URL] = []
+    private var takers: [UUID: (URL) -> Bool] = [:]
+    private var openNew: ((URL) -> Void)?
+
+    nonisolated func application(_ application: NSApplication, open urls: [URL]) {
+        MainActor.assumeIsolated {
+            for url in urls { self.dispatch(url) }
+        }
+    }
+
+    func setOpenNew(_ handler: @escaping (URL) -> Void) {
+        guard openNew == nil else { return }
+        openNew = handler
+        let queued = pending
+        pending.removeAll()
+        for url in queued { dispatch(url) }
+    }
+
+    func registerTaker(_ id: UUID, _ taker: @escaping (URL) -> Bool) {
+        takers[id] = taker
+    }
+
+    func unregisterTaker(_ id: UUID) {
+        takers.removeValue(forKey: id)
+    }
+
+    private func dispatch(_ url: URL) {
+        for taker in takers.values where taker(url) { return }
+        if let openNew {
+            openNew(url)
+        } else {
+            pending.append(url)
+        }
+    }
+}
+
 @main
 struct LogramApp: App {
+    @NSApplicationDelegateAdaptor(LogramAppDelegate.self) private var appDelegate
     @FocusedValue(\.openLogFile) var openLogFile
 
     var body: some Scene {
-        WindowGroup {
-            ContentView()
+        WindowGroup(for: URL?.self) { $url in
+            ContentView(initialURL: url ?? nil)
+                .environmentObject(appDelegate)
                 .frame(minWidth: 900, minHeight: 600)
+        } defaultValue: {
+            URL?.none
         }
         .commands {
             CommandGroup(replacing: .newItem) {

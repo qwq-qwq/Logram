@@ -8,6 +8,14 @@ struct ContentView: View {
     @State private var showTimings = false
     @State private var searchText = ""
     @State private var searchIdx: Int?
+    @State private var pendingURL: URL?
+    @State private var takerID = UUID()
+    @EnvironmentObject private var appDelegate: LogramAppDelegate
+    @Environment(\.openWindow) private var openWindow
+
+    init(initialURL: URL? = nil) {
+        _pendingURL = State(initialValue: initialURL)
+    }
 
     private var theme: ColorTheme {
         ColorTheme(rawValue: themeRaw) ?? .tokyoNight
@@ -64,6 +72,25 @@ struct ContentView: View {
         }
         .navigationTitle(document.fileName.isEmpty ? "Logram" : document.fileName)
         .focusedSceneValue(\.openLogFile, openFile)
+        .task(id: pendingURL) {
+            guard let url = pendingURL else { return }
+            showDuration = false
+            await document.load(from: url)
+            pendingURL = nil
+        }
+        .onAppear {
+            appDelegate.setOpenNew { url in openWindow(value: Optional(url)) }
+            appDelegate.registerTaker(takerID) { url in
+                guard document.allLines.isEmpty,
+                      !document.isLoading,
+                      pendingURL == nil else { return false }
+                pendingURL = url
+                return true
+            }
+        }
+        .onDisappear {
+            appDelegate.unregisterTaker(takerID)
+        }
     }
 
     // MARK: - Toolbar
