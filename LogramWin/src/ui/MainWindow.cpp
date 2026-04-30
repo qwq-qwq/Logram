@@ -547,7 +547,7 @@ void MainWindow::RunSearch(bool forward) {
         if (wrapped) MessageBeep(MB_ICONINFORMATION);
     } else {
         MessageBeep(MB_ICONWARNING);
-        MessageBoxW(hwnd_, L"Совпадений не найдено.", L"Logram",
+        MessageBoxW(hwnd_, L"No matches found.", L"Logram",
                     MB_OK | MB_ICONINFORMATION);
     }
 }
