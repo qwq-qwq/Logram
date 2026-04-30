@@ -354,7 +354,7 @@ struct ContentView: View {
         } else {
             NSSound.beep()
             let alert = NSAlert()
-            alert.messageText = "Совпадений не найдено"
+            alert.messageText = "No matches found"
             alert.alertStyle = .informational
             alert.addButton(withTitle: "OK")
             alert.runModal()
