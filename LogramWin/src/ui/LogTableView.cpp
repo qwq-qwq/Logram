@@ -109,9 +109,18 @@ LRESULT LogTableView::HandleMessage(UINT msg, WPARAM wParam, LPARAM lParam) {
             return 0;
         case WM_ERASEBKGND:
             return 1; // D2D handles background
-        case WM_VSCROLL:
-            OnVScroll(LOWORD(wParam), HIWORD(wParam));
+        case WM_VSCROLL: {
+            int code = LOWORD(wParam);
+            int pos = HIWORD(wParam);
+            if (code == SB_THUMBTRACK || code == SB_THUMBPOSITION) {
+                SCROLLINFO si = {};
+                si.cbSize = sizeof(si);
+                si.fMask = SIF_TRACKPOS;
+                if (GetScrollInfo(hwnd_, SB_VERT, &si)) pos = si.nTrackPos;
+            }
+            OnVScroll(code, pos);
             return 0;
+        }
         case WM_MOUSEWHEEL:
             OnMouseWheel(GET_WHEEL_DELTA_WPARAM(wParam));
             return 0;
@@ -345,7 +354,8 @@ void LogTableView::OnVScroll(int code, int pos) {
         case SB_LINEDOWN:  topRow_ = std::min(totalRows - pageSize, topRow_ + 1); break;
         case SB_PAGEUP:    topRow_ = std::max(0, topRow_ - pageSize); break;
         case SB_PAGEDOWN:  topRow_ = std::min(totalRows - pageSize, topRow_ + pageSize); break;
-        case SB_THUMBTRACK: topRow_ = pos; break;
+        case SB_THUMBTRACK:
+        case SB_THUMBPOSITION: topRow_ = pos; break;
         case SB_TOP:       topRow_ = 0; break;
         case SB_BOTTOM:    topRow_ = totalRows - pageSize; break;
     }
