@@ -56,6 +56,8 @@ private:
     HWND hwndBtnErrNext_ = nullptr;
     HWND hwndBtnErrPrev_ = nullptr;
     HBRUSH hBgBrush_ = nullptr;
+    HBRUSH hEraseBrush_ = nullptr;       // cached for WM_ERASEBKGND, rebuilt on theme change
+    COLORREF hEraseBrushColor_ = 0;
     HFONT hToolbarFont_ = nullptr;
 
     std::unique_ptr<LogTableView>  tableView_;

@@ -8,16 +8,17 @@ FilterSidebar::FilterSidebar() {}
 FilterSidebar::~FilterSidebar() {
     if (doc_) doc_->listeners.Remove(this);
     if (hFont_) DeleteObject(hFont_);
+    if (hEraseBrush_) DeleteObject(hEraseBrush_);
 }
 
 void FilterSidebar::RegisterClass(HINSTANCE hInstance) {
     WNDCLASSEXW wc = {};
     wc.cbSize = sizeof(wc);
-    wc.style = CS_HREDRAW | CS_VREDRAW;
+    wc.style = 0;
     wc.lpfnWndProc = WndProc;
     wc.hInstance = hInstance;
     wc.hCursor = LoadCursorW(nullptr, IDC_ARROW);
-    wc.hbrBackground = reinterpret_cast<HBRUSH>(COLOR_BTNFACE + 1);
+    wc.hbrBackground = nullptr;
     wc.lpszClassName = kClassName;
     RegisterClassExW(&wc);
 }
@@ -31,7 +32,7 @@ HWND FilterSidebar::Create(HWND parent, HINSTANCE hInstance, LogDocument* doc) {
     dpiScale_ = dpi / 96.0f;
 
     hwnd_ = CreateWindowExW(0, kClassName, nullptr,
-        WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN,
+        WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS,
         0, 0, Scale(200), Scale(400), parent, nullptr, hInstance, this);
 
     // DPI-scaled UI font shared by preset buttons and the list.
@@ -447,11 +448,15 @@ LRESULT FilterSidebar::HandleMessage(UINT msg, WPARAM wParam, LPARAM lParam) {
 
         case WM_ERASEBKGND: {
             auto& theme = CurrentTheme();
+            COLORREF c = ToCOLORREF(theme.background);
+            if (!hEraseBrush_ || hEraseBrushColor_ != c) {
+                if (hEraseBrush_) DeleteObject(hEraseBrush_);
+                hEraseBrush_ = CreateSolidBrush(c);
+                hEraseBrushColor_ = c;
+            }
             RECT rc;
             GetClientRect(hwnd_, &rc);
-            HBRUSH brush = CreateSolidBrush(ToCOLORREF(theme.background));
-            FillRect(reinterpret_cast<HDC>(wParam), &rc, brush);
-            DeleteObject(brush);
+            FillRect(reinterpret_cast<HDC>(wParam), &rc, hEraseBrush_);
             return 1;
         }
 

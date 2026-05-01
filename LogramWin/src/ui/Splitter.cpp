@@ -4,7 +4,7 @@
 void Splitter::RegisterClass(HINSTANCE hInstance) {
     WNDCLASSEXW wc = {};
     wc.cbSize = sizeof(wc);
-    wc.style = CS_HREDRAW | CS_VREDRAW;
+    wc.style = 0;
     wc.lpfnWndProc = WndProc;
     wc.hInstance = hInstance;
     wc.hCursor = LoadCursorW(nullptr, IDC_SIZEWE);
@@ -15,7 +15,7 @@ void Splitter::RegisterClass(HINSTANCE hInstance) {
 
 HWND Splitter::Create(HWND parent, HINSTANCE hInstance, int x, int y, int w, int h) {
     hwnd_ = CreateWindowExW(0, kClassName, nullptr,
-        WS_CHILD | WS_VISIBLE,
+        WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS,
         x, y, w, h, parent, nullptr, hInstance, this);
     return hwnd_;
 }
@@ -84,16 +84,20 @@ LRESULT Splitter::HandleMessage(UINT msg, WPARAM wParam, LPARAM lParam) {
 
         case WM_ERASEBKGND: {
             auto& theme = CurrentTheme();
-            RECT rc;
-            GetClientRect(hwnd_, &rc);
             ColorRGBA c;
             c.r = (theme.background.r + theme.secondary.r) * 0.5f;
             c.g = (theme.background.g + theme.secondary.g) * 0.5f;
             c.b = (theme.background.b + theme.secondary.b) * 0.5f;
             c.a = 1.0f;
-            HBRUSH brush = CreateSolidBrush(ToCOLORREF(c));
-            FillRect(reinterpret_cast<HDC>(wParam), &rc, brush);
-            DeleteObject(brush);
+            COLORREF cref = ToCOLORREF(c);
+            if (!hEraseBrush_ || hEraseBrushColor_ != cref) {
+                if (hEraseBrush_) DeleteObject(hEraseBrush_);
+                hEraseBrush_ = CreateSolidBrush(cref);
+                hEraseBrushColor_ = cref;
+            }
+            RECT rc;
+            GetClientRect(hwnd_, &rc);
+            FillRect(reinterpret_cast<HDC>(wParam), &rc, hEraseBrush_);
             return 1;
         }
     }

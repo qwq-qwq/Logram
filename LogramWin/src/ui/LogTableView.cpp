@@ -16,7 +16,10 @@ LogTableView::~LogTableView() {
 void LogTableView::RegisterClass(HINSTANCE hInstance) {
     WNDCLASSEXW wc = {};
     wc.cbSize = sizeof(wc);
-    wc.style = CS_HREDRAW | CS_VREDRAW;
+    // No CS_HREDRAW/CS_VREDRAW: D2D fully repaints on WM_PAINT and OnSize
+    // already invalidates the client region — the class flag would just add
+    // a redundant pass per WM_SIZE, causing flicker during interactive resize.
+    wc.style = 0;
     wc.lpfnWndProc = WndProc;
     wc.hInstance = hInstance;
     wc.hCursor = LoadCursorW(nullptr, IDC_ARROW);
@@ -29,7 +32,7 @@ HWND LogTableView::Create(HWND parent, HINSTANCE hInstance, LogDocument* doc) {
     if (doc_) doc_->listeners.Add(this);
 
     hwnd_ = CreateWindowExW(0, kClassName, nullptr,
-        WS_CHILD | WS_VISIBLE | WS_VSCROLL | WS_TABSTOP,
+        WS_CHILD | WS_VISIBLE | WS_VSCROLL | WS_TABSTOP | WS_CLIPSIBLINGS,
         0, 0, 100, 100, parent, nullptr, hInstance, this);
 
     // Create DirectWrite text format

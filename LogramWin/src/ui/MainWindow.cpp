@@ -34,17 +34,21 @@ MainWindow::~MainWindow() {
     doc_.listeners.Remove(this);
     if (loadThread_.joinable()) loadThread_.join();
     if (hBgBrush_) DeleteObject(hBgBrush_);
+    if (hEraseBrush_) DeleteObject(hEraseBrush_);
     if (hToolbarFont_) DeleteObject(hToolbarFont_);
 }
 
 void MainWindow::RegisterClass(HINSTANCE hInstance) {
     WNDCLASSEXW wc = {};
     wc.cbSize = sizeof(wc);
-    wc.style = CS_HREDRAW | CS_VREDRAW;
+    // No CS_HREDRAW/CS_VREDRAW: those force a full client invalidate on every
+    // resize, which causes visible flicker. We invalidate explicitly when the
+    // visual content actually changes.
+    wc.style = 0;
     wc.lpfnWndProc = WndProc;
     wc.hInstance = hInstance;
     wc.hCursor = LoadCursorW(nullptr, IDC_ARROW);
-    wc.hbrBackground = reinterpret_cast<HBRUSH>(COLOR_BTNFACE + 1);
+    wc.hbrBackground = nullptr;  // we paint the background ourselves
     wc.lpszMenuName = MAKEINTRESOURCEW(IDR_MAINMENU);
     wc.lpszClassName = kClassName;
     wc.hIcon = LoadIconW(hInstance, MAKEINTRESOURCEW(IDI_APPICON));
@@ -133,12 +137,19 @@ LRESULT MainWindow::HandleMessage(UINT msg, WPARAM wParam, LPARAM lParam) {
             return 0;
 
         case WM_ERASEBKGND: {
+            // Cache the brush — interactive resize can fire dozens of these
+            // per second; recreating a GDI brush each time was a flicker
+            // contributor and pure waste.
             auto& theme = CurrentTheme();
+            COLORREF c = ToCOLORREF(theme.background);
+            if (!hEraseBrush_ || hEraseBrushColor_ != c) {
+                if (hEraseBrush_) DeleteObject(hEraseBrush_);
+                hEraseBrush_ = CreateSolidBrush(c);
+                hEraseBrushColor_ = c;
+            }
             RECT rc;
             GetClientRect(hwnd_, &rc);
-            HBRUSH brush = CreateSolidBrush(ToCOLORREF(theme.background));
-            FillRect(reinterpret_cast<HDC>(wParam), &rc, brush);
-            DeleteObject(brush);
+            FillRect(reinterpret_cast<HDC>(wParam), &rc, hEraseBrush_);
             return 1;
         }
 

@@ -14,16 +14,17 @@ DetailPanel::~DetailPanel() {
     if (hFont_) DeleteObject(hFont_);
     if (hFontSmall_) DeleteObject(hFontSmall_);
     if (hBgBrush_) DeleteObject(hBgBrush_);
+    if (hEraseBrush_) DeleteObject(hEraseBrush_);
 }
 
 void DetailPanel::RegisterClass(HINSTANCE hInstance) {
     WNDCLASSEXW wc = {};
     wc.cbSize = sizeof(wc);
-    wc.style = CS_HREDRAW | CS_VREDRAW;
+    wc.style = 0;
     wc.lpfnWndProc = WndProc;
     wc.hInstance = hInstance;
     wc.hCursor = LoadCursorW(nullptr, IDC_ARROW);
-    wc.hbrBackground = reinterpret_cast<HBRUSH>(COLOR_BTNFACE + 1);
+    wc.hbrBackground = nullptr;
     wc.lpszClassName = kClassName;
     RegisterClassExW(&wc);
 }
@@ -39,7 +40,7 @@ HWND DetailPanel::Create(HWND parent, HINSTANCE hInstance, LogDocument* doc) {
     if (doc_) doc_->listeners.Add(this);
 
     hwnd_ = CreateWindowExW(0, kClassName, nullptr,
-        WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN,
+        WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS,
         0, 0, 400, 200, parent, nullptr, hInstance, this);
 
     UINT dpi = GetDpiForWindow(parent);
@@ -520,11 +521,15 @@ LRESULT DetailPanel::HandleMessage(UINT msg, WPARAM wParam, LPARAM lParam) {
 
         case WM_ERASEBKGND: {
             auto& theme = CurrentTheme();
+            COLORREF c = ToCOLORREF(theme.background);
+            if (!hEraseBrush_ || hEraseBrushColor_ != c) {
+                if (hEraseBrush_) DeleteObject(hEraseBrush_);
+                hEraseBrush_ = CreateSolidBrush(c);
+                hEraseBrushColor_ = c;
+            }
             RECT rc;
             GetClientRect(hwnd_, &rc);
-            HBRUSH brush = CreateSolidBrush(ToCOLORREF(theme.background));
-            FillRect(reinterpret_cast<HDC>(wParam), &rc, brush);
-            DeleteObject(brush);
+            FillRect(reinterpret_cast<HDC>(wParam), &rc, hEraseBrush_);
             return 1;
         }
 
