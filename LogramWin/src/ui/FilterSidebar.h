@@ -35,6 +35,8 @@ private:
     void ApplyPreset(Preset p);
     void CreatePresetButtons(HINSTANCE hInstance);
     void LayoutInternal();
+    void ShowRowContextMenu(int row, int xScreen, int yScreen);
+    void ApplyRowGroupChoice(int row, int choice);  // 1=All, 2=None, 3=Only this
 
     HWND hwnd_      = nullptr;
     HWND hwndList_  = nullptr;

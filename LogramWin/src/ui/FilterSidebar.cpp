@@ -379,6 +379,50 @@ LRESULT FilterSidebar::OnCustomDraw(LPNMLVCUSTOMDRAW cd) {
     return CDRF_DODEFAULT;
 }
 
+void FilterSidebar::ShowRowContextMenu(int row, int xScreen, int yScreen) {
+    if (!hwndList_) return;
+    HMENU menu = CreatePopupMenu();
+    if (!menu) return;
+    AppendMenuW(menu, MF_STRING, 1, L"All");
+    AppendMenuW(menu, MF_STRING, 2, L"None");
+    AppendMenuW(menu, MF_STRING, 3, L"Only this");
+    int cmd = TrackPopupMenu(menu,
+        TPM_RETURNCMD | TPM_NONOTIFY | TPM_LEFTALIGN | TPM_TOPALIGN,
+        xScreen, yScreen, 0, hwnd_, nullptr);
+    DestroyMenu(menu);
+    if (cmd >= 1 && cmd <= 3) ApplyRowGroupChoice(row, cmd);
+}
+
+void FilterSidebar::ApplyRowGroupChoice(int row, int choice) {
+    if (!doc_ || !hwndList_) return;
+
+    LVITEMW li = {};
+    li.mask = LVIF_PARAM;
+    li.iItem = row;
+    if (!ListView_GetItem(hwndList_, &li)) return;
+    bool isLevel = (li.lParam < 1000);
+
+    suppressNotify_ = true;
+    int total = ListView_GetItemCount(hwndList_);
+    for (int r = 0; r < total; ++r) {
+        LVITEMW it = {}; it.mask = LVIF_PARAM; it.iItem = r;
+        ListView_GetItem(hwndList_, &it);
+        bool inGroup = isLevel ? (it.lParam < 1000) : (it.lParam >= 1000);
+        if (!inGroup) continue;
+        BOOL on = FALSE;
+        switch (choice) {
+            case 1: on = TRUE; break;                          // All
+            case 2: on = FALSE; break;                         // None
+            case 3: on = (r == row) ? TRUE : FALSE; break;     // Only this
+        }
+        ListView_SetCheckState(hwndList_, r, on);
+    }
+    suppressNotify_ = false;
+
+    ReadCheckStatesIntoDoc();
+    UpdateGroupLabels();
+}
+
 LRESULT CALLBACK FilterSidebar::WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
     FilterSidebar* self = nullptr;
     if (msg == WM_NCCREATE) {
@@ -447,6 +491,16 @@ LRESULT FilterSidebar::HandleMessage(UINT msg, WPARAM wParam, LPARAM lParam) {
                 auto result = OnCustomDraw(reinterpret_cast<LPNMLVCUSTOMDRAW>(lParam));
                 SetWindowLongPtrW(hwnd_, DWLP_MSGRESULT, result);
                 return result;
+            }
+
+            if (hdr->code == NM_RCLICK) {
+                auto* nmia = reinterpret_cast<NMITEMACTIVATE*>(lParam);
+                if (nmia && nmia->iItem >= 0) {
+                    POINT pt = nmia->ptAction;
+                    ClientToScreen(hwndList_, &pt);
+                    ShowRowContextMenu(nmia->iItem, pt.x, pt.y);
+                }
+                return 0;
             }
 
             if (hdr->code == LVN_LINKCLICK) {

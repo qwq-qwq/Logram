@@ -115,6 +115,24 @@ struct FilterSidebar: View {
             }
             .toggleStyle(.checkbox)
         }
+        .contentShape(Rectangle())
+        .contextMenu {
+            Button("All") {
+                document.enabledLevels = Set(LogLevel.allCases)
+                showAllLevels = true
+                document.applyFilters()
+            }
+            Button("None") {
+                document.enabledLevels = []
+                showAllLevels = false
+                document.applyFilters()
+            }
+            Button("Only this") {
+                document.enabledLevels = [level]
+                showAllLevels = false
+                document.applyFilters()
+            }
+        }
     }
 
     private func presetButton(_ title: String, levels: Set<LogLevel>) -> some View {
@@ -187,6 +205,24 @@ struct FilterSidebar: View {
                 }
             }
             .toggleStyle(.checkbox)
+        }
+        .contentShape(Rectangle())
+        .contextMenu {
+            Button("All") {
+                document.enabledThreads = Set(0..<LogParser.maxThreads)
+                showAllThreads = true
+                document.applyFilters()
+            }
+            Button("None") {
+                document.enabledThreads = []
+                showAllThreads = false
+                document.applyFilters()
+            }
+            Button("Only this") {
+                document.enabledThreads = [th]
+                showAllThreads = false
+                document.applyFilters()
+            }
         }
     }
 
