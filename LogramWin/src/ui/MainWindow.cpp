@@ -403,24 +403,19 @@ void MainWindow::LayoutChildren() {
     // are bit-blit'd via swpMove and any extra parent erase would briefly
     // expose the theme background where buttons used to sit, which reads
     // as flicker.
-    if (tableView_ && tableView_->GetHwnd()) {
-        InvalidateRect(tableView_->GetHwnd(), nullptr, FALSE);
-        UpdateWindow(tableView_->GetHwnd());
-    }
-    if (detailPanel_ && detailPanel_->GetHwnd()) {
-        InvalidateRect(detailPanel_->GetHwnd(), nullptr, TRUE);
-        UpdateWindow(detailPanel_->GetHwnd());
-    }
-    // Invalidate ONLY the parent strip to the left of the search edit
-    // (between the sidebar splitter and the search box). The search edit
-    // has WS_EX_CLIENTEDGE, and bit-blit'ing it leaves its old border
-    // pixels on the parent when the strip shrinks during sidebar drag.
-    // We deliberately don't touch the right side where the buttons sit —
-    // forcing erase there caused visible button flicker.
-    RECT toolbarLeft = { sidebarWidth_ + splitterPx, 0, xSearch, toolbarPx };
-    if (toolbarLeft.right > toolbarLeft.left) {
-        InvalidateRect(hwnd_, &toolbarLeft, TRUE);
-    }
+    // Force synchronous repaint of resized panes — RDW_FRAME makes sure the
+    // non-client edge of the search edit (and any other CLIENTEDGE child)
+    // is redrawn, which is what leaves "ghost" border pixels otherwise.
+    const UINT redrawAll =
+        RDW_INVALIDATE | RDW_ERASE | RDW_FRAME | RDW_UPDATENOW |
+        RDW_ALLCHILDREN;
+    if (tableView_ && tableView_->GetHwnd())
+        RedrawWindow(tableView_->GetHwnd(), nullptr, nullptr,
+                     RDW_INVALIDATE | RDW_UPDATENOW);
+    if (detailPanel_ && detailPanel_->GetHwnd())
+        RedrawWindow(detailPanel_->GetHwnd(), nullptr, nullptr, redrawAll);
+    if (hwndSearch_)
+        RedrawWindow(hwndSearch_, nullptr, nullptr, redrawAll);
 }
 
 void MainWindow::OnCommand(int id, int code, HWND ctrl) {
