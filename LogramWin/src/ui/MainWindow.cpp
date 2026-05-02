@@ -371,7 +371,13 @@ void MainWindow::LayoutChildren() {
     // Batch all child reposition into a single atomic pass. Without this,
     // each MoveWindow would invalidate/repaint that child individually, so
     // the user sees ~12 children update in a staggered cascade during drag.
-    const UINT swp = SWP_NOZORDER | SWP_NOACTIVATE;
+    //
+    // SWP_NOCOPYBITS: skip Windows' bit-blit of old contents to new coords.
+    // During splitter drag, when LogTableView grows downward into the area
+    // DetailPanel just left, the bit-blit pulls DetailPanel's button pixels
+    // into the table — the "Params/Copy ghost" residue. We invalidate the
+    // children explicitly below so they fully repaint instead.
+    const UINT swp = SWP_NOZORDER | SWP_NOACTIVATE | SWP_NOCOPYBITS;
     HDWP hdwp = BeginDeferWindowPos(12);
     auto defer = [&](HWND h, int x_, int y_, int w_, int h_) {
         if (h && hdwp) hdwp = DeferWindowPos(hdwp, h, nullptr, x_, y_, w_, h_, swp);
@@ -390,6 +396,19 @@ void MainWindow::LayoutChildren() {
 
     if (filterSidebar_) filterSidebar_->Resize(sidebarWidth_, workH);
     if (detailSplitter_) detailSplitter_->SetPosition(splitY);
+
+    // After SWP_NOCOPYBITS, children have undefined contents in newly grown
+    // regions until WM_PAINT runs. Force a synchronous full repaint of the
+    // panes that actually grow on splitter drag (D2D table + detail panel)
+    // so the user never sees stale pixels mid-drag.
+    if (tableView_ && tableView_->GetHwnd()) {
+        InvalidateRect(tableView_->GetHwnd(), nullptr, FALSE);
+        UpdateWindow(tableView_->GetHwnd());
+    }
+    if (detailPanel_ && detailPanel_->GetHwnd()) {
+        InvalidateRect(detailPanel_->GetHwnd(), nullptr, TRUE);
+        UpdateWindow(detailPanel_->GetHwnd());
+    }
 }
 
 void MainWindow::OnCommand(int id, int code, HWND ctrl) {
