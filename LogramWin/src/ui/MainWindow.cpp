@@ -369,21 +369,28 @@ void MainWindow::LayoutChildren() {
     // ("ghost trail") until the next WM_PAINT cleared them. We then force a
     // synchronous repaint of the panes that grew, so the user never sees the
     // pre-paint buffer mid-drag.
-    const UINT swp = SWP_NOZORDER | SWP_NOACTIVATE | SWP_NOCOPYBITS;
+    // SWP_NOCOPYBITS only on panes that actually grow on splitter drag —
+    // table and detail. Without it the bit-blit would copy detail-panel
+    // button pixels into the table area ("ghost trail"). Everything else
+    // (buttons, search edit, splitters, sidebar) just translates and is
+    // bit-blit'd smoothly — that keeps owner-draw buttons and the scroll
+    // bars from getting a forced WM_DRAWITEM/WM_NCPAINT each drag step.
+    const UINT swpMove = SWP_NOZORDER | SWP_NOACTIVATE;
+    const UINT swpGrow = SWP_NOZORDER | SWP_NOACTIVATE | SWP_NOCOPYBITS;
     HDWP hdwp = BeginDeferWindowPos(12);
-    auto defer = [&](HWND h, int x_, int y_, int w_, int h_) {
-        if (h && hdwp) hdwp = DeferWindowPos(hdwp, h, nullptr, x_, y_, w_, h_, swp);
+    auto defer = [&](HWND h, int x_, int y_, int w_, int h_, UINT flags) {
+        if (h && hdwp) hdwp = DeferWindowPos(hdwp, h, nullptr, x_, y_, w_, h_, flags);
     };
-    defer(hwndBtnErrNext_, xErrNext, btnY, errBtnW, ctrlH);
-    defer(hwndBtnErrPrev_, xErrPrev, btnY, errBtnW, ctrlH);
-    defer(hwndBtnFindNext_, xFindNext, btnY, btnW, ctrlH);
-    defer(hwndBtnFindPrev_, xFindPrev, btnY, btnW, ctrlH);
-    defer(hwndSearch_, xSearch, btnY, wSearch, ctrlH);
-    if (filterSidebar_) defer(filterSidebar_->GetHwnd(), 0, workY, sidebarWidth_, workH);
-    if (sidebarSplitter_) defer(sidebarSplitter_->GetHwnd(), sidebarWidth_, workY, splitterPx, workH);
-    if (tableView_) defer(tableView_->GetHwnd(), rightX, workY, rightW, topH);
-    if (detailSplitter_) defer(detailSplitter_->GetHwnd(), rightX, splitY, rightW, splitterPx);
-    if (detailPanel_) defer(detailPanel_->GetHwnd(), rightX, detailY, rightW, detailActualH);
+    defer(hwndBtnErrNext_, xErrNext, btnY, errBtnW, ctrlH, swpMove);
+    defer(hwndBtnErrPrev_, xErrPrev, btnY, errBtnW, ctrlH, swpMove);
+    defer(hwndBtnFindNext_, xFindNext, btnY, btnW, ctrlH, swpMove);
+    defer(hwndBtnFindPrev_, xFindPrev, btnY, btnW, ctrlH, swpMove);
+    defer(hwndSearch_, xSearch, btnY, wSearch, ctrlH, swpMove);
+    if (filterSidebar_) defer(filterSidebar_->GetHwnd(), 0, workY, sidebarWidth_, workH, swpMove);
+    if (sidebarSplitter_) defer(sidebarSplitter_->GetHwnd(), sidebarWidth_, workY, splitterPx, workH, swpMove);
+    if (tableView_) defer(tableView_->GetHwnd(), rightX, workY, rightW, topH, swpGrow);
+    if (detailSplitter_) defer(detailSplitter_->GetHwnd(), rightX, splitY, rightW, splitterPx, swpMove);
+    if (detailPanel_) defer(detailPanel_->GetHwnd(), rightX, detailY, rightW, detailActualH, swpGrow);
     if (hdwp) EndDeferWindowPos(hdwp);
 
     if (filterSidebar_) filterSidebar_->Resize(sidebarWidth_, workH);
