@@ -219,6 +219,22 @@
       <span class="w-path"><code>Navigate → Next/Prev Error</code> menu · <kbd>Ctrl</kbd><kbd>Shift</kbd><kbd>&darr;</kbd>/<kbd>&uarr;</kbd></span>
     </div>
   </div>
+
+  <h3>Focus on Call</h3>
+  <p>You're investigating a crash. You found the failing line, narrowed down threads, and started scrolling up looking for the start of the call. <b>Focus on Call</b> is the magic wand: select any line and Logram shows you only that call frame &mdash; from the outermost <code>+</code> on the same thread down to its matching <code>-</code> (or to the end of the log if the process died before unwinding).</p>
+  <p>The thread filter is automatically narrowed to just the call's thread; everything else (the noise from other parallel requests) is hidden. Other filters &mdash; level checkboxes, text search &mdash; still apply on top.</p>
+  <div class="doc-where">
+    <div class="w-col">
+      <span class="w-os">macOS</span>
+      <span class="w-path">Right-click the line &rarr; <b>Focus on Call</b> · <code>Navigate → Focus on Call</code> · <kbd>&#8984;</kbd><kbd>Shift</kbd><kbd>E</kbd></span>
+    </div>
+    <div class="w-col">
+      <span class="w-os">Windows</span>
+      <span class="w-path">Right-click the line &rarr; <b>Focus on Call</b> · <code>Navigate → Focus on Call</code> · <kbd>Ctrl</kbd><kbd>Shift</kbd><kbd>E</kbd></span>
+    </div>
+  </div>
+  <p>To clear focus and return to the full log: <kbd>Esc</kbd>, the <b>Clear Focus</b> menu item, or click the focus indicator in the status bar.</p>
+  <p><b>Algorithm.</b> From the selected line, walk up the same thread tracking nested closed frames; whenever the stack is empty and we meet a <code>+</code>, that's an enclosing frame &mdash; keep climbing to find the <i>outermost</i> one. The matching <code>-</code> is found going down the same thread with depth-tracking; if there isn't one (truncated log), focus extends to EOF.</p>
 </section>
 
 <section class="doc" id="sql">
@@ -318,6 +334,16 @@
         <td>Next / previous error</td>
         <td class="k">&mdash;</td>
         <td class="k"><kbd>Ctrl</kbd><kbd>Shift</kbd><kbd>&darr;</kbd> / <kbd>&uarr;</kbd></td>
+      </tr>
+      <tr>
+        <td>Focus on Call</td>
+        <td class="k"><kbd>&#8984;</kbd><kbd>Shift</kbd><kbd>E</kbd></td>
+        <td class="k"><kbd>Ctrl</kbd><kbd>Shift</kbd><kbd>E</kbd></td>
+      </tr>
+      <tr>
+        <td>Clear Focus</td>
+        <td class="k"><kbd>Esc</kbd></td>
+        <td class="k"><kbd>Esc</kbd></td>
       </tr>
       <tr>
         <td>Copy selection</td>

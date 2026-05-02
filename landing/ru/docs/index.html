@@ -219,6 +219,22 @@
       <span class="w-path">Меню <code>Navigate → Next/Prev Error</code> · <kbd>Ctrl</kbd><kbd>Shift</kbd><kbd>&darr;</kbd>/<kbd>&uarr;</kbd></span>
     </div>
   </div>
+
+  <h3>Focus on Call &mdash; фокус на вызове</h3>
+  <p>Расследуете падение. Нашли строку с эксепшеном, отключили лишние потоки, начали скроллить вверх в поисках начала вызова. <b>Focus on Call</b> &mdash; та самая «волшебная палочка»: выделяете любую строку, и Logram оставляет в окне только этот вызов &mdash; от внешнего <code>+</code> на том же потоке до его парного <code>-</code> (или до конца лога, если процесс упал и не успел свернуть стек).</p>
+  <p>Фильтр потоков автоматически сужается до того потока, на котором живёт этот вызов; параллельные запросы и фоновый шум скрываются. Остальные фильтры &mdash; чекбоксы уровней, текстовый поиск &mdash; продолжают работать поверх.</p>
+  <div class="doc-where">
+    <div class="w-col">
+      <span class="w-os">macOS</span>
+      <span class="w-path">Правый клик по строке &rarr; <b>Focus on Call</b> · <code>Navigate → Focus on Call</code> · <kbd>&#8984;</kbd><kbd>Shift</kbd><kbd>E</kbd></span>
+    </div>
+    <div class="w-col">
+      <span class="w-os">Windows</span>
+      <span class="w-path">Правый клик по строке &rarr; <b>Focus on Call</b> · <code>Navigate → Focus on Call</code> · <kbd>Ctrl</kbd><kbd>Shift</kbd><kbd>E</kbd></span>
+    </div>
+  </div>
+  <p>Чтобы снять фокус и вернуться к полному логу: <kbd>Esc</kbd>, пункт <b>Clear Focus</b> в меню или клик по индикатору фокуса в статус-баре.</p>
+  <p><b>Алгоритм.</b> От выделенной строки идём вверх по тому же потоку, поддерживая счётчик пройденных закрытых поддеревьев; каждый <code>+</code>, увиденный при пустом счётчике, &mdash; кандидат на enclosing-кадр. Не останавливаемся на первом &mdash; идём до самого верха стека и берём <i>самый внешний</i>. Парный <code>-</code> ищется вниз по потоку с учётом вложенности; если его нет (лог обрезан крашем), фокус расширяется до конца файла.</p>
 </section>
 
 <section class="doc" id="sql">
@@ -318,6 +334,16 @@
         <td>Следующая / предыдущая ошибка</td>
         <td class="k">&mdash;</td>
         <td class="k"><kbd>Ctrl</kbd><kbd>Shift</kbd><kbd>&darr;</kbd> / <kbd>&uarr;</kbd></td>
+      </tr>
+      <tr>
+        <td>Focus on Call</td>
+        <td class="k"><kbd>&#8984;</kbd><kbd>Shift</kbd><kbd>E</kbd></td>
+        <td class="k"><kbd>Ctrl</kbd><kbd>Shift</kbd><kbd>E</kbd></td>
+      </tr>
+      <tr>
+        <td>Снять фокус</td>
+        <td class="k"><kbd>Esc</kbd></td>
+        <td class="k"><kbd>Esc</kbd></td>
       </tr>
       <tr>
         <td>Копировать выделенное</td>
