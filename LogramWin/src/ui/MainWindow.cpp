@@ -202,28 +202,7 @@ void MainWindow::OnCreate() {
     SendMessageW(hwndSearch_, EM_SETCUEBANNER, TRUE,
                  reinterpret_cast<LPARAM>(L"  Search..."));
 
-    // Subclass procedure for owner-draw buttons: when Windows posts an
-    // erase-background pass between a move (bit-blit) and the next
-    // WM_DRAWITEM, the default proc fills with the system grey, which
-    // reads as a flicker against our dark theme. We pre-fill with the
-    // theme's background color (same as what DrawThemedButton paints on
-    // top), so even if a stray erase slips through, the button stays dark.
-    static auto buttonSubclass = [](HWND h, UINT msg, WPARAM wp, LPARAM lp,
-                                    UINT_PTR /*id*/, DWORD_PTR ref) -> LRESULT {
-        if (msg == WM_ERASEBKGND) {
-            auto& th = CurrentTheme();
-            RECT rc; GetClientRect(h, &rc);
-            HBRUSH br = CreateSolidBrush(ToCOLORREF(th.background));
-            FillRect(reinterpret_cast<HDC>(wp), &rc, br);
-            DeleteObject(br);
-            return 1;
-        }
-        if (msg == WM_NCDESTROY) {
-            RemoveWindowSubclass(h, reinterpret_cast<SUBCLASSPROC>(ref), 0);
-        }
-        return DefSubclassProc(h, msg, wp, lp);
-    };
-
+    // Navigation buttons next to search
     auto makeBtn = [&](const wchar_t* label, int id) -> HWND {
         HWND btn = CreateWindowExW(0, L"BUTTON", label,
             WS_CHILD | WS_VISIBLE | BS_OWNERDRAW,
@@ -232,8 +211,6 @@ void MainWindow::OnCreate() {
             hInst, nullptr);
         if (hToolbarFont_) SendMessageW(btn, WM_SETFONT,
                                         reinterpret_cast<WPARAM>(hToolbarFont_), TRUE);
-        SUBCLASSPROC proc = static_cast<SUBCLASSPROC>(buttonSubclass);
-        SetWindowSubclass(btn, proc, 0, reinterpret_cast<DWORD_PTR>(proc));
         return btn;
     };
     hwndBtnFindPrev_ = makeBtn(L"\x25B2", IDC_BTN_FINDPREV);     // ▲
@@ -433,6 +410,16 @@ void MainWindow::LayoutChildren() {
     if (detailPanel_ && detailPanel_->GetHwnd()) {
         InvalidateRect(detailPanel_->GetHwnd(), nullptr, TRUE);
         UpdateWindow(detailPanel_->GetHwnd());
+    }
+    // Invalidate ONLY the parent strip to the left of the search edit
+    // (between the sidebar splitter and the search box). The search edit
+    // has WS_EX_CLIENTEDGE, and bit-blit'ing it leaves its old border
+    // pixels on the parent when the strip shrinks during sidebar drag.
+    // We deliberately don't touch the right side where the buttons sit —
+    // forcing erase there caused visible button flicker.
+    RECT toolbarLeft = { sidebarWidth_ + splitterPx, 0, xSearch, toolbarPx };
+    if (toolbarLeft.right > toolbarLeft.left) {
+        InvalidateRect(hwnd_, &toolbarLeft, TRUE);
     }
 }
 
