@@ -123,6 +123,18 @@ LRESULT MainWindow::HandleMessage(UINT msg, WPARAM wParam, LPARAM lParam) {
             return 0;
         }
 
+        case WM_APP_SPLITTER_DRAG: {
+            // Hide owner-draw toolbar buttons during splitter drag — they
+            // flicker each layout pass otherwise. They snap back when the
+            // user releases the mouse.
+            int show = wParam ? SW_HIDE : SW_SHOW;
+            if (hwndBtnFindPrev_) ShowWindow(hwndBtnFindPrev_, show);
+            if (hwndBtnFindNext_) ShowWindow(hwndBtnFindNext_, show);
+            if (hwndBtnErrPrev_)  ShowWindow(hwndBtnErrPrev_,  show);
+            if (hwndBtnErrNext_)  ShowWindow(hwndBtnErrNext_,  show);
+            return 0;
+        }
+
         case WM_CLOSE:
             DestroyWindow(hwnd_);
             return 0;
@@ -379,20 +391,7 @@ void MainWindow::LayoutChildren() {
     const UINT swpGrow = SWP_NOZORDER | SWP_NOACTIVATE | SWP_NOCOPYBITS;
     HDWP hdwp = BeginDeferWindowPos(12);
     auto defer = [&](HWND h, int x_, int y_, int w_, int h_, UINT flags) {
-        if (!h || !hdwp) return;
-        // Skip windows whose geometry hasn't changed. Windows still issues
-        // an invalidate/erase pass for a no-op SetWindowPos, which on
-        // owner-draw children causes a visible flicker each layout pass.
-        RECT cur;
-        if (GetWindowRect(h, &cur)) {
-            POINT topLeft = { cur.left, cur.top };
-            ScreenToClient(hwnd_, &topLeft);
-            int curW = cur.right - cur.left;
-            int curH = cur.bottom - cur.top;
-            if (topLeft.x == x_ && topLeft.y == y_ && curW == w_ && curH == h_)
-                return;
-        }
-        hdwp = DeferWindowPos(hdwp, h, nullptr, x_, y_, w_, h_, flags);
+        if (h && hdwp) hdwp = DeferWindowPos(hdwp, h, nullptr, x_, y_, w_, h_, flags);
     };
     defer(hwndBtnErrNext_, xErrNext, btnY, errBtnW, ctrlH, swpMove);
     defer(hwndBtnErrPrev_, xErrPrev, btnY, errBtnW, ctrlH, swpMove);

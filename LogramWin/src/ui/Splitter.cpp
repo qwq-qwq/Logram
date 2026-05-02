@@ -1,5 +1,6 @@
 #include "ui/Splitter.h"
 #include "ui/ThemeColors.h"
+#include "resource.h"
 
 void Splitter::RegisterClass(HINSTANCE hInstance) {
     WNDCLASSEXW wc = {};
@@ -43,7 +44,7 @@ LRESULT CALLBACK Splitter::WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lP
 
 LRESULT Splitter::HandleMessage(UINT msg, WPARAM wParam, LPARAM lParam) {
     switch (msg) {
-        case WM_LBUTTONDOWN:
+        case WM_LBUTTONDOWN: {
             SetCapture(hwnd_);
             dragging_ = true;
             // Grip offset within the splitter at click time. Following
@@ -54,7 +55,12 @@ LRESULT Splitter::HandleMessage(UINT msg, WPARAM wParam, LPARAM lParam) {
             // create self-referential oscillation between two positions.
             dragStart_ = (orient_ == Orientation::Vertical) ?
                 GET_X_LPARAM(lParam) : GET_Y_LPARAM(lParam);
+            // Tell the parent a drag is starting so it can hide owner-draw
+            // toolbar buttons that would otherwise flicker each layout pass.
+            HWND parent = GetParent(hwnd_);
+            if (parent) SendMessageW(parent, WM_APP_SPLITTER_DRAG, 1, 0);
             return 0;
+        }
 
         case WM_MOUSEMOVE:
             if (dragging_) {
@@ -82,6 +88,18 @@ LRESULT Splitter::HandleMessage(UINT msg, WPARAM wParam, LPARAM lParam) {
             if (dragging_) {
                 dragging_ = false;
                 ReleaseCapture();
+                HWND parent = GetParent(hwnd_);
+                if (parent) SendMessageW(parent, WM_APP_SPLITTER_DRAG, 0, 0);
+            }
+            return 0;
+
+        case WM_CAPTURECHANGED:
+            // If capture was stolen mid-drag (alt-tab, etc.) make sure the
+            // parent re-shows the toolbar buttons.
+            if (dragging_) {
+                dragging_ = false;
+                HWND parent = GetParent(hwnd_);
+                if (parent) SendMessageW(parent, WM_APP_SPLITTER_DRAG, 0, 0);
             }
             return 0;
 
