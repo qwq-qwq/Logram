@@ -158,9 +158,14 @@ void LogTableView::CreateRenderTarget() {
     GetClientRect(hwnd_, &rc);
     D2D1_SIZE_U size = {static_cast<UINT32>(rc.right), static_cast<UINT32>(rc.bottom)};
 
+    // PRESENT_OPTIONS_IMMEDIATELY: bypass DWM's vsync queue. With the default
+    // option D2D waits a frame to present, giving a visible "tear" during
+    // interactive resize. Immediate presents are flicker-free for static
+    // content (we only paint on demand, no continuous redraw).
     factory->CreateHwndRenderTarget(
         D2D1::RenderTargetProperties(),
-        D2D1::HwndRenderTargetProperties(hwnd_, size),
+        D2D1::HwndRenderTargetProperties(hwnd_, size,
+            D2D1_PRESENT_OPTIONS_IMMEDIATELY),
         &rt_);
 
     if (rt_) {
@@ -330,7 +335,10 @@ void LogTableView::OnSize(int w, int h) {
         rt_->Resize(D2D1::SizeU(w, h));
     }
     UpdateScrollInfo();
+    // Synchronous repaint: without UpdateWindow the WM_PAINT is queued and
+    // the user sees a frame of stretched/black D2D contents during drag.
     InvalidateRect(hwnd_, nullptr, FALSE);
+    UpdateWindow(hwnd_);
 }
 
 void LogTableView::UpdateScrollInfo() {

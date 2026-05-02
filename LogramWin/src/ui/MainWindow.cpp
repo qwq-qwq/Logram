@@ -330,14 +330,11 @@ void MainWindow::LayoutChildren() {
     const int minDetailPx    = Scale(kMinDetailHeightDip);
     const int minTablePx     = Scale(200);
 
-    // Clamp dimensions so children always have room
     int workH = std::max(0, totalH - toolbarPx - sbH);
     int workY = toolbarPx;
     int workBottom = workY + workH;
 
-    // First layout: sidebar = 15% of window width.
     if (sidebarWidth_ < 0) sidebarWidth_ = totalW * 15 / 100;
-
     if (sidebarWidth_ < minSidebarPx) sidebarWidth_ = minSidebarPx;
     if (sidebarWidth_ > totalW - minTablePx)
         sidebarWidth_ = std::max(minSidebarPx, totalW - minTablePx);
@@ -345,9 +342,7 @@ void MainWindow::LayoutChildren() {
     int rightX = sidebarWidth_ + splitterPx;
     int rightW = std::max(0, totalW - rightX);
 
-    // First layout: table gets 70%, detail gets 30%.
     if (detailHeight_ < 0) detailHeight_ = workH * 30 / 100;
-
     int detailH = std::min(detailHeight_, std::max(0, workH - minDetailPx));
     if (detailH < minDetailPx) detailH = minDetailPx;
     if (detailH > workH - minDetailPx) detailH = std::max(minDetailPx, workH - minDetailPx);
@@ -355,60 +350,46 @@ void MainWindow::LayoutChildren() {
 
     int topH = std::max(0, workH - detailH - splitterPx);
 
-    // Toolbar: search box + navigation buttons across the right pane.
-    {
-        const int pad = Scale(6);
-        const int ctrlH = Scale(24);
-        const int btnY = (toolbarPx - ctrlH) / 2;
-        const int btnW = Scale(36);
-        const int errBtnW = Scale(50);
+    const int pad = Scale(6);
+    const int ctrlH = Scale(24);
+    const int btnY = (toolbarPx - ctrlH) / 2;
+    const int btnW = Scale(36);
+    const int errBtnW = Scale(50);
 
-        // Buttons from right edge: ErrNext, ErrPrev, FindNext, FindPrev
-        int x = totalW - pad;
-        if (hwndBtnErrNext_) { x -= errBtnW; MoveWindow(hwndBtnErrNext_, x, btnY, errBtnW, ctrlH, TRUE); x -= pad/2; }
-        if (hwndBtnErrPrev_) { x -= errBtnW; MoveWindow(hwndBtnErrPrev_, x, btnY, errBtnW, ctrlH, TRUE); x -= pad; }
-        if (hwndBtnFindNext_) { x -= btnW; MoveWindow(hwndBtnFindNext_, x, btnY, btnW, ctrlH, TRUE); x -= pad/2; }
-        if (hwndBtnFindPrev_) { x -= btnW; MoveWindow(hwndBtnFindPrev_, x, btnY, btnW, ctrlH, TRUE); x -= pad; }
+    int x = totalW - pad;
+    int xErrNext = (x -= errBtnW);
+    int xErrPrev = (x -= pad/2, x -= errBtnW, x);
+    int xFindNext = (x -= pad, x -= btnW, x);
+    int xFindPrev = (x -= pad/2, x -= btnW, x);
+    int xSearch = sidebarWidth_ + splitterPx + pad;
+    int wSearch = std::max(Scale(120), (x - pad) - xSearch);
 
-        // Search box fills remaining space
-        if (hwndSearch_) {
-            const int searchX = sidebarWidth_ + splitterPx + pad;
-            const int searchW = std::max(Scale(120), x - searchX);
-            MoveWindow(hwndSearch_, searchX, btnY, searchW, ctrlH, TRUE);
-        }
-    }
-
-    // Filter sidebar (left)
-    if (filterSidebar_) {
-        MoveWindow(filterSidebar_->GetHwnd(), 0, workY, sidebarWidth_, workH, TRUE);
-        filterSidebar_->Resize(sidebarWidth_, workH);
-    }
-
-    // Vertical splitter (between sidebar and right pane)
-    if (sidebarSplitter_) {
-        MoveWindow(sidebarSplitter_->GetHwnd(),
-                   sidebarWidth_, workY, splitterPx, workH, TRUE);
-    }
-
-    // Table view (top-right)
-    if (tableView_) {
-        MoveWindow(tableView_->GetHwnd(), rightX, workY, rightW, topH, TRUE);
-    }
-
-    // Horizontal splitter (between table and detail pane)
     int splitY = workY + topH;
-    if (detailSplitter_) {
-        MoveWindow(detailSplitter_->GetHwnd(),
-                   rightX, splitY, rightW, splitterPx, TRUE);
-        detailSplitter_->SetPosition(splitY); // keep in sync for drags
-    }
-
-    // Detail panel (bottom-right)
     int detailY = splitY + splitterPx;
     int detailActualH = std::max(0, workBottom - detailY);
-    if (detailPanel_) {
-        MoveWindow(detailPanel_->GetHwnd(), rightX, detailY, rightW, detailActualH, TRUE);
-    }
+
+    // Batch all child reposition into a single atomic pass. Without this,
+    // each MoveWindow would invalidate/repaint that child individually, so
+    // the user sees ~12 children update in a staggered cascade during drag.
+    const UINT swp = SWP_NOZORDER | SWP_NOACTIVATE | SWP_NOCOPYBITS;
+    HDWP hdwp = BeginDeferWindowPos(12);
+    auto defer = [&](HWND h, int x_, int y_, int w_, int h_) {
+        if (h && hdwp) hdwp = DeferWindowPos(hdwp, h, nullptr, x_, y_, w_, h_, swp);
+    };
+    defer(hwndBtnErrNext_, xErrNext, btnY, errBtnW, ctrlH);
+    defer(hwndBtnErrPrev_, xErrPrev, btnY, errBtnW, ctrlH);
+    defer(hwndBtnFindNext_, xFindNext, btnY, btnW, ctrlH);
+    defer(hwndBtnFindPrev_, xFindPrev, btnY, btnW, ctrlH);
+    defer(hwndSearch_, xSearch, btnY, wSearch, ctrlH);
+    if (filterSidebar_) defer(filterSidebar_->GetHwnd(), 0, workY, sidebarWidth_, workH);
+    if (sidebarSplitter_) defer(sidebarSplitter_->GetHwnd(), sidebarWidth_, workY, splitterPx, workH);
+    if (tableView_) defer(tableView_->GetHwnd(), rightX, workY, rightW, topH);
+    if (detailSplitter_) defer(detailSplitter_->GetHwnd(), rightX, splitY, rightW, splitterPx);
+    if (detailPanel_) defer(detailPanel_->GetHwnd(), rightX, detailY, rightW, detailActualH);
+    if (hdwp) EndDeferWindowPos(hdwp);
+
+    if (filterSidebar_) filterSidebar_->Resize(sidebarWidth_, workH);
+    if (detailSplitter_) detailSplitter_->SetPosition(splitY);
 }
 
 void MainWindow::OnCommand(int id, int code, HWND ctrl) {

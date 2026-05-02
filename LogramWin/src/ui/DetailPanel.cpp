@@ -111,17 +111,16 @@ void DetailPanel::LayoutInternal() {
     int btnW = Scale(60);
     int pad = Scale(4);
 
-    if (hwndHeader_)
-        MoveWindow(hwndHeader_, pad, 0, w - 2 * btnW - 3 * pad, headerH, TRUE);
-
-    if (hwndParams_)
-        MoveWindow(hwndParams_, w - 2 * (btnW + pad), Scale(2), btnW, headerH - Scale(4), TRUE);
-
-    if (hwndCopy_)
-        MoveWindow(hwndCopy_, w - btnW - pad, Scale(2), btnW, headerH - Scale(4), TRUE);
-
-    if (hwndEdit_)
-        MoveWindow(hwndEdit_, 0, headerH, w, std::max(0, h - headerH), TRUE);
+    const UINT swp = SWP_NOZORDER | SWP_NOACTIVATE | SWP_NOCOPYBITS;
+    HDWP hdwp = BeginDeferWindowPos(4);
+    auto defer = [&](HWND hC, int x_, int y_, int w_, int h_) {
+        if (hC && hdwp) hdwp = DeferWindowPos(hdwp, hC, nullptr, x_, y_, w_, h_, swp);
+    };
+    defer(hwndHeader_, pad, 0, w - 2 * btnW - 3 * pad, headerH);
+    defer(hwndParams_, w - 2 * (btnW + pad), Scale(2), btnW, headerH - Scale(4));
+    defer(hwndCopy_, w - btnW - pad, Scale(2), btnW, headerH - Scale(4));
+    defer(hwndEdit_, 0, headerH, w, std::max(0, h - headerH));
+    if (hdwp) EndDeferWindowPos(hdwp);
 }
 
 void DetailPanel::SetDocument(LogDocument* doc) {
