@@ -34,21 +34,17 @@ MainWindow::~MainWindow() {
     doc_.listeners.Remove(this);
     if (loadThread_.joinable()) loadThread_.join();
     if (hBgBrush_) DeleteObject(hBgBrush_);
-    if (hEraseBrush_) DeleteObject(hEraseBrush_);
     if (hToolbarFont_) DeleteObject(hToolbarFont_);
 }
 
 void MainWindow::RegisterClass(HINSTANCE hInstance) {
     WNDCLASSEXW wc = {};
     wc.cbSize = sizeof(wc);
-    // No CS_HREDRAW/CS_VREDRAW: those force a full client invalidate on every
-    // resize, which causes visible flicker. We invalidate explicitly when the
-    // visual content actually changes.
-    wc.style = 0;
+    wc.style = CS_HREDRAW | CS_VREDRAW;
     wc.lpfnWndProc = WndProc;
     wc.hInstance = hInstance;
     wc.hCursor = LoadCursorW(nullptr, IDC_ARROW);
-    wc.hbrBackground = nullptr;  // we paint the background ourselves
+    wc.hbrBackground = reinterpret_cast<HBRUSH>(COLOR_BTNFACE + 1);
     wc.lpszMenuName = MAKEINTRESOURCEW(IDR_MAINMENU);
     wc.lpszClassName = kClassName;
     wc.hIcon = LoadIconW(hInstance, MAKEINTRESOURCEW(IDI_APPICON));
@@ -137,19 +133,12 @@ LRESULT MainWindow::HandleMessage(UINT msg, WPARAM wParam, LPARAM lParam) {
             return 0;
 
         case WM_ERASEBKGND: {
-            // Cache the brush — interactive resize can fire dozens of these
-            // per second; recreating a GDI brush each time was a flicker
-            // contributor and pure waste.
             auto& theme = CurrentTheme();
-            COLORREF c = ToCOLORREF(theme.background);
-            if (!hEraseBrush_ || hEraseBrushColor_ != c) {
-                if (hEraseBrush_) DeleteObject(hEraseBrush_);
-                hEraseBrush_ = CreateSolidBrush(c);
-                hEraseBrushColor_ = c;
-            }
             RECT rc;
             GetClientRect(hwnd_, &rc);
-            FillRect(reinterpret_cast<HDC>(wParam), &rc, hEraseBrush_);
+            HBRUSH brush = CreateSolidBrush(ToCOLORREF(theme.background));
+            FillRect(reinterpret_cast<HDC>(wParam), &rc, brush);
+            DeleteObject(brush);
             return 1;
         }
 
@@ -330,11 +319,14 @@ void MainWindow::LayoutChildren() {
     const int minDetailPx    = Scale(kMinDetailHeightDip);
     const int minTablePx     = Scale(200);
 
+    // Clamp dimensions so children always have room
     int workH = std::max(0, totalH - toolbarPx - sbH);
     int workY = toolbarPx;
     int workBottom = workY + workH;
 
+    // First layout: sidebar = 15% of window width.
     if (sidebarWidth_ < 0) sidebarWidth_ = totalW * 15 / 100;
+
     if (sidebarWidth_ < minSidebarPx) sidebarWidth_ = minSidebarPx;
     if (sidebarWidth_ > totalW - minTablePx)
         sidebarWidth_ = std::max(minSidebarPx, totalW - minTablePx);
@@ -342,7 +334,9 @@ void MainWindow::LayoutChildren() {
     int rightX = sidebarWidth_ + splitterPx;
     int rightW = std::max(0, totalW - rightX);
 
+    // First layout: table gets 70%, detail gets 30%.
     if (detailHeight_ < 0) detailHeight_ = workH * 30 / 100;
+
     int detailH = std::min(detailHeight_, std::max(0, workH - minDetailPx));
     if (detailH < minDetailPx) detailH = minDetailPx;
     if (detailH > workH - minDetailPx) detailH = std::max(minDetailPx, workH - minDetailPx);
@@ -368,15 +362,13 @@ void MainWindow::LayoutChildren() {
     int detailY = splitY + splitterPx;
     int detailActualH = std::max(0, workBottom - detailY);
 
-    // Batch all child reposition into a single atomic pass. Without this,
-    // each MoveWindow would invalidate/repaint that child individually, so
-    // the user sees ~12 children update in a staggered cascade during drag.
-    //
-    // SWP_NOCOPYBITS: skip Windows' bit-blit of old contents to new coords.
-    // During splitter drag, when LogTableView grows downward into the area
-    // DetailPanel just left, the bit-blit pulls DetailPanel's button pixels
-    // into the table — the "Params/Copy ghost" residue. We invalidate the
-    // children explicitly below so they fully repaint instead.
+    // Batch all child reposition into a single atomic pass, and tell Windows
+    // not to bit-blit old contents. During splitter drag the table grows
+    // downward into where the detail panel sat — without SWP_NOCOPYBITS the
+    // bit-blit would copy detail-panel button pixels into the table area
+    // ("ghost trail") until the next WM_PAINT cleared them. We then force a
+    // synchronous repaint of the panes that grew, so the user never sees the
+    // pre-paint buffer mid-drag.
     const UINT swp = SWP_NOZORDER | SWP_NOACTIVATE | SWP_NOCOPYBITS;
     HDWP hdwp = BeginDeferWindowPos(12);
     auto defer = [&](HWND h, int x_, int y_, int w_, int h_) {
@@ -397,10 +389,9 @@ void MainWindow::LayoutChildren() {
     if (filterSidebar_) filterSidebar_->Resize(sidebarWidth_, workH);
     if (detailSplitter_) detailSplitter_->SetPosition(splitY);
 
-    // After SWP_NOCOPYBITS, children have undefined contents in newly grown
-    // regions until WM_PAINT runs. Force a synchronous full repaint of the
-    // panes that actually grow on splitter drag (D2D table + detail panel)
-    // so the user never sees stale pixels mid-drag.
+    // Force synchronous repaint of the panes that grow on splitter drag, so
+    // newly exposed regions never show stale pixels between the SWP_NOCOPYBITS
+    // and the queued WM_PAINT.
     if (tableView_ && tableView_->GetHwnd()) {
         InvalidateRect(tableView_->GetHwnd(), nullptr, FALSE);
         UpdateWindow(tableView_->GetHwnd());
@@ -409,6 +400,14 @@ void MainWindow::LayoutChildren() {
         InvalidateRect(detailPanel_->GetHwnd(), nullptr, TRUE);
         UpdateWindow(detailPanel_->GetHwnd());
     }
+    // Also redraw the toolbar strip on the parent: the search edit and the
+    // four owner-draw buttons sit directly on MainWindow's client, and when
+    // the sidebar splitter moves they leave ghost pixels in the strip the
+    // toolbar children no longer cover. WS_CLIPCHILDREN keeps the actual
+    // controls intact while we erase the parent fill behind them.
+    RECT tb = { 0, 0, totalW, toolbarPx };
+    RedrawWindow(hwnd_, &tb, nullptr,
+        RDW_INVALIDATE | RDW_ERASE | RDW_UPDATENOW);
 }
 
 void MainWindow::OnCommand(int id, int code, HWND ctrl) {

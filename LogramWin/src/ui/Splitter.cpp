@@ -4,7 +4,7 @@
 void Splitter::RegisterClass(HINSTANCE hInstance) {
     WNDCLASSEXW wc = {};
     wc.cbSize = sizeof(wc);
-    wc.style = 0;
+    wc.style = CS_HREDRAW | CS_VREDRAW;
     wc.lpfnWndProc = WndProc;
     wc.hInstance = hInstance;
     wc.hCursor = LoadCursorW(nullptr, IDC_SIZEWE);
@@ -15,7 +15,7 @@ void Splitter::RegisterClass(HINSTANCE hInstance) {
 
 HWND Splitter::Create(HWND parent, HINSTANCE hInstance, int x, int y, int w, int h) {
     hwnd_ = CreateWindowExW(0, kClassName, nullptr,
-        WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS,
+        WS_CHILD | WS_VISIBLE,
         x, y, w, h, parent, nullptr, hInstance, this);
     return hwnd_;
 }
@@ -43,18 +43,18 @@ LRESULT CALLBACK Splitter::WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lP
 
 LRESULT Splitter::HandleMessage(UINT msg, WPARAM wParam, LPARAM lParam) {
     switch (msg) {
-        case WM_LBUTTONDOWN: {
+        case WM_LBUTTONDOWN:
             SetCapture(hwnd_);
             dragging_ = true;
-            // Store the grip offset in splitter-local coords. Every following
-            // MOUSEMOVE will be evaluated in PARENT coords (stable frame), so
-            // the splitter follows the cursor without oscillation. Reading
-            // lParam directly here would be in splitter coords — same thing
-            // at click time, since the splitter hasn't moved yet.
+            // Grip offset within the splitter at click time. Following
+            // MOUSEMOVE handlers evaluate the cursor in PARENT coords (a
+            // stable reference frame) and place the splitter at
+            // (cursorParent - dragStart_). Reading the cursor in
+            // splitter-local coords after the splitter has moved would
+            // create self-referential oscillation between two positions.
             dragStart_ = (orient_ == Orientation::Vertical) ?
                 GET_X_LPARAM(lParam) : GET_Y_LPARAM(lParam);
             return 0;
-        }
 
         case WM_MOUSEMOVE:
             if (dragging_) {
@@ -92,20 +92,16 @@ LRESULT Splitter::HandleMessage(UINT msg, WPARAM wParam, LPARAM lParam) {
 
         case WM_ERASEBKGND: {
             auto& theme = CurrentTheme();
+            RECT rc;
+            GetClientRect(hwnd_, &rc);
             ColorRGBA c;
             c.r = (theme.background.r + theme.secondary.r) * 0.5f;
             c.g = (theme.background.g + theme.secondary.g) * 0.5f;
             c.b = (theme.background.b + theme.secondary.b) * 0.5f;
             c.a = 1.0f;
-            COLORREF cref = ToCOLORREF(c);
-            if (!hEraseBrush_ || hEraseBrushColor_ != cref) {
-                if (hEraseBrush_) DeleteObject(hEraseBrush_);
-                hEraseBrush_ = CreateSolidBrush(cref);
-                hEraseBrushColor_ = cref;
-            }
-            RECT rc;
-            GetClientRect(hwnd_, &rc);
-            FillRect(reinterpret_cast<HDC>(wParam), &rc, hEraseBrush_);
+            HBRUSH brush = CreateSolidBrush(ToCOLORREF(c));
+            FillRect(reinterpret_cast<HDC>(wParam), &rc, brush);
+            DeleteObject(brush);
             return 1;
         }
     }

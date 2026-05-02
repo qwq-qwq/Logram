@@ -16,10 +16,7 @@ LogTableView::~LogTableView() {
 void LogTableView::RegisterClass(HINSTANCE hInstance) {
     WNDCLASSEXW wc = {};
     wc.cbSize = sizeof(wc);
-    // No CS_HREDRAW/CS_VREDRAW: D2D fully repaints on WM_PAINT and OnSize
-    // already invalidates the client region — the class flag would just add
-    // a redundant pass per WM_SIZE, causing flicker during interactive resize.
-    wc.style = 0;
+    wc.style = CS_HREDRAW | CS_VREDRAW;
     wc.lpfnWndProc = WndProc;
     wc.hInstance = hInstance;
     wc.hCursor = LoadCursorW(nullptr, IDC_ARROW);
@@ -32,7 +29,7 @@ HWND LogTableView::Create(HWND parent, HINSTANCE hInstance, LogDocument* doc) {
     if (doc_) doc_->listeners.Add(this);
 
     hwnd_ = CreateWindowExW(0, kClassName, nullptr,
-        WS_CHILD | WS_VISIBLE | WS_VSCROLL | WS_TABSTOP | WS_CLIPSIBLINGS,
+        WS_CHILD | WS_VISIBLE | WS_VSCROLL | WS_TABSTOP,
         0, 0, 100, 100, parent, nullptr, hInstance, this);
 
     // Create DirectWrite text format
@@ -111,10 +108,10 @@ LRESULT LogTableView::HandleMessage(UINT msg, WPARAM wParam, LPARAM lParam) {
             OnPaint();
             return 0;
         case WM_ERASEBKGND: {
-            // D2D fully repaints in WM_PAINT; normally we skip erase. But if
-            // CreateHwndRenderTarget ever fails (no GPU / locked desktop) we
-            // would otherwise leak the default black HWND background, so
-            // fall back to a theme-colored fill until the next WM_PAINT.
+            // D2D fully repaints in WM_PAINT, so we normally skip erase. But
+            // if CreateHwndRenderTarget ever fails (no GPU / locked desktop)
+            // we'd otherwise leak the default black HWND background, so fall
+            // back to a theme-colored fill until the next WM_PAINT.
             if (rt_) return 1;
             auto& theme = CurrentTheme();
             RECT rc; GetClientRect(hwnd_, &rc);
@@ -341,10 +338,7 @@ void LogTableView::OnSize(int w, int h) {
         rt_->Resize(D2D1::SizeU(w, h));
     }
     UpdateScrollInfo();
-    // Synchronous repaint: without UpdateWindow the WM_PAINT is queued and
-    // the user sees a frame of stretched/black D2D contents during drag.
     InvalidateRect(hwnd_, nullptr, FALSE);
-    UpdateWindow(hwnd_);
 }
 
 void LogTableView::UpdateScrollInfo() {

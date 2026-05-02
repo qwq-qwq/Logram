@@ -42,8 +42,6 @@ private:
     HWND hwndList_  = nullptr;
     HWND hwndPreset_[5] = {nullptr, nullptr, nullptr, nullptr, nullptr};
     HFONT hFont_ = nullptr;
-    HBRUSH hEraseBrush_ = nullptr;
-    COLORREF hEraseBrushColor_ = 0;
     LogDocument* doc_ = nullptr;
 
     int clientW_ = 0;

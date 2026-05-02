@@ -14,17 +14,16 @@ DetailPanel::~DetailPanel() {
     if (hFont_) DeleteObject(hFont_);
     if (hFontSmall_) DeleteObject(hFontSmall_);
     if (hBgBrush_) DeleteObject(hBgBrush_);
-    if (hEraseBrush_) DeleteObject(hEraseBrush_);
 }
 
 void DetailPanel::RegisterClass(HINSTANCE hInstance) {
     WNDCLASSEXW wc = {};
     wc.cbSize = sizeof(wc);
-    wc.style = 0;
+    wc.style = CS_HREDRAW | CS_VREDRAW;
     wc.lpfnWndProc = WndProc;
     wc.hInstance = hInstance;
     wc.hCursor = LoadCursorW(nullptr, IDC_ARROW);
-    wc.hbrBackground = nullptr;
+    wc.hbrBackground = reinterpret_cast<HBRUSH>(COLOR_BTNFACE + 1);
     wc.lpszClassName = kClassName;
     RegisterClassExW(&wc);
 }
@@ -40,7 +39,7 @@ HWND DetailPanel::Create(HWND parent, HINSTANCE hInstance, LogDocument* doc) {
     if (doc_) doc_->listeners.Add(this);
 
     hwnd_ = CreateWindowExW(0, kClassName, nullptr,
-        WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS,
+        WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN,
         0, 0, 400, 200, parent, nullptr, hInstance, this);
 
     UINT dpi = GetDpiForWindow(parent);
@@ -111,16 +110,17 @@ void DetailPanel::LayoutInternal() {
     int btnW = Scale(60);
     int pad = Scale(4);
 
-    const UINT swp = SWP_NOZORDER | SWP_NOACTIVATE;
-    HDWP hdwp = BeginDeferWindowPos(4);
-    auto defer = [&](HWND hC, int x_, int y_, int w_, int h_) {
-        if (hC && hdwp) hdwp = DeferWindowPos(hdwp, hC, nullptr, x_, y_, w_, h_, swp);
-    };
-    defer(hwndHeader_, pad, 0, w - 2 * btnW - 3 * pad, headerH);
-    defer(hwndParams_, w - 2 * (btnW + pad), Scale(2), btnW, headerH - Scale(4));
-    defer(hwndCopy_, w - btnW - pad, Scale(2), btnW, headerH - Scale(4));
-    defer(hwndEdit_, 0, headerH, w, std::max(0, h - headerH));
-    if (hdwp) EndDeferWindowPos(hdwp);
+    if (hwndHeader_)
+        MoveWindow(hwndHeader_, pad, 0, w - 2 * btnW - 3 * pad, headerH, TRUE);
+
+    if (hwndParams_)
+        MoveWindow(hwndParams_, w - 2 * (btnW + pad), Scale(2), btnW, headerH - Scale(4), TRUE);
+
+    if (hwndCopy_)
+        MoveWindow(hwndCopy_, w - btnW - pad, Scale(2), btnW, headerH - Scale(4), TRUE);
+
+    if (hwndEdit_)
+        MoveWindow(hwndEdit_, 0, headerH, w, std::max(0, h - headerH), TRUE);
 }
 
 void DetailPanel::SetDocument(LogDocument* doc) {
@@ -520,15 +520,11 @@ LRESULT DetailPanel::HandleMessage(UINT msg, WPARAM wParam, LPARAM lParam) {
 
         case WM_ERASEBKGND: {
             auto& theme = CurrentTheme();
-            COLORREF c = ToCOLORREF(theme.background);
-            if (!hEraseBrush_ || hEraseBrushColor_ != c) {
-                if (hEraseBrush_) DeleteObject(hEraseBrush_);
-                hEraseBrush_ = CreateSolidBrush(c);
-                hEraseBrushColor_ = c;
-            }
             RECT rc;
             GetClientRect(hwnd_, &rc);
-            FillRect(reinterpret_cast<HDC>(wParam), &rc, hEraseBrush_);
+            HBRUSH brush = CreateSolidBrush(ToCOLORREF(theme.background));
+            FillRect(reinterpret_cast<HDC>(wParam), &rc, brush);
+            DeleteObject(brush);
             return 1;
         }
 

@@ -31,8 +31,6 @@ private:
     HFONT hFont_ = nullptr;
     HFONT hFontSmall_ = nullptr;
     HBRUSH hBgBrush_ = nullptr;
-    HBRUSH hEraseBrush_ = nullptr;
-    COLORREF hEraseBrushColor_ = 0;
     LogDocument* doc_ = nullptr;
     int lastLineId_ = -1;
     bool paramsEnabled_ = false;
