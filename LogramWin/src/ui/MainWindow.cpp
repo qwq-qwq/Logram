@@ -416,6 +416,16 @@ void MainWindow::LayoutChildren() {
         RedrawWindow(detailPanel_->GetHwnd(), nullptr, nullptr, redrawAll);
     if (hwndSearch_)
         RedrawWindow(hwndSearch_, nullptr, nullptr, redrawAll);
+
+    // Owner-draw buttons: after a move, Windows briefly shows the system
+    // grey background between the bit-blit and the next WM_DRAWITEM. Force
+    // synchronous redraw so each button repaints itself in one frame.
+    HWND btns[] = { hwndBtnFindPrev_, hwndBtnFindNext_,
+                    hwndBtnErrPrev_,  hwndBtnErrNext_ };
+    for (HWND b : btns) {
+        if (b) RedrawWindow(b, nullptr, nullptr,
+                            RDW_INVALIDATE | RDW_UPDATENOW);
+    }
 }
 
 void MainWindow::OnCommand(int id, int code, HWND ctrl) {
