@@ -110,17 +110,29 @@ void DetailPanel::LayoutInternal() {
     int btnW = Scale(60);
     int pad = Scale(4);
 
-    if (hwndHeader_)
-        MoveWindow(hwndHeader_, pad, 0, w - 2 * btnW - 3 * pad, headerH, TRUE);
+    // Skip MoveWindow when geometry hasn't changed. Windows still issues an
+    // invalidate/erase pass for a no-op move, which on owner-draw buttons
+    // (Params/Copy) shows up as a flicker each layout pass during resize.
+    auto move = [](HWND h, int x, int y, int w_, int h_) {
+        if (!h) return;
+        RECT cur;
+        if (GetWindowRect(h, &cur)) {
+            HWND parent = GetParent(h);
+            POINT tl = { cur.left, cur.top };
+            if (parent) ScreenToClient(parent, &tl);
+            if (tl.x == x && tl.y == y &&
+                (cur.right - cur.left) == w_ &&
+                (cur.bottom - cur.top) == h_) {
+                return;
+            }
+        }
+        MoveWindow(h, x, y, w_, h_, TRUE);
+    };
 
-    if (hwndParams_)
-        MoveWindow(hwndParams_, w - 2 * (btnW + pad), Scale(2), btnW, headerH - Scale(4), TRUE);
-
-    if (hwndCopy_)
-        MoveWindow(hwndCopy_, w - btnW - pad, Scale(2), btnW, headerH - Scale(4), TRUE);
-
-    if (hwndEdit_)
-        MoveWindow(hwndEdit_, 0, headerH, w, std::max(0, h - headerH), TRUE);
+    move(hwndHeader_, pad, 0, w - 2 * btnW - 3 * pad, headerH);
+    move(hwndParams_, w - 2 * (btnW + pad), Scale(2), btnW, headerH - Scale(4));
+    move(hwndCopy_,   w - btnW - pad,        Scale(2), btnW, headerH - Scale(4));
+    move(hwndEdit_,   0, headerH, w, std::max(0, h - headerH));
 }
 
 void DetailPanel::SetDocument(LogDocument* doc) {
