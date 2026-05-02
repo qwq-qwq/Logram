@@ -1,6 +1,11 @@
 #include "ui/Splitter.h"
 #include "ui/ThemeColors.h"
-#include "resource.h"
+
+// Mirrors resource.h. Defined here to avoid pulling the resource header
+// (which lives outside src/) into a UI source file.
+#ifndef WM_APP_SPLITTER_DRAG
+#define WM_APP_SPLITTER_DRAG (WM_APP + 3)
+#endif
 
 void Splitter::RegisterClass(HINSTANCE hInstance) {
     WNDCLASSEXW wc = {};
