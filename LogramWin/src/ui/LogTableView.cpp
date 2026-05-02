@@ -110,8 +110,19 @@ LRESULT LogTableView::HandleMessage(UINT msg, WPARAM wParam, LPARAM lParam) {
         case WM_PAINT:
             OnPaint();
             return 0;
-        case WM_ERASEBKGND:
-            return 1; // D2D handles background
+        case WM_ERASEBKGND: {
+            // D2D fully repaints in WM_PAINT; normally we skip erase. But if
+            // CreateHwndRenderTarget ever fails (no GPU / locked desktop) we
+            // would otherwise leak the default black HWND background, so
+            // fall back to a theme-colored fill until the next WM_PAINT.
+            if (rt_) return 1;
+            auto& theme = CurrentTheme();
+            RECT rc; GetClientRect(hwnd_, &rc);
+            HBRUSH brush = CreateSolidBrush(ToCOLORREF(theme.background));
+            FillRect(reinterpret_cast<HDC>(wParam), &rc, brush);
+            DeleteObject(brush);
+            return 1;
+        }
         case WM_VSCROLL: {
             int code = LOWORD(wParam);
             int pos = HIWORD(wParam);
@@ -158,14 +169,9 @@ void LogTableView::CreateRenderTarget() {
     GetClientRect(hwnd_, &rc);
     D2D1_SIZE_U size = {static_cast<UINT32>(rc.right), static_cast<UINT32>(rc.bottom)};
 
-    // PRESENT_OPTIONS_IMMEDIATELY: bypass DWM's vsync queue. With the default
-    // option D2D waits a frame to present, giving a visible "tear" during
-    // interactive resize. Immediate presents are flicker-free for static
-    // content (we only paint on demand, no continuous redraw).
     factory->CreateHwndRenderTarget(
         D2D1::RenderTargetProperties(),
-        D2D1::HwndRenderTargetProperties(hwnd_, size,
-            D2D1_PRESENT_OPTIONS_IMMEDIATELY),
+        D2D1::HwndRenderTargetProperties(hwnd_, size),
         &rt_);
 
     if (rt_) {
