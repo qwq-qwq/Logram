@@ -30,3 +30,4 @@
 // Custom messages
 #define WM_APP_DOC_CHANGED  (WM_APP + 1)
 #define WM_APP_DOC_LOADED   (WM_APP + 2)
+#define WM_APP_SPLITTER_DRAG (WM_APP + 3)  // wParam: 1 = begin, 0 = end
