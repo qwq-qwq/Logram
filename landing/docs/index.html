@@ -219,6 +219,22 @@
       <span class="w-path">Меню <code>Navigate → Next/Prev Error</code> · <kbd>Ctrl</kbd><kbd>Shift</kbd><kbd>&darr;</kbd>/<kbd>&uarr;</kbd></span>
     </div>
   </div>
+
+  <h3>Focus on Call &mdash; фокус на виклику</h3>
+  <p>Розслідуєте падіння. Знайшли рядок з ексепшеном, відключили зайві потоки, почали скролити вгору в пошуках початку виклику. <b>Focus on Call</b> &mdash; та сама «чарівна паличка»: виділяєте будь-який рядок, і Logram залишає у вікні лише цей виклик &mdash; від зовнішнього <code>+</code> на тому ж потоці до парного <code>-</code> (або до кінця лога, якщо процес упав і не встиг згорнути стек).</p>
+  <p>Фільтр потоків автоматично звужується до того потоку, на якому живе виклик; паралельні запити та фоновий шум приховуються. Інші фільтри &mdash; чекбокси рівнів, текстовий пошук &mdash; продовжують працювати поверх.</p>
+  <div class="doc-where">
+    <div class="w-col">
+      <span class="w-os">macOS</span>
+      <span class="w-path">Правий клік по рядку &rarr; <b>Focus on Call</b> · <code>Navigate → Focus on Call</code> · <kbd>&#8984;</kbd><kbd>Shift</kbd><kbd>E</kbd></span>
+    </div>
+    <div class="w-col">
+      <span class="w-os">Windows</span>
+      <span class="w-path">Правий клік по рядку &rarr; <b>Focus on Call</b> · <code>Navigate → Focus on Call</code> · <kbd>Ctrl</kbd><kbd>Shift</kbd><kbd>E</kbd></span>
+    </div>
+  </div>
+  <p>Щоб зняти фокус і повернутись до повного лога: <kbd>Esc</kbd>, пункт <b>Clear Focus</b> у меню або клік по індикатору фокусу в статус-барі.</p>
+  <p><b>Алгоритм.</b> Від виділеного рядка йдемо вгору тим самим потоком, тримаючи лічильник пройдених закритих піддерев; кожен <code>+</code>, побачений при порожньому лічильнику, &mdash; кандидат на enclosing-кадр. Не зупиняємось на першому &mdash; йдемо до самого верху стека і беремо <i>найзовнішніший</i>. Парний <code>-</code> шукається вниз тим самим потоком з урахуванням вкладеності; якщо його немає (лог обірваний крашем), фокус розширюється до кінця файлу.</p>
 </section>
 
 <section class="doc" id="sql">
@@ -318,6 +334,16 @@
         <td>Наступна / попередня помилка</td>
         <td class="k">&mdash;</td>
         <td class="k"><kbd>Ctrl</kbd><kbd>Shift</kbd><kbd>&darr;</kbd> / <kbd>&uarr;</kbd></td>
+      </tr>
+      <tr>
+        <td>Focus on Call</td>
+        <td class="k"><kbd>&#8984;</kbd><kbd>Shift</kbd><kbd>E</kbd></td>
+        <td class="k"><kbd>Ctrl</kbd><kbd>Shift</kbd><kbd>E</kbd></td>
+      </tr>
+      <tr>
+        <td>Зняти фокус</td>
+        <td class="k"><kbd>Esc</kbd></td>
+        <td class="k"><kbd>Esc</kbd></td>
       </tr>
       <tr>
         <td>Копіювати виділене</td>
