@@ -457,6 +457,7 @@ h2.section-title em { font-style: italic; color: var(--yellow); }
 .feat:nth-child(3) { grid-column: span 5; }
 .feat:nth-child(4) { grid-column: span 4; }
 .feat:nth-child(5) { grid-column: span 8; }
+.feat:nth-child(6) { grid-column: span 12; }
 
 .feat-kicker {
   font-size: 10px; letter-spacing: .22em; text-transform: uppercase;
