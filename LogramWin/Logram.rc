@@ -35,6 +35,9 @@ BEGIN
         MENUITEM "&Jump to +/-\tCtrl+J",        ID_NAV_JUMPPAIR
         MENUITEM "Next &Error\tCtrl+Shift+Down",ID_NAV_NEXTERROR
         MENUITEM "Prev E&rror\tCtrl+Shift+Up",  ID_NAV_PREVERROR
+        MENUITEM SEPARATOR
+        MENUITEM "Focus on &Call\tCtrl+Shift+E", ID_NAV_FOCUSCALL
+        MENUITEM "Clear Focus\tEsc",             ID_NAV_CLEARFOCUS
     END
     POPUP "&Help"
     BEGIN
@@ -54,6 +57,8 @@ BEGIN
     "J",        ID_NAV_JUMPPAIR,    VIRTKEY, CONTROL
     VK_DOWN,    ID_NAV_NEXTERROR,   VIRTKEY, CONTROL, SHIFT
     VK_UP,      ID_NAV_PREVERROR,   VIRTKEY, CONTROL, SHIFT
+    "E",        ID_NAV_FOCUSCALL,   VIRTKEY, CONTROL, SHIFT
+    VK_ESCAPE,  ID_NAV_CLEARFOCUS,  VIRTKEY
 END
 
 // Version info

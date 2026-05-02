@@ -5,6 +5,7 @@
 #include "infra/Clipboard.h"
 #include "infra/Dpi.h"
 #include "infra/Settings.h"
+#include "resource.h"
 
 LogTableView::LogTableView() {}
 LogTableView::~LogTableView() {
@@ -148,6 +149,47 @@ LRESULT LogTableView::HandleMessage(UINT msg, WPARAM wParam, LPARAM lParam) {
         case WM_CAPTURECHANGED:
             isDragging_ = false;
             return 0;
+        case WM_RBUTTONDOWN: {
+            // Right-click selects the row under cursor and shows a context
+            // menu with Focus/Clear Focus. Forwarded to MainWindow as
+            // WM_COMMAND so the existing handlers run.
+            int x = GET_X_LPARAM(lParam);
+            int y = GET_Y_LPARAM(lParam);
+            int row = HitTestRow(y);
+            if (row >= 0 && doc_) {
+                int total = static_cast<int>(doc_->FilteredIndices().size());
+                if (row < total) {
+                    int lineId = static_cast<int>(doc_->FilteredIndices()[row]);
+                    doc_->SetSelectedLineId(lineId);
+                    selectedRows_.clear();
+                    selectedRows_.insert(static_cast<size_t>(row));
+                    anchorRow_ = static_cast<size_t>(row);
+                    DocumentChanges ch;
+                    ch.flags = DocumentChanges::SelectionChanged;
+                    doc_->listeners.Notify(ch);
+                    InvalidateRect(hwnd_, nullptr, FALSE);
+                }
+            }
+            POINT pt = { x, y };
+            ClientToScreen(hwnd_, &pt);
+            HMENU menu = CreatePopupMenu();
+            if (menu) {
+                bool hasSel = doc_ && doc_->SelectedLineId() >= 0;
+                bool focused = doc_ && doc_->FocusActive();
+                AppendMenuW(menu,
+                    MF_STRING | (hasSel ? 0 : MF_GRAYED),
+                    ID_NAV_FOCUSCALL, L"Focus on Call\tCtrl+Shift+E");
+                AppendMenuW(menu,
+                    MF_STRING | (focused ? 0 : MF_GRAYED),
+                    ID_NAV_CLEARFOCUS, L"Clear Focus\tEsc");
+                int cmd = TrackPopupMenu(menu,
+                    TPM_RETURNCMD | TPM_LEFTALIGN | TPM_TOPALIGN,
+                    pt.x, pt.y, 0, GetParent(hwnd_), nullptr);
+                DestroyMenu(menu);
+                if (cmd) PostMessageW(GetParent(hwnd_), WM_COMMAND, cmd, 0);
+            }
+            return 0;
+        }
         case WM_KEYDOWN:
             OnKeyDown(wParam, lParam);
             return 0;

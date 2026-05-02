@@ -82,6 +82,17 @@ public:
     // --- Navigation ---
     int FindMatchingPair(int lineId) const;
 
+    // --- Focus on Call ---
+    // When active, ApplyFilters keeps only lines within [focusStart, focusEnd]
+    // and the thread filter is narrowed to the focused thread. clearFocus
+    // restores the previous thread mask.
+    bool FocusActive() const { return focusActive_; }
+    int  FocusStart()  const { return focusStart_; }
+    int  FocusEnd()    const { return focusEnd_; }
+    int  FocusThread() const { return focusThread_; }
+    bool FocusOnCall(int lineId);
+    void ClearFocus();
+
     enum class SearchDirection { Forward, Backward };
     int FindNext(const std::string& pattern, SearchDirection dir, int from = -1) const;
 
@@ -114,6 +125,13 @@ private:
     bool searchRegex_ = false;
 
     int selectedLineId_ = -1;
+
+    // Focus state
+    bool focusActive_ = false;
+    int  focusStart_ = -1;
+    int  focusEnd_ = -1;
+    int  focusThread_ = -1;
+    uint64_t savedThreadMask_ = ~uint64_t(0);
 
     std::vector<MethodTiming> methodTimings_;
 

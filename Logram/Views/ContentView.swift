@@ -44,7 +44,10 @@ struct ContentView: View {
                             theme: theme,
                             showDuration: showDuration,
                             selectedId: $document.selectedLineId,
-                            onJumpToPair: jumpToPair
+                            onJumpToPair: jumpToPair,
+                            onFocusOnCall: focusOnCallSelected,
+                            onClearFocus: clearFocusSelected,
+                            focusActive: document.focusRange != nil
                         )
                         .frame(minHeight: 200)
 
@@ -72,6 +75,10 @@ struct ContentView: View {
         }
         .navigationTitle(document.fileName.isEmpty ? "Logram" : document.fileName)
         .focusedSceneValue(\.openLogFile, openFile)
+        .focusedSceneValue(\.focusOnCall,
+                           document.selectedLineId == nil ? nil : focusOnCallSelected)
+        .focusedSceneValue(\.clearFocus,
+                           document.focusRange == nil ? nil : clearFocusSelected)
         .task(id: pendingURL) {
             guard let url = pendingURL else { return }
             showDuration = false
@@ -228,6 +235,23 @@ struct ContentView: View {
                     .foregroundStyle(.secondary)
             }
             Spacer()
+            if let range = document.focusRange {
+                Button {
+                    document.clearFocus()
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "scope")
+                        Text("Focused: \(range.lowerBound + 1)…\(range.upperBound + 1)" +
+                             (document.focusThread.map { " · thread \($0)" } ?? ""))
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundStyle(.secondary)
+                    }
+                    .font(.caption)
+                    .foregroundStyle(Color.accentColor)
+                }
+                .buttonStyle(.plain)
+                .help("Clear focus (Esc)")
+            }
             Text(document.filteredCount == document.allLines.count
                  ? "\(document.allLines.count) lines"
                  : "\(document.filteredCount) / \(document.allLines.count) lines")
@@ -319,6 +343,17 @@ struct ContentView: View {
         guard let selId = document.selectedLineId,
               let pairId = document.findMatchingPair(for: selId) else { return }
         document.selectedLineId = pairId
+    }
+
+    private func focusOnCallSelected() {
+        guard let selId = document.selectedLineId else { return }
+        if !document.focusOnCall(lineId: selId) {
+            NSSound.beep()
+        }
+    }
+
+    private func clearFocusSelected() {
+        document.clearFocus()
     }
 
     private func openFile() {

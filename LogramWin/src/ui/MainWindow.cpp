@@ -495,6 +495,28 @@ void MainWindow::OnCommand(int id, int code, HWND ctrl) {
         case ID_NAV_PREVERROR:
             JumpToErrorRelative(-1);
             break;
+        case ID_NAV_FOCUSCALL: {
+            int sel = doc_.SelectedLineId();
+            if (sel < 0) { MessageBeep(MB_ICONINFORMATION); break; }
+            if (!doc_.FocusOnCall(sel)) {
+                MessageBeep(MB_ICONWARNING);
+                break;
+            }
+            DocumentChanges ch;
+            ch.flags = DocumentChanges::FiltersChanged;
+            doc_.listeners.Notify(ch);
+            UpdateStatusBar();
+            break;
+        }
+        case ID_NAV_CLEARFOCUS: {
+            if (!doc_.FocusActive()) break;
+            doc_.ClearFocus();
+            DocumentChanges ch;
+            ch.flags = DocumentChanges::FiltersChanged;
+            doc_.listeners.Notify(ch);
+            UpdateStatusBar();
+            break;
+        }
         case ID_HELP_ABOUT:
             MessageBoxW(hwnd_,
                 L"Logram 1.1\n"
@@ -729,7 +751,11 @@ void MainWindow::UpdateStatusBar() {
     SendMessageW(hwndStatus_, SB_SETTEXTW, 2, reinterpret_cast<LPARAM>(buf));
 
     int errors = doc_.ErrorCount();
-    if (errors > 0) {
+    if (doc_.FocusActive()) {
+        swprintf(buf, 64, L"Focus: %d-%d th%d",
+                 doc_.FocusStart() + 1, doc_.FocusEnd() + 1,
+                 doc_.FocusThread() + 1);
+    } else if (errors > 0) {
         swprintf(buf, 64, L"%d errors", errors);
     } else {
         buf[0] = L'\0';

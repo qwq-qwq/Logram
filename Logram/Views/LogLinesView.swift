@@ -11,12 +11,18 @@ struct LogLinesView: View {
     let showDuration: Bool
     @Binding var selectedId: Int?
     var onJumpToPair: (() -> Void)?
+    var onFocusOnCall: (() -> Void)?
+    var onClearFocus: (() -> Void)?
+    var focusActive: Bool = false
 
     var body: some View {
         LogTableView(
             allLines: allLines, indices: indices, theme: theme,
             showDuration: showDuration, selectedId: $selectedId,
-            onJumpToPair: onJumpToPair
+            onJumpToPair: onJumpToPair,
+            onFocusOnCall: onFocusOnCall,
+            onClearFocus: onClearFocus,
+            focusActive: focusActive
         )
     }
 }
@@ -26,6 +32,38 @@ struct LogLinesView: View {
 class LogNSTableView: NSTableView {
     var onCopy: ((_ selectedRows: IndexSet) -> Void)?
     var onJumpToPair: (() -> Void)?
+    var onFocusOnCall: (() -> Void)?
+    var onClearFocus: (() -> Void)?
+    var focusActive: Bool = false
+
+    override func menu(for event: NSEvent) -> NSMenu? {
+        // Right-click selects the row under the cursor first (so the focus
+        // action sees the right line), then shows the context menu.
+        let pt = convert(event.locationInWindow, from: nil)
+        let row = self.row(at: pt)
+        if row >= 0 {
+            self.selectRowIndexes(IndexSet(integer: row), byExtendingSelection: false)
+        }
+        let menu = NSMenu()
+        let focusItem = NSMenuItem(title: "Focus on Call",
+                                   action: #selector(focusOnCallAction),
+                                   keyEquivalent: "e")
+        focusItem.keyEquivalentModifierMask = [.command, .shift]
+        focusItem.target = self
+        focusItem.isEnabled = (row >= 0)
+        menu.addItem(focusItem)
+
+        let clearItem = NSMenuItem(title: "Clear Focus",
+                                   action: #selector(clearFocusAction),
+                                   keyEquivalent: "")
+        clearItem.target = self
+        clearItem.isEnabled = focusActive
+        menu.addItem(clearItem)
+        return menu
+    }
+
+    @objc private func focusOnCallAction() { onFocusOnCall?() }
+    @objc private func clearFocusAction()  { onClearFocus?() }
 
     override func keyDown(with event: NSEvent) {
         let cmd = event.modifierFlags.contains(.command)
@@ -51,6 +89,9 @@ struct LogTableView: NSViewRepresentable {
     let showDuration: Bool
     @Binding var selectedId: Int?
     var onJumpToPair: (() -> Void)?
+    var onFocusOnCall: (() -> Void)?
+    var onClearFocus: (() -> Void)?
+    var focusActive: Bool = false
 
     func makeCoordinator() -> Coordinator {
         Coordinator(parent: self)
@@ -83,6 +124,9 @@ struct LogTableView: NSViewRepresentable {
             coordinator?.copyRows(rows)
         }
         tableView.onJumpToPair = onJumpToPair
+        tableView.onFocusOnCall = onFocusOnCall
+        tableView.onClearFocus = onClearFocus
+        tableView.focusActive = focusActive
 
         context.coordinator.tableView = tableView
 
@@ -110,6 +154,9 @@ struct LogTableView: NSViewRepresentable {
         coord.currentTheme = theme
         coord.currentShowDuration = showDuration
         tableView.onJumpToPair = onJumpToPair
+        tableView.onFocusOnCall = onFocusOnCall
+        tableView.onClearFocus = onClearFocus
+        tableView.focusActive = focusActive
 
         if dataChanged || themeChanged || durationChanged {
             tableView.reloadData()

@@ -22,6 +22,8 @@
 #define ID_NAV_JUMPPAIR     3004
 #define ID_NAV_NEXTERROR    3005
 #define ID_NAV_PREVERROR    3006
+#define ID_NAV_FOCUSCALL    3007
+#define ID_NAV_CLEARFOCUS   3008
 
 // Help
 #define ID_HELP_ABOUT       4001

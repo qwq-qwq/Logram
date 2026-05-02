@@ -29,6 +29,15 @@ final class LogDocument {
     var searchPattern: String = ""
     var searchRegex: Bool = false
 
+    /// "Focus on call" — when set, applyFilters keeps only lines within this
+    /// inclusive range. Other filters (level/thread/text) still apply on top.
+    /// Cleared by clearFocus() or by loading a new file.
+    var focusRange: ClosedRange<Int>? = nil
+    /// Thread of the focused call frame (for status display).
+    var focusThread: Int? = nil
+    /// Saved enabledThreads at focus time, restored by clearFocus().
+    private var savedEnabledThreads: Set<Int>? = nil
+
     // MARK: - Selection
     var selectedLineId: Int?
 
@@ -207,6 +216,9 @@ final class LogDocument {
                 .map { $0.offset }
 
             allLines = parsed
+            focusRange = nil
+            focusThread = nil
+            savedEnabledThreads = nil
             applyFilters()
             loadingProgress = 1.0
             isLoading = false
@@ -224,6 +236,7 @@ final class LogDocument {
         let threads = enabledThreads
         let pattern = searchPattern
         let useRegex = searchRegex
+        let range = focusRange
 
         var regex: NSRegularExpression?
         if !pattern.isEmpty && useRegex {
@@ -233,7 +246,11 @@ final class LogDocument {
         var indices: [Int] = []
         indices.reserveCapacity(allLines.count)
 
-        for i in 0..<allLines.count {
+        let lower = range?.lowerBound ?? 0
+        let upper = range?.upperBound ?? (allLines.count - 1)
+
+        for i in lower...max(lower, upper) {
+            if i >= allLines.count { break }
             let line = allLines[i]
             // Level filter
             guard levels.contains(line.level) else { continue }
@@ -244,8 +261,8 @@ final class LogDocument {
             // Text filter
             if !pattern.isEmpty {
                 if let re = regex {
-                    let range = NSRange(line.raw.startIndex..., in: line.raw)
-                    if re.firstMatch(in: line.raw, range: range) == nil { continue }
+                    let nsr = NSRange(line.raw.startIndex..., in: line.raw)
+                    if re.firstMatch(in: line.raw, range: nsr) == nil { continue }
                 } else {
                     if !line.raw.localizedCaseInsensitiveContains(pattern) { continue }
                 }
@@ -254,6 +271,79 @@ final class LogDocument {
         }
 
         filteredIndices = indices
+    }
+
+    // MARK: - Focus on Call
+
+    /// Walk up from `lineId` on its thread, find the nearest enclosing Enter
+    /// (`+`), then locate its matching Leave (`-`). Set `focusRange` so that
+    /// the table shows only that call frame. Returns false if the line isn't
+    /// inside any open call frame on its thread.
+    @discardableResult
+    func focusOnCall(lineId: Int) -> Bool {
+        guard lineId >= 0, lineId < allLines.count else { return false }
+        let line = allLines[lineId]
+        let thread = line.thread
+        guard thread >= 0 else { return false }
+
+        // Walk up the same thread tracking nested closed frames; whenever we
+        // emerge to stack-empty and see an Enter, that's an enclosing frame
+        // for our line. We don't stop at the first one — we keep going to
+        // the very top of the call stack (outermost Enter still containing
+        // the line). That gives the user "from process start to finish",
+        // not just the innermost call.
+        var stack = 0
+        var topLevel = -1
+        let startProbe = (line.level == .enter) ? lineId - 1 : lineId - 1
+        if line.level == .enter { topLevel = lineId }
+        var i = startProbe
+        while i >= 0 {
+            let prev = allLines[i]
+            if prev.thread == thread {
+                if prev.level == .leave {
+                    stack += 1
+                } else if prev.level == .enter {
+                    if stack > 0 {
+                        stack -= 1
+                    } else {
+                        // Enter that still contains our line — possibly the
+                        // outermost so far. Keep climbing in case there's an
+                        // even more outer frame above.
+                        topLevel = i
+                    }
+                }
+            }
+            i -= 1
+        }
+        if topLevel < 0 { return false }
+        let startIdx = topLevel
+
+        // Find matching Leave; if there isn't one (truncated log), focus to EOF.
+        let endIdx = findMatchingPair(for: startIdx) ?? (allLines.count - 1)
+        focusRange = startIdx...endIdx
+        focusThread = thread
+
+        // Snapshot the user's thread filter so we can restore it on clearFocus,
+        // then narrow to just the focused thread — that's how the user wants
+        // it: the call frame visually contains only the originating thread.
+        if savedEnabledThreads == nil {
+            savedEnabledThreads = enabledThreads
+        }
+        enabledThreads = [thread]
+
+        applyFilters()
+        return true
+    }
+
+    func clearFocus() {
+        guard focusRange != nil else { return }
+        focusRange = nil
+        focusThread = nil
+        if let saved = savedEnabledThreads {
+            enabledThreads = saved
+            savedEnabledThreads = nil
+        }
+        applyFilters()
     }
 
     // MARK: - Search

@@ -226,6 +226,9 @@ bool LogDocument::Load(const wchar_t* path, std::function<void(double)> onProgre
     searchRegex_ = false;
     selectedLineId_ = -1;
     methodTimings_.clear();
+    focusActive_ = false;
+    focusStart_ = focusEnd_ = focusThread_ = -1;
+    savedThreadMask_ = ~uint64_t(0);
 
     ApplyFilters();
 
@@ -261,7 +264,14 @@ void LogDocument::ApplyFilters() {
 
     const uint8_t* base = file_.Data();
 
-    for (size_t i = 0; i < allLines_.size(); ++i) {
+    size_t lo = 0, hi = allLines_.size();
+    if (focusActive_) {
+        lo = static_cast<size_t>(std::max(0, focusStart_));
+        hi = static_cast<size_t>(std::min<int>(focusEnd_ + 1,
+                                               static_cast<int>(allLines_.size())));
+    }
+
+    for (size_t i = lo; i < hi; ++i) {
         const auto& line = allLines_[i];
         auto level = static_cast<LogLevel>(line.level);
 
@@ -334,6 +344,62 @@ int LogDocument::FindMatchingPair(int lineId) const {
         }
     }
     return -1;
+}
+
+bool LogDocument::FocusOnCall(int lineId) {
+    if (lineId < 0 || lineId >= static_cast<int>(allLines_.size())) return false;
+    const auto& line = allLines_[lineId];
+    int thread = line.thread;
+    if (thread < 0) return false;
+
+    // Walk up the same thread tracking nested closed frames; whenever we
+    // emerge to stack-empty and see an Enter, that's an enclosing frame
+    // for our line. Keep climbing to find the OUTERMOST enclosing Enter
+    // ("from process start to finish"), not just the innermost.
+    int stack = 0;
+    int topLevel = -1;
+    if (static_cast<LogLevel>(line.level) == LogLevel::Enter) topLevel = lineId;
+    for (int i = lineId - 1; i >= 0; --i) {
+        const auto& prev = allLines_[i];
+        if (prev.thread != thread) continue;
+        auto lv = static_cast<LogLevel>(prev.level);
+        if (lv == LogLevel::Leave) {
+            stack++;
+        } else if (lv == LogLevel::Enter) {
+            if (stack > 0) {
+                stack--;
+            } else {
+                topLevel = i;  // candidate, keep climbing
+            }
+        }
+    }
+    if (topLevel < 0) return false;
+
+    int endIdx = FindMatchingPair(topLevel);
+    if (endIdx < 0) endIdx = static_cast<int>(allLines_.size()) - 1;
+
+    // Snapshot the user's thread mask once so a second focus without clear
+    // doesn't lose the original.
+    if (!focusActive_) savedThreadMask_ = enabledThreadMask_;
+
+    focusActive_ = true;
+    focusStart_  = topLevel;
+    focusEnd_    = endIdx;
+    focusThread_ = thread;
+    enabledThreadMask_ = (uint64_t(1) << thread);
+
+    ApplyFilters();
+    return true;
+}
+
+void LogDocument::ClearFocus() {
+    if (!focusActive_) return;
+    focusActive_ = false;
+    focusStart_ = focusEnd_ = -1;
+    focusThread_ = -1;
+    enabledThreadMask_ = savedThreadMask_;
+    savedThreadMask_ = ~uint64_t(0);
+    ApplyFilters();
 }
 
 void LogDocument::BuildMethodTimings() {

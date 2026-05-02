@@ -6,10 +6,26 @@ struct OpenLogFileKey: FocusedValueKey {
     typealias Value = () -> Void
 }
 
+struct FocusOnCallKey: FocusedValueKey {
+    typealias Value = () -> Void
+}
+
+struct ClearFocusKey: FocusedValueKey {
+    typealias Value = () -> Void
+}
+
 extension FocusedValues {
     var openLogFile: (() -> Void)? {
         get { self[OpenLogFileKey.self] }
         set { self[OpenLogFileKey.self] = newValue }
+    }
+    var focusOnCall: (() -> Void)? {
+        get { self[FocusOnCallKey.self] }
+        set { self[FocusOnCallKey.self] = newValue }
+    }
+    var clearFocus: (() -> Void)? {
+        get { self[ClearFocusKey.self] }
+        set { self[ClearFocusKey.self] = newValue }
     }
 }
 
@@ -58,6 +74,8 @@ final class LogramAppDelegate: NSObject, NSApplicationDelegate, ObservableObject
 struct LogramApp: App {
     @NSApplicationDelegateAdaptor(LogramAppDelegate.self) private var appDelegate
     @FocusedValue(\.openLogFile) var openLogFile
+    @FocusedValue(\.focusOnCall) var focusOnCall
+    @FocusedValue(\.clearFocus) var clearFocus
 
     var body: some Scene {
         WindowGroup(for: URL?.self) { $url in
@@ -73,6 +91,14 @@ struct LogramApp: App {
                     openLogFile?()
                 }
                 .keyboardShortcut("o", modifiers: .command)
+            }
+            CommandMenu("Navigate") {
+                Button("Focus on Call") { focusOnCall?() }
+                    .keyboardShortcut("e", modifiers: [.command, .shift])
+                    .disabled(focusOnCall == nil)
+                Button("Clear Focus") { clearFocus?() }
+                    .keyboardShortcut(.escape, modifiers: [])
+                    .disabled(clearFocus == nil)
             }
             CommandGroup(replacing: .appInfo) {
                 Button("About Logram") {
