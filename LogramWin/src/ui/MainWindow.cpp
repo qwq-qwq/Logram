@@ -202,7 +202,28 @@ void MainWindow::OnCreate() {
     SendMessageW(hwndSearch_, EM_SETCUEBANNER, TRUE,
                  reinterpret_cast<LPARAM>(L"  Search..."));
 
-    // Navigation buttons next to search
+    // Subclass procedure for owner-draw buttons: when Windows posts an
+    // erase-background pass between a move (bit-blit) and the next
+    // WM_DRAWITEM, the default proc fills with the system grey, which
+    // reads as a flicker against our dark theme. We pre-fill with the
+    // theme's background color (same as what DrawThemedButton paints on
+    // top), so even if a stray erase slips through, the button stays dark.
+    static auto buttonSubclass = [](HWND h, UINT msg, WPARAM wp, LPARAM lp,
+                                    UINT_PTR /*id*/, DWORD_PTR ref) -> LRESULT {
+        if (msg == WM_ERASEBKGND) {
+            auto& th = CurrentTheme();
+            RECT rc; GetClientRect(h, &rc);
+            HBRUSH br = CreateSolidBrush(ToCOLORREF(th.background));
+            FillRect(reinterpret_cast<HDC>(wp), &rc, br);
+            DeleteObject(br);
+            return 1;
+        }
+        if (msg == WM_NCDESTROY) {
+            RemoveWindowSubclass(h, reinterpret_cast<SUBCLASSPROC>(ref), 0);
+        }
+        return DefSubclassProc(h, msg, wp, lp);
+    };
+
     auto makeBtn = [&](const wchar_t* label, int id) -> HWND {
         HWND btn = CreateWindowExW(0, L"BUTTON", label,
             WS_CHILD | WS_VISIBLE | BS_OWNERDRAW,
@@ -211,6 +232,8 @@ void MainWindow::OnCreate() {
             hInst, nullptr);
         if (hToolbarFont_) SendMessageW(btn, WM_SETFONT,
                                         reinterpret_cast<WPARAM>(hToolbarFont_), TRUE);
+        SUBCLASSPROC proc = static_cast<SUBCLASSPROC>(buttonSubclass);
+        SetWindowSubclass(btn, proc, 0, reinterpret_cast<DWORD_PTR>(proc));
         return btn;
     };
     hwndBtnFindPrev_ = makeBtn(L"\x25B2", IDC_BTN_FINDPREV);     // ▲
@@ -396,9 +419,13 @@ void MainWindow::LayoutChildren() {
     if (filterSidebar_) filterSidebar_->Resize(sidebarWidth_, workH);
     if (detailSplitter_) detailSplitter_->SetPosition(splitY);
 
-    // Force synchronous repaint of the panes that grow on splitter drag, so
-    // newly exposed regions never show stale pixels between the SWP_NOCOPYBITS
-    // and the queued WM_PAINT.
+    // Force synchronous repaint only on the SWP_NOCOPYBITS panes — newly
+    // grown regions there have no valid pixels until WM_PAINT runs, so we
+    // pull it forward to avoid a visible "ghost" frame. We deliberately do
+    // NOT force-invalidate the toolbar strip: the buttons and search edit
+    // are bit-blit'd via swpMove and any extra parent erase would briefly
+    // expose the theme background where buttons used to sit, which reads
+    // as flicker.
     if (tableView_ && tableView_->GetHwnd()) {
         InvalidateRect(tableView_->GetHwnd(), nullptr, FALSE);
         UpdateWindow(tableView_->GetHwnd());
@@ -407,14 +434,6 @@ void MainWindow::LayoutChildren() {
         InvalidateRect(detailPanel_->GetHwnd(), nullptr, TRUE);
         UpdateWindow(detailPanel_->GetHwnd());
     }
-    // Also redraw the toolbar strip on the parent: the search edit and the
-    // four owner-draw buttons sit directly on MainWindow's client, and when
-    // the sidebar splitter moves they leave ghost pixels in the strip the
-    // toolbar children no longer cover. WS_CLIPCHILDREN keeps the actual
-    // controls intact while we erase the parent fill behind them.
-    RECT tb = { 0, 0, totalW, toolbarPx };
-    RedrawWindow(hwnd_, &tb, nullptr,
-        RDW_INVALIDATE | RDW_ERASE | RDW_UPDATENOW);
 }
 
 void MainWindow::OnCommand(int id, int code, HWND ctrl) {
