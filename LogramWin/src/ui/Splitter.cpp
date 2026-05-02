@@ -1,6 +1,12 @@
 #include "ui/Splitter.h"
 #include "ui/ThemeColors.h"
 
+// Mirrors resource.h. Defined here to avoid pulling the resource header
+// (which lives outside src/) into a UI source file.
+#ifndef WM_APP_SPLITTER_DRAG
+#define WM_APP_SPLITTER_DRAG (WM_APP + 3)
+#endif
+
 void Splitter::RegisterClass(HINSTANCE hInstance) {
     WNDCLASSEXW wc = {};
     wc.cbSize = sizeof(wc);
@@ -43,7 +49,7 @@ LRESULT CALLBACK Splitter::WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lP
 
 LRESULT Splitter::HandleMessage(UINT msg, WPARAM wParam, LPARAM lParam) {
     switch (msg) {
-        case WM_LBUTTONDOWN:
+        case WM_LBUTTONDOWN: {
             SetCapture(hwnd_);
             dragging_ = true;
             // Grip offset within the splitter at click time. Following
@@ -54,7 +60,10 @@ LRESULT Splitter::HandleMessage(UINT msg, WPARAM wParam, LPARAM lParam) {
             // create self-referential oscillation between two positions.
             dragStart_ = (orient_ == Orientation::Vertical) ?
                 GET_X_LPARAM(lParam) : GET_Y_LPARAM(lParam);
+            HWND parent = GetParent(hwnd_);
+            if (parent) SendMessageW(parent, WM_APP_SPLITTER_DRAG, 1, 0);
             return 0;
+        }
 
         case WM_MOUSEMOVE:
             if (dragging_) {
@@ -82,6 +91,18 @@ LRESULT Splitter::HandleMessage(UINT msg, WPARAM wParam, LPARAM lParam) {
             if (dragging_) {
                 dragging_ = false;
                 ReleaseCapture();
+                HWND parent = GetParent(hwnd_);
+                if (parent) SendMessageW(parent, WM_APP_SPLITTER_DRAG, 0, 0);
+            }
+            return 0;
+
+        case WM_CAPTURECHANGED:
+            // Capture stolen mid-drag (alt-tab etc.) — reset state and tell
+            // the parent so it can re-show any controls hidden during drag.
+            if (dragging_) {
+                dragging_ = false;
+                HWND parent = GetParent(hwnd_);
+                if (parent) SendMessageW(parent, WM_APP_SPLITTER_DRAG, 0, 0);
             }
             return 0;
 

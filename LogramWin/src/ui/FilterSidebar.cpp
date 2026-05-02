@@ -112,25 +112,15 @@ void FilterSidebar::OnThemeChanged() {
 void FilterSidebar::LayoutInternal() {
     const int barH = Scale(kPresetBarHeightDip);
     if (hwndList_) {
-        // Skip the MoveWindow when geometry is unchanged — see DetailPanel
-        // for rationale (avoids spurious invalidates that flicker neighbors).
-        RECT cur;
-        bool needMove = true;
-        if (GetWindowRect(hwndList_, &cur)) {
-            POINT tl = { cur.left, cur.top };
-            ScreenToClient(hwnd_, &tl);
-            int curW = cur.right - cur.left;
-            int curH = cur.bottom - cur.top;
-            int wantH = std::max(0, clientH_ - barH);
-            if (tl.x == 0 && tl.y == barH && curW == clientW_ && curH == wantH)
-                needMove = false;
-        }
-        if (needMove) {
-            MoveWindow(hwndList_, 0, barH,
-                       clientW_, std::max(0, clientH_ - barH), TRUE);
-            ListView_SetColumnWidth(hwndList_, 0, std::max(Scale(50), clientW_ - Scale(4)));
-        }
+        MoveWindow(hwndList_, 0, barH,
+                   clientW_, std::max(0, clientH_ - barH), TRUE);
+        ListView_SetColumnWidth(hwndList_, 0, std::max(Scale(50), clientW_ - Scale(4)));
     }
+}
+
+void FilterSidebar::SetPresetButtonsVisible(bool visible) {
+    int show = visible ? SW_SHOW : SW_HIDE;
+    for (HWND h : hwndPreset_) if (h) ShowWindow(h, show);
 }
 
 void FilterSidebar::RebuildList() {

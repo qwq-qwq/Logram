@@ -18,6 +18,7 @@ public:
     void SetDocument(LogDocument* doc);
     void OnThemeChanged();
     void OnDocumentChanged(DocumentChanges changes) override;
+    void SetPresetButtonsVisible(bool visible);
 
     // Called by MainWindow on WM_SIZE / splitter drag.
     void Resize(int w, int h);

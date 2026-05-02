@@ -16,6 +16,7 @@ public:
     void ShowLine(int lineId);
     void OnThemeChanged();
     void OnDocumentChanged(DocumentChanges changes) override;
+    void SetButtonsVisible(bool visible);
 
 private:
     static LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);

@@ -123,6 +123,16 @@ LRESULT MainWindow::HandleMessage(UINT msg, WPARAM wParam, LPARAM lParam) {
             return 0;
         }
 
+        case WM_APP_SPLITTER_DRAG: {
+            // Hide owner-draw button groups during splitter drag — they
+            // flicker each layout pass otherwise. They snap back when the
+            // user releases the mouse.
+            bool visible = (wParam == 0);
+            if (filterSidebar_) filterSidebar_->SetPresetButtonsVisible(visible);
+            if (detailPanel_)   detailPanel_->SetButtonsVisible(visible);
+            return 0;
+        }
+
 
         case WM_CLOSE:
             DestroyWindow(hwnd_);
