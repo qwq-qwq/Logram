@@ -111,7 +111,7 @@ void DetailPanel::LayoutInternal() {
     int btnW = Scale(60);
     int pad = Scale(4);
 
-    const UINT swp = SWP_NOZORDER | SWP_NOACTIVATE | SWP_NOCOPYBITS;
+    const UINT swp = SWP_NOZORDER | SWP_NOACTIVATE;
     HDWP hdwp = BeginDeferWindowPos(4);
     auto defer = [&](HWND hC, int x_, int y_, int w_, int h_) {
         if (hC && hdwp) hdwp = DeferWindowPos(hdwp, hC, nullptr, x_, y_, w_, h_, swp);

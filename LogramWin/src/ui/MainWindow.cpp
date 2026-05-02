@@ -371,7 +371,7 @@ void MainWindow::LayoutChildren() {
     // Batch all child reposition into a single atomic pass. Without this,
     // each MoveWindow would invalidate/repaint that child individually, so
     // the user sees ~12 children update in a staggered cascade during drag.
-    const UINT swp = SWP_NOZORDER | SWP_NOACTIVATE | SWP_NOCOPYBITS;
+    const UINT swp = SWP_NOZORDER | SWP_NOACTIVATE;
     HDWP hdwp = BeginDeferWindowPos(12);
     auto defer = [&](HWND h, int x_, int y_, int w_, int h_) {
         if (h && hdwp) hdwp = DeferWindowPos(hdwp, h, nullptr, x_, y_, w_, h_, swp);
