@@ -123,17 +123,6 @@ LRESULT MainWindow::HandleMessage(UINT msg, WPARAM wParam, LPARAM lParam) {
             return 0;
         }
 
-        case WM_APP_SPLITTER_DRAG: {
-            // Hide owner-draw toolbar buttons during splitter drag — they
-            // flicker each layout pass otherwise. They snap back when the
-            // user releases the mouse.
-            int show = wParam ? SW_HIDE : SW_SHOW;
-            if (hwndBtnFindPrev_) ShowWindow(hwndBtnFindPrev_, show);
-            if (hwndBtnFindNext_) ShowWindow(hwndBtnFindNext_, show);
-            if (hwndBtnErrPrev_)  ShowWindow(hwndBtnErrPrev_,  show);
-            if (hwndBtnErrNext_)  ShowWindow(hwndBtnErrNext_,  show);
-            return 0;
-        }
 
         case WM_CLOSE:
             DestroyWindow(hwnd_);
