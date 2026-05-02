@@ -43,27 +43,35 @@ LRESULT CALLBACK Splitter::WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lP
 
 LRESULT Splitter::HandleMessage(UINT msg, WPARAM wParam, LPARAM lParam) {
     switch (msg) {
-        case WM_LBUTTONDOWN:
+        case WM_LBUTTONDOWN: {
             SetCapture(hwnd_);
             dragging_ = true;
+            // Store the grip offset in splitter-local coords. Every following
+            // MOUSEMOVE will be evaluated in PARENT coords (stable frame), so
+            // the splitter follows the cursor without oscillation. Reading
+            // lParam directly here would be in splitter coords — same thing
+            // at click time, since the splitter hasn't moved yet.
             dragStart_ = (orient_ == Orientation::Vertical) ?
                 GET_X_LPARAM(lParam) : GET_Y_LPARAM(lParam);
-            posStart_ = pos_;
             return 0;
+        }
 
         case WM_MOUSEMOVE:
             if (dragging_) {
-                int current = (orient_ == Orientation::Vertical) ?
-                    GET_X_LPARAM(lParam) : GET_Y_LPARAM(lParam);
-                pos_ = posStart_ + (current - dragStart_);
-                if (pos_ < 50) pos_ = 50;
                 HWND parent = GetParent(hwnd_);
-                if (parent) {
-                    RECT rc;
-                    GetClientRect(parent, &rc);
-                    int maxPos = ((orient_ == Orientation::Vertical) ? rc.right : rc.bottom) - 50;
-                    if (pos_ > maxPos) pos_ = maxPos;
-                    // Trigger parent layout
+                if (!parent) return 0;
+                POINT pt;
+                GetCursorPos(&pt);
+                ScreenToClient(parent, &pt);
+                int cursorParent = (orient_ == Orientation::Vertical) ? pt.x : pt.y;
+                int newPos = cursorParent - dragStart_;
+                if (newPos < 50) newPos = 50;
+                RECT rc;
+                GetClientRect(parent, &rc);
+                int maxPos = ((orient_ == Orientation::Vertical) ? rc.right : rc.bottom) - 50;
+                if (newPos > maxPos) newPos = maxPos;
+                if (newPos != pos_) {
+                    pos_ = newPos;
                     SendMessageW(parent, WM_SIZE, 0,
                         MAKELPARAM(rc.right, rc.bottom));
                 }
