@@ -65,11 +65,12 @@ HWND FilterSidebar::Create(HWND parent, HINSTANCE hInstance, LogDocument* doc) {
     ListView_InsertColumn(hwndList_, 0, &col);
 
     // Reserve right margin inside groups so the "All"/"None" task link
-    // doesn't get clipped by the vertical scroll bar.
+    // doesn't get clipped by the vertical scroll bar. The reserve must
+    // include scrollbar width plus enough room for the link text itself.
     LVGROUPMETRICS gm = {};
     gm.cbSize = sizeof(gm);
     gm.mask = LVGMF_BORDERSIZE;
-    gm.Right = Scale(28);
+    gm.Right = GetSystemMetrics(SM_CXVSCROLL) + Scale(48);
     ListView_SetGroupMetrics(hwndList_, &gm);
 
     RebuildList();
