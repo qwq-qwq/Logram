@@ -121,9 +121,16 @@ void FilterSidebar::OnThemeChanged() {
 void FilterSidebar::LayoutInternal() {
     const int barH = Scale(kPresetBarHeightDip);
     if (hwndList_) {
+        // Shrink the ListView by the scrollbar width so the vertical scroll
+        // bar sits OUTSIDE the client area (in our parent's space). That way
+        // the group task link ("All"/"None") is fully visible without being
+        // overlapped by the scroll bar — and we don't need padding hacks
+        // that produce a stray underline.
+        int sbw = GetSystemMetrics(SM_CXVSCROLL);
+        int listW = std::max(0, clientW_ - sbw);
         MoveWindow(hwndList_, 0, barH,
-                   clientW_, std::max(0, clientH_ - barH), TRUE);
-        ListView_SetColumnWidth(hwndList_, 0, std::max(Scale(50), clientW_ - Scale(4)));
+                   listW, std::max(0, clientH_ - barH), TRUE);
+        ListView_SetColumnWidth(hwndList_, 0, std::max(Scale(50), listW - Scale(4)));
     }
 }
 
@@ -220,11 +227,8 @@ void FilterSidebar::UpdateGroupLabels() {
     // Trailing spaces shift the visible part of the task link left of the
     // scroll bar. LVGROUPMETRICS Right margin doesn't actually affect task
     // link placement on this Win32 build — pad inside the string instead.
-    // Leading padding shifts the visible text (and its underline) left of
-    // the scroll bar. Trailing padding would put the underline UNDER the
-    // scrollbar — visible as an extra dash sticking out.
-    const wchar_t* levelsTask  = (levelMaskCur == 0) ? L"     All" : L"     None";
-    const wchar_t* threadsTask = (thMaskCur    == 0) ? L"     All" : L"     None";
+    const wchar_t* levelsTask  = (levelMaskCur == 0) ? L"All" : L"None";
+    const wchar_t* threadsTask = (thMaskCur    == 0) ? L"All" : L"None";
 
     LVGROUP grp = {};
     grp.cbSize = sizeof(grp);
