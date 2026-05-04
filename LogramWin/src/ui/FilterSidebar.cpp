@@ -217,8 +217,11 @@ void FilterSidebar::UpdateGroupLabels() {
     uint64_t levelMaskCur = doc_->EnabledLevelMask() & visibleLevelMask;
     uint64_t thMaskCur    = doc_->EnabledThreadMask() & visibleThreadMask;
 
-    const wchar_t* levelsTask  = (levelMaskCur == 0) ? L"All" : L"None";
-    const wchar_t* threadsTask = (thMaskCur    == 0) ? L"All" : L"None";
+    // Trailing spaces shift the visible part of the task link left of the
+    // scroll bar. LVGROUPMETRICS Right margin doesn't actually affect task
+    // link placement on this Win32 build — pad inside the string instead.
+    const wchar_t* levelsTask  = (levelMaskCur == 0) ? L"All  " : L"None  ";
+    const wchar_t* threadsTask = (thMaskCur    == 0) ? L"All  " : L"None  ";
 
     LVGROUP grp = {};
     grp.cbSize = sizeof(grp);
