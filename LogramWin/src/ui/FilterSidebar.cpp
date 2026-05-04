@@ -220,13 +220,27 @@ void FilterSidebar::UpdateGroupLabels() {
     // Trailing spaces shift the visible part of the task link left of the
     // scroll bar. LVGROUPMETRICS Right margin doesn't actually affect task
     // link placement on this Win32 build — pad inside the string instead.
-    // Trailing padding shifts the visible task text left of the scrollbar.
-    // Yes, the underline extends through the spaces — but since the spaces
-    // are invisible against the dark theme background, the underline tail
-    // is barely noticeable. This is the simplest workaround that doesn't
-    // break ListView non-client geometry.
-    const wchar_t* levelsTask  = (levelMaskCur == 0) ? L"All        " : L"None        ";
-    const wchar_t* threadsTask = (thMaskCur    == 0) ? L"All        " : L"None        ";
+    // Trailing padding shifts the visible task text left of the scrollbar
+    // (the scrollbar otherwise overlaps the link). Pad only when the
+    // scrollbar is actually showing — otherwise the link sits cleanly at
+    // the right edge with no extra underline tail.
+    bool hasVScroll = false;
+    LONG style = GetWindowLongW(hwndList_, GWL_STYLE);
+    if (style & WS_VSCROLL) {
+        SCROLLBARINFO sbi = {};
+        sbi.cbSize = sizeof(sbi);
+        if (GetScrollBarInfo(hwndList_, OBJID_VSCROLL, &sbi)) {
+            hasVScroll = !(sbi.rgstate[0] & STATE_SYSTEM_INVISIBLE);
+        } else {
+            hasVScroll = true;  // assume yes if we can't tell
+        }
+    }
+    const wchar_t* levelsTask  = (levelMaskCur == 0)
+        ? (hasVScroll ? L"All    "  : L"All")
+        : (hasVScroll ? L"None    " : L"None");
+    const wchar_t* threadsTask = (thMaskCur == 0)
+        ? (hasVScroll ? L"All    "  : L"All")
+        : (hasVScroll ? L"None    " : L"None");
 
     LVGROUP grp = {};
     grp.cbSize = sizeof(grp);
