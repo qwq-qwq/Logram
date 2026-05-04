@@ -220,8 +220,11 @@ void FilterSidebar::UpdateGroupLabels() {
     // Trailing spaces shift the visible part of the task link left of the
     // scroll bar. LVGROUPMETRICS Right margin doesn't actually affect task
     // link placement on this Win32 build — pad inside the string instead.
-    const wchar_t* levelsTask  = (levelMaskCur == 0) ? L"All  " : L"None  ";
-    const wchar_t* threadsTask = (thMaskCur    == 0) ? L"All  " : L"None  ";
+    // Leading padding shifts the visible text (and its underline) left of
+    // the scroll bar. Trailing padding would put the underline UNDER the
+    // scrollbar — visible as an extra dash sticking out.
+    const wchar_t* levelsTask  = (levelMaskCur == 0) ? L"     All" : L"     None";
+    const wchar_t* threadsTask = (thMaskCur    == 0) ? L"     All" : L"     None";
 
     LVGROUP grp = {};
     grp.cbSize = sizeof(grp);
