@@ -53,6 +53,27 @@ HWND FilterSidebar::Create(HWND parent, HINSTANCE hInstance, LogDocument* doc) {
         hwnd_, nullptr, hInstance, nullptr);
     ShowScrollBar(hwndList_, SB_HORZ, FALSE);
 
+    // ListView re-shows the horizontal scrollbar from inside its own
+    // WM_SIZE/WM_VSCROLL handlers. Subclass it and intercept WM_NCCALCSIZE
+    // / post-handle to keep it hidden permanently.
+    SetWindowSubclass(hwndList_,
+        [](HWND h, UINT msg, WPARAM wp, LPARAM lp,
+           UINT_PTR /*id*/, DWORD_PTR /*ref*/) -> LRESULT {
+            if (msg == WM_NCDESTROY) {
+                RemoveWindowSubclass(h, nullptr, 1);
+            }
+            LRESULT r = DefSubclassProc(h, msg, wp, lp);
+            // Re-hide the H scrollbar after any message that ListView uses
+            // to manage its scrollbars.
+            if (msg == WM_SIZE || msg == WM_VSCROLL ||
+                msg == LVM_INSERTITEM || msg == LVM_DELETEITEM ||
+                msg == LVM_DELETEALLITEMS || msg == LVM_SETITEMCOUNT ||
+                msg == LVM_SETCOLUMNWIDTH) {
+                ShowScrollBar(h, SB_HORZ, FALSE);
+            }
+            return r;
+        }, 1, 0);
+
     ListView_SetExtendedListViewStyle(hwndList_,
         LVS_EX_CHECKBOXES | LVS_EX_FULLROWSELECT | LVS_EX_DOUBLEBUFFER);
 
