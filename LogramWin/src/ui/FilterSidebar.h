@@ -1,5 +1,6 @@
 #pragma once
 #include <windows.h>
+#include <commctrl.h>
 #include "core/LogDocument.h"
 #include "core/Observer.h"
 
@@ -28,6 +29,8 @@ public:
 
 private:
     static LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
+    static LRESULT CALLBACK ListViewSubclass(HWND, UINT, WPARAM, LPARAM,
+                                             UINT_PTR, DWORD_PTR);
     LRESULT HandleMessage(UINT msg, WPARAM wParam, LPARAM lParam);
 
     void RebuildList();                       // re-fill ListView (levels + active threads)
