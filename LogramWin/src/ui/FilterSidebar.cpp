@@ -130,6 +130,10 @@ void FilterSidebar::LayoutInternal() {
         MoveWindow(hwndList_, 0, barH,
                    clientW_, std::max(0, clientH_ - barH), TRUE);
         ListView_SetColumnWidth(hwndList_, 0, std::max(Scale(50), clientW_ - Scale(4)));
+        // ListView re-evaluates and re-shows the horizontal scrollbar on
+        // every resize; suppress it here too (filter list never needs to
+        // scroll horizontally).
+        ShowScrollBar(hwndList_, SB_HORZ, FALSE);
         // Group task padding ("All"/"None") depends on scrollbar visibility,
         // which changes with the list's height — recompute on resize.
         UpdateGroupLabels();
