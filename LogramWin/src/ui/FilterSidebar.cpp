@@ -41,11 +41,17 @@ HWND FilterSidebar::Create(HWND parent, HINSTANCE hInstance, LogDocument* doc) {
 
     CreatePresetButtons(hInstance);
 
+    // LVS_NOSCROLL would also kill the vertical scroller — instead we hide
+    // only the horizontal one. The trailing padding on group task labels
+    // ("All    "/"None    ") makes the ListView think content is wider than
+    // the client and pop a horizontal scrollbar; we don't need horizontal
+    // scrolling for a filter list, so suppress it.
     hwndList_ = CreateWindowExW(0, WC_LISTVIEWW, nullptr,
         WS_CHILD | WS_VISIBLE | LVS_REPORT | LVS_NOCOLUMNHEADER | LVS_SINGLESEL,
         0, Scale(kPresetBarHeightDip), Scale(200),
         Scale(400 - kPresetBarHeightDip),
         hwnd_, nullptr, hInstance, nullptr);
+    ShowScrollBar(hwndList_, SB_HORZ, FALSE);
 
     ListView_SetExtendedListViewStyle(hwndList_,
         LVS_EX_CHECKBOXES | LVS_EX_FULLROWSELECT | LVS_EX_DOUBLEBUFFER);
