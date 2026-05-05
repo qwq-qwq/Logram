@@ -41,11 +41,38 @@ HWND FilterSidebar::Create(HWND parent, HINSTANCE hInstance, LogDocument* doc) {
 
     CreatePresetButtons(hInstance);
 
+    // LVS_NOSCROLL would also kill the vertical scroller — instead we hide
+    // only the horizontal one. The trailing padding on group task labels
+    // ("All    "/"None    ") makes the ListView think content is wider than
+    // the client and pop a horizontal scrollbar; we don't need horizontal
+    // scrolling for a filter list, so suppress it.
     hwndList_ = CreateWindowExW(0, WC_LISTVIEWW, nullptr,
         WS_CHILD | WS_VISIBLE | LVS_REPORT | LVS_NOCOLUMNHEADER | LVS_SINGLESEL,
         0, Scale(kPresetBarHeightDip), Scale(200),
         Scale(400 - kPresetBarHeightDip),
         hwnd_, nullptr, hInstance, nullptr);
+    ShowScrollBar(hwndList_, SB_HORZ, FALSE);
+
+    // ListView re-shows the horizontal scrollbar from inside its own
+    // WM_SIZE/WM_VSCROLL handlers. Subclass it and intercept WM_NCCALCSIZE
+    // / post-handle to keep it hidden permanently.
+    SetWindowSubclass(hwndList_,
+        [](HWND h, UINT msg, WPARAM wp, LPARAM lp,
+           UINT_PTR /*id*/, DWORD_PTR /*ref*/) -> LRESULT {
+            if (msg == WM_NCDESTROY) {
+                RemoveWindowSubclass(h, nullptr, 1);
+            }
+            LRESULT r = DefSubclassProc(h, msg, wp, lp);
+            // Re-hide the H scrollbar after any message that ListView uses
+            // to manage its scrollbars.
+            if (msg == WM_SIZE || msg == WM_VSCROLL ||
+                msg == LVM_INSERTITEM || msg == LVM_DELETEITEM ||
+                msg == LVM_DELETEALLITEMS || msg == LVM_SETITEMCOUNT ||
+                msg == LVM_SETCOLUMNWIDTH) {
+                ShowScrollBar(h, SB_HORZ, FALSE);
+            }
+            return r;
+        }, 1, 0);
 
     ListView_SetExtendedListViewStyle(hwndList_,
         LVS_EX_CHECKBOXES | LVS_EX_FULLROWSELECT | LVS_EX_DOUBLEBUFFER);
@@ -124,6 +151,10 @@ void FilterSidebar::LayoutInternal() {
         MoveWindow(hwndList_, 0, barH,
                    clientW_, std::max(0, clientH_ - barH), TRUE);
         ListView_SetColumnWidth(hwndList_, 0, std::max(Scale(50), clientW_ - Scale(4)));
+        // ListView re-evaluates and re-shows the horizontal scrollbar on
+        // every resize; suppress it here too (filter list never needs to
+        // scroll horizontally).
+        ShowScrollBar(hwndList_, SB_HORZ, FALSE);
         // Group task padding ("All"/"None") depends on scrollbar visibility,
         // which changes with the list's height — recompute on resize.
         UpdateGroupLabels();
