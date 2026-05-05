@@ -476,14 +476,30 @@ LRESULT CALLBACK FilterSidebar::ListViewSubclass(HWND h, UINT msg, WPARAM wp,
     if (msg == WM_NCDESTROY) {
         RemoveWindowSubclass(h, &FilterSidebar::ListViewSubclass, id);
     }
+    // Strip WS_HSCROLL from the window style BEFORE Windows recomputes the
+    // non-client area. ListView keeps re-enabling it from inside its own
+    // scroll handlers (because the trailing padding on group task labels
+    // makes content "wider" than client); the previous post-hoc
+    // ShowScrollBar fix flickered for one frame each scroll. With the style
+    // bit cleared at NCCALCSIZE time, the scrollbar never gets allocated
+    // non-client space in the first place.
+    if (msg == WM_NCCALCSIZE || msg == WM_STYLECHANGING) {
+        LONG style = GetWindowLongW(h, GWL_STYLE);
+        if (style & WS_HSCROLL) {
+            SetWindowLongW(h, GWL_STYLE, style & ~WS_HSCROLL);
+        }
+    }
     LRESULT r = DefSubclassProc(h, msg, wp, lp);
-    // Re-hide the H scrollbar after any message that ListView uses to manage
-    // its scrollbars. Trailing padding on group task labels makes the list
-    // believe content is wider than client; we don't need horizontal scroll.
     if (msg == WM_SIZE || msg == WM_VSCROLL ||
         msg == LVM_INSERTITEM || msg == LVM_DELETEITEM ||
         msg == LVM_DELETEALLITEMS || msg == LVM_SETITEMCOUNT ||
         msg == LVM_SETCOLUMNWIDTH) {
+        // Belt-and-suspenders: still hide via ShowScrollBar in case ListView
+        // somehow recreated it through a path we didn't intercept.
+        LONG style = GetWindowLongW(h, GWL_STYLE);
+        if (style & WS_HSCROLL) {
+            SetWindowLongW(h, GWL_STYLE, style & ~WS_HSCROLL);
+        }
         ShowScrollBar(h, SB_HORZ, FALSE);
     }
     return r;
