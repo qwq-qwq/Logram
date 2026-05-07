@@ -500,6 +500,10 @@ void MainWindow::OnCommand(int id, int code, HWND ctrl) {
             if (sel < 0) { MessageBeep(MB_ICONINFORMATION); break; }
             if (!doc_.FocusOnCall(sel)) {
                 MessageBeep(MB_ICONWARNING);
+                MessageBoxW(hwnd_,
+                    L"This line is not inside an open + / - frame on its thread.",
+                    L"No enclosing call",
+                    MB_OK | MB_ICONINFORMATION);
                 break;
             }
             DocumentChanges ch;
@@ -574,12 +578,27 @@ void MainWindow::RunSearch(bool forward) {
 
     auto dir = forward ? LogDocument::SearchDirection::Forward
                        : LogDocument::SearchDirection::Backward;
-    int next = doc_.FindNext(pattern, dir, lastFoundIdx_);
+
+    // If focus moved (row click, arrow keys, jump), resume search from the
+    // focused line rather than the previous match. FilteredIndices is
+    // monotonically increasing, so binary-search the selection's position.
+    int startFrom = lastFoundIdx_;
+    int sel = doc_.SelectedLineId();
+    if (sel >= 0) {
+        const auto& indices = doc_.FilteredIndices();
+        auto it = std::lower_bound(indices.begin(), indices.end(),
+                                   static_cast<uint32_t>(sel));
+        if (it != indices.end() && static_cast<int>(*it) == sel) {
+            startFrom = static_cast<int>(it - indices.begin());
+        }
+    }
+
+    int next = doc_.FindNext(pattern, dir, startFrom);
 
     // Wrap-around: if the walk ran off the end (or beginning), restart from
     // the opposite edge so F3 keeps cycling through matches.
     bool wrapped = false;
-    if (next < 0 && lastFoundIdx_ >= 0) {
+    if (next < 0 && startFrom >= 0) {
         int restart = forward ? -1 : static_cast<int>(doc_.FilteredIndices().size());
         next = doc_.FindNext(pattern, dir, restart);
         wrapped = (next >= 0);
