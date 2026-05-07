@@ -19,6 +19,7 @@ Packages/
 .idea/
 .swiftpm/
 
-# Claude Code
+# Claude Code & Agents
 .claude/
 CLAUDE.md
+AGENTS.md
