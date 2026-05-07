@@ -435,7 +435,17 @@ void DetailPanel::ShowLine(int lineId) {
              (!msgStr.empty() && msgStr[0] == 'q' && msgStr.size() > 1 && msgStr[1] == '=')) {
         auto parsed = SqlStatsParse(msgStr);
         lastSql_ = parsed.sql;
-        displayText = SqlFormat(parsed.sql);
+
+        if (paramsEnabled_) {
+            auto paramsJson = FindParamsForSql(doc_, lineId);
+            if (!paramsJson.empty()) {
+                displayText = SqlFormat(SqlParamSubstitute(parsed.sql, paramsJson));
+            } else {
+                displayText = SqlFormat(parsed.sql);
+            }
+        } else {
+            displayText = SqlFormat(parsed.sql);
+        }
         hlMode = HighlightMode::Sql;
     }
     // Plain text
