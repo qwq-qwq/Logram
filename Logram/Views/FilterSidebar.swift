@@ -191,9 +191,15 @@ struct FilterSidebar: View {
             Toggle(isOn: Binding(
                 get: { document.enabledThreads.contains(th) },
                 set: { on in
+                    // Capture the visible thread mask before exiting focus —
+                    // clearFocus would otherwise restore the pre-focus snapshot
+                    // and we'd end up with "all threads + th" instead of
+                    // honoring what the user actually sees in the checkboxes.
+                    var visible = document.enabledThreads
+                    if on { visible.insert(th) }
+                    else { visible.remove(th) }
                     if document.focusRange != nil { document.clearFocus() }
-                    if on { document.enabledThreads.insert(th) }
-                    else { document.enabledThreads.remove(th) }
+                    document.enabledThreads = visible
                     document.applyFilters()
                 }
             )) {
