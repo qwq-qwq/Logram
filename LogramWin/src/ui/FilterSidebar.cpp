@@ -296,6 +296,14 @@ void FilterSidebar::ReadCheckStatesIntoDoc() {
         }
     }
 
+    // If the user toggled thread checkboxes while a call-frame focus is
+    // active, exit focus mode — otherwise focusRange would keep hiding the
+    // threads they just enabled. ClearFocus restores the previously saved
+    // thread mask, but we then overwrite it with what the user just clicked.
+    if (doc_->FocusActive() && thMask != doc_->EnabledThreadMask()) {
+        doc_->ClearFocus();
+    }
+
     doc_->SetEnabledLevelMask(levelMask);
     doc_->SetEnabledThreadMask(thMask);
     doc_->ApplyFilters();

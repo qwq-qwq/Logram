@@ -349,6 +349,12 @@ struct ContentView: View {
         guard let selId = document.selectedLineId else { return }
         if !document.focusOnCall(lineId: selId) {
             NSSound.beep()
+            let alert = NSAlert()
+            alert.messageText = "No enclosing call"
+            alert.informativeText = "This line is not inside an open + / - frame on its thread."
+            alert.alertStyle = .informational
+            alert.addButton(withTitle: "OK")
+            alert.runModal()
         }
     }
 
@@ -371,12 +377,27 @@ struct ContentView: View {
     private func doSearch(_ direction: LogDocument.SearchDirection) {
         guard !searchText.isEmpty else { return }
 
-        var idx = document.findNext(searchText, direction: direction, from: searchIdx)
+        // If focus moved (row click, arrows, jump), resume search from the
+        // focused line rather than the previous match. filteredIndices is
+        // monotonically increasing, so binary-search the selection's position.
+        let startFrom: Int? = {
+            guard let selId = document.selectedLineId else { return searchIdx }
+            let arr = document.filteredIndices
+            var lo = 0, hi = arr.count
+            while lo < hi {
+                let mid = (lo + hi) / 2
+                if arr[mid] == selId { return mid }
+                if arr[mid] < selId { lo = mid + 1 } else { hi = mid }
+            }
+            return searchIdx
+        }()
+
+        var idx = document.findNext(searchText, direction: direction, from: startFrom)
 
         // Wrap-around: if we ran off the end/start after a previous hit,
         // restart from the opposite edge so the search keeps cycling.
         var wrapped = false
-        if idx == nil, searchIdx != nil {
+        if idx == nil, startFrom != nil {
             let restart = direction == .forward ? -1 : document.filteredIndices.count
             idx = document.findNext(searchText, direction: direction, from: restart)
             wrapped = idx != nil

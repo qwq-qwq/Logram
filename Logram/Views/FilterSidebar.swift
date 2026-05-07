@@ -163,6 +163,10 @@ struct FilterSidebar: View {
                     .font(.subheadline.weight(.semibold))
                 Spacer()
                 Button(showAllThreads ? "None" : "All") {
+                    // User is editing the thread filter — drop any active
+                    // call-frame focus first, otherwise focusRange would keep
+                    // hiding the threads they just enabled.
+                    if document.focusRange != nil { document.clearFocus() }
                     if showAllThreads {
                         document.enabledThreads = []
                     } else {
@@ -187,6 +191,7 @@ struct FilterSidebar: View {
             Toggle(isOn: Binding(
                 get: { document.enabledThreads.contains(th) },
                 set: { on in
+                    if document.focusRange != nil { document.clearFocus() }
                     if on { document.enabledThreads.insert(th) }
                     else { document.enabledThreads.remove(th) }
                     document.applyFilters()
@@ -209,16 +214,19 @@ struct FilterSidebar: View {
         .contentShape(Rectangle())
         .contextMenu {
             Button("All") {
+                if document.focusRange != nil { document.clearFocus() }
                 document.enabledThreads = Set(0..<LogParser.maxThreads)
                 showAllThreads = true
                 document.applyFilters()
             }
             Button("None") {
+                if document.focusRange != nil { document.clearFocus() }
                 document.enabledThreads = []
                 showAllThreads = false
                 document.applyFilters()
             }
             Button("Only this") {
+                if document.focusRange != nil { document.clearFocus() }
                 document.enabledThreads = [th]
                 showAllThreads = false
                 document.applyFilters()
