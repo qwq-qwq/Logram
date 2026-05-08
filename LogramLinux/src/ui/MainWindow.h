@@ -6,6 +6,7 @@
 class LogDocument;
 class LogTableView;
 class FilterSidebar;
+class DetailPanel;
 
 class MainWindow {
 public:
@@ -23,10 +24,12 @@ public:
 private:
     void UpdateStatus();
     void OnFiltersChanged();
+    void OnRowSelected(int lineId);
 
     GtkWidget* window_ = nullptr;
     GtkWidget* statusLabel_ = nullptr;
     std::unique_ptr<LogTableView> table_;
     std::unique_ptr<FilterSidebar> sidebar_;
+    std::unique_ptr<DetailPanel> detail_;
     std::unique_ptr<LogDocument> doc_;
 };

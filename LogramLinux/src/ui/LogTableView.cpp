@@ -158,15 +158,26 @@ GtkColumnViewColumn* MakeColumn(const char* title, CellFormatter formatter,
 
 // ---------------- LogTableView ----------------
 
+namespace {
+void OnSelectionPropertyChanged(GObject* selection, GParamSpec* /*pspec*/,
+                                gpointer user_data) {
+    auto* self = static_cast<LogTableView*>(user_data);
+    const guint pos = gtk_single_selection_get_selected(
+        GTK_SINGLE_SELECTION(selection));
+    self->OnSelectionChanged(pos);
+}
+} // namespace
+
 LogTableView::LogTableView() {
     auto* rowModel = log_row_model_new();
     model_ = G_LIST_MODEL(rowModel);
 
-    GtkSelectionModel* selection =
-        GTK_SELECTION_MODEL(gtk_single_selection_new(model_));
+    selection_ = gtk_single_selection_new(model_);
     // gtk_single_selection_new takes ownership of model_ ref; keep the pointer.
+    g_signal_connect(selection_, "notify::selected",
+                     G_CALLBACK(OnSelectionPropertyChanged), this);
 
-    columnView_ = gtk_column_view_new(selection);
+    columnView_ = gtk_column_view_new(GTK_SELECTION_MODEL(selection_));
     gtk_column_view_set_show_row_separators(GTK_COLUMN_VIEW(columnView_), FALSE);
     gtk_column_view_set_show_column_separators(GTK_COLUMN_VIEW(columnView_), FALSE);
 
@@ -200,4 +211,18 @@ void LogTableView::Refresh() {
     const guint newCount = doc_ ? static_cast<guint>(doc_->FilteredIndices().size()) : 0;
     g_list_model_items_changed(model_, 0, lastCount_, newCount);
     lastCount_ = newCount;
+}
+
+void LogTableView::OnSelectionChanged(unsigned position) {
+    if (!onSelection_) return;
+    if (!doc_ || position == GTK_INVALID_LIST_POSITION) {
+        onSelection_(-1);
+        return;
+    }
+    const auto& filtered = doc_->FilteredIndices();
+    if (position >= filtered.size()) {
+        onSelection_(-1);
+        return;
+    }
+    onSelection_(static_cast<int>(filtered[position]));
 }

@@ -1,6 +1,7 @@
 #include "ui/MainWindow.h"
 #include "ui/LogTableView.h"
 #include "ui/FilterSidebar.h"
+#include "ui/DetailPanel.h"
 #include "core/LogDocument.h"
 
 #include <cstdio>
@@ -64,10 +65,19 @@ MainWindow::MainWindow(GtkApplication* app) {
     sidebar_->SetOnChanged([this]{ OnFiltersChanged(); });
 
     table_ = std::make_unique<LogTableView>();
+    table_->SetOnSelectionChanged([this](int lineId){ OnRowSelected(lineId); });
+
+    detail_ = std::make_unique<DetailPanel>();
+
+    GtkWidget* rightPaned = gtk_paned_new(GTK_ORIENTATION_VERTICAL);
+    gtk_paned_set_start_child(GTK_PANED(rightPaned), table_->Widget());
+    gtk_paned_set_end_child(GTK_PANED(rightPaned), detail_->Widget());
+    gtk_paned_set_position(GTK_PANED(rightPaned), 520);
+    gtk_paned_set_resize_end_child(GTK_PANED(rightPaned), FALSE);
 
     GtkWidget* paned = gtk_paned_new(GTK_ORIENTATION_HORIZONTAL);
     gtk_paned_set_start_child(GTK_PANED(paned), sidebar_->Widget());
-    gtk_paned_set_end_child(GTK_PANED(paned), table_->Widget());
+    gtk_paned_set_end_child(GTK_PANED(paned), rightPaned);
     gtk_paned_set_position(GTK_PANED(paned), 240);
     gtk_paned_set_resize_start_child(GTK_PANED(paned), FALSE);
     gtk_paned_set_shrink_start_child(GTK_PANED(paned), FALSE);
@@ -124,7 +134,12 @@ void MainWindow::LoadFile(const char* utf8Path) {
 void MainWindow::OnFiltersChanged() {
     if (!doc_) return;
     table_->Refresh();
+    detail_->Clear();
     UpdateStatus();
+}
+
+void MainWindow::OnRowSelected(int lineId) {
+    detail_->SetLine(doc_.get(), lineId);
 }
 
 void MainWindow::UpdateStatus() {

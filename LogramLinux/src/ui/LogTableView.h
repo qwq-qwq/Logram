@@ -1,6 +1,7 @@
 #pragma once
 
 #include <gtk/gtk.h>
+#include <functional>
 
 class LogDocument;
 
@@ -21,10 +22,21 @@ public:
     // Call after the underlying document data changes (filters, reload).
     void Refresh();
 
+    // Fired when the user picks a new row. The argument is the document's
+    // line id (index into AllLines), or -1 if nothing is selected.
+    void SetOnSelectionChanged(std::function<void(int lineId)> cb) {
+        onSelection_ = std::move(cb);
+    }
+
+    // Internal — called from a static GTK callback.
+    void OnSelectionChanged(unsigned position);
+
 private:
     GtkWidget* scroller_ = nullptr;
     GtkWidget* columnView_ = nullptr;
     GListModel* model_ = nullptr;
+    GtkSingleSelection* selection_ = nullptr;
     LogDocument* doc_ = nullptr;
     unsigned lastCount_ = 0;
+    std::function<void(int)> onSelection_;
 };
