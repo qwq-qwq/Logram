@@ -1,4 +1,5 @@
 #include "ui/MainWindow.h"
+#include "ui/LogTableView.h"
 #include "core/LogDocument.h"
 
 #include <cstdio>
@@ -39,6 +40,11 @@ void OnFileChooserResponse(GtkNativeDialog* native, int response, gpointer self)
     g_object_unref(native);
 }
 
+const char* BaseName(const char* path) {
+    const char* slash = std::strrchr(path, '/');
+    return slash ? slash + 1 : path;
+}
+
 } // namespace
 
 MainWindow::MainWindow(GtkApplication* app) {
@@ -53,11 +59,21 @@ MainWindow::MainWindow(GtkApplication* app) {
     g_signal_connect(openBtn, "clicked", G_CALLBACK(OnOpenButtonClicked), this);
     gtk_header_bar_pack_start(GTK_HEADER_BAR(header), openBtn);
 
+    GtkWidget* vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
+
+    table_ = std::make_unique<LogTableView>();
+    gtk_box_append(GTK_BOX(vbox), table_->Widget());
+
     statusLabel_ = gtk_label_new("Откройте файл лога: кнопка Open…");
-    gtk_widget_set_halign(statusLabel_, GTK_ALIGN_CENTER);
-    gtk_widget_set_valign(statusLabel_, GTK_ALIGN_CENTER);
-    gtk_label_set_wrap(GTK_LABEL(statusLabel_), TRUE);
-    gtk_window_set_child(GTK_WINDOW(window_), statusLabel_);
+    gtk_widget_set_halign(statusLabel_, GTK_ALIGN_START);
+    gtk_widget_set_margin_start(statusLabel_, 8);
+    gtk_widget_set_margin_end(statusLabel_, 8);
+    gtk_widget_set_margin_top(statusLabel_, 4);
+    gtk_widget_set_margin_bottom(statusLabel_, 4);
+    gtk_label_set_ellipsize(GTK_LABEL(statusLabel_), PANGO_ELLIPSIZE_END);
+    gtk_box_append(GTK_BOX(vbox), statusLabel_);
+
+    gtk_window_set_child(GTK_WINDOW(window_), vbox);
 }
 
 MainWindow::~MainWindow() = default;
@@ -83,11 +99,15 @@ void MainWindow::LoadFile(const char* utf8Path) {
         return;
     }
     doc_ = std::move(doc);
+    table_->SetDocument(doc_.get());
+
+    char title[512];
+    std::snprintf(title, sizeof(title), "Logram — %s", BaseName(utf8Path));
+    gtk_window_set_title(GTK_WINDOW(window_), title);
 
     char buf[1024];
     std::snprintf(buf, sizeof(buf),
-                  "%s\n%d lines · %zu threads · %d errors · %s",
-                  utf8Path,
+                  "%d lines · %zu threads · %d errors · %s",
                   doc_->TotalEvents(),
                   doc_->ActiveThreads().size(),
                   doc_->ErrorCount(),

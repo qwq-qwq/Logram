@@ -4,6 +4,7 @@
 #include <memory>
 
 class LogDocument;
+class LogTableView;
 
 class MainWindow {
 public:
@@ -21,5 +22,6 @@ public:
 private:
     GtkWidget* window_ = nullptr;
     GtkWidget* statusLabel_ = nullptr;
+    std::unique_ptr<LogTableView> table_;
     std::unique_ptr<LogDocument> doc_;
 };

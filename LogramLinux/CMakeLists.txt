@@ -44,6 +44,7 @@ add_executable(Logram
     src/main.cpp
     src/ui/App.cpp
     src/ui/MainWindow.cpp
+    src/ui/LogTableView.cpp
 )
 target_include_directories(Logram PRIVATE src)
 target_link_libraries(Logram PRIVATE
