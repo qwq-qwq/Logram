@@ -47,9 +47,27 @@ const char* BaseName(const char* path) {
     return slash ? slash + 1 : path;
 }
 
+void OnSearchActivate(GtkSearchEntry* /*entry*/, gpointer self) {
+    static_cast<MainWindow*>(self)->SearchNext();
+}
+
+void OnSearchChanged(GtkSearchEntry* /*entry*/, gpointer self) {
+    static_cast<MainWindow*>(self)->OnSearchChanged();
+}
+
+void OnFindAction(GSimpleAction*, GVariant*, gpointer self) {
+    static_cast<MainWindow*>(self)->FocusSearch();
+}
+void OnFindNextAction(GSimpleAction*, GVariant*, gpointer self) {
+    static_cast<MainWindow*>(self)->SearchNext();
+}
+void OnFindPrevAction(GSimpleAction*, GVariant*, gpointer self) {
+    static_cast<MainWindow*>(self)->SearchPrev();
+}
+
 } // namespace
 
-MainWindow::MainWindow(GtkApplication* app) {
+MainWindow::MainWindow(GtkApplication* app) : app_(app) {
     window_ = gtk_application_window_new(app);
     gtk_window_set_title(GTK_WINDOW(window_), "Logram");
     gtk_window_set_default_size(GTK_WINDOW(window_), 1280, 800);
@@ -60,6 +78,16 @@ MainWindow::MainWindow(GtkApplication* app) {
     GtkWidget* openBtn = gtk_button_new_with_label("Open…");
     g_signal_connect(openBtn, "clicked", G_CALLBACK(OnOpenButtonClicked), this);
     gtk_header_bar_pack_start(GTK_HEADER_BAR(header), openBtn);
+
+    searchEntry_ = gtk_search_entry_new();
+    gtk_widget_set_size_request(searchEntry_, 280, -1);
+    gtk_search_entry_set_placeholder_text(GTK_SEARCH_ENTRY(searchEntry_),
+                                          "Search… (Ctrl+F)");
+    g_signal_connect(searchEntry_, "activate",
+                     G_CALLBACK(OnSearchActivate), this);
+    g_signal_connect(searchEntry_, "search-changed",
+                     G_CALLBACK(::OnSearchChanged), this);
+    gtk_header_bar_pack_end(GTK_HEADER_BAR(header), searchEntry_);
 
     sidebar_ = std::make_unique<FilterSidebar>();
     sidebar_->SetOnChanged([this]{ OnFiltersChanged(); });
@@ -96,9 +124,28 @@ MainWindow::MainWindow(GtkApplication* app) {
     gtk_box_append(GTK_BOX(vbox), statusLabel_);
 
     gtk_window_set_child(GTK_WINDOW(window_), vbox);
+
+    InstallActions();
 }
 
 MainWindow::~MainWindow() = default;
+
+void MainWindow::InstallActions() {
+    static const GActionEntry kActions[] = {
+        {"find",      OnFindAction,     nullptr, nullptr, nullptr, {0, 0, 0}},
+        {"find-next", OnFindNextAction, nullptr, nullptr, nullptr, {0, 0, 0}},
+        {"find-prev", OnFindPrevAction, nullptr, nullptr, nullptr, {0, 0, 0}},
+    };
+    g_action_map_add_action_entries(G_ACTION_MAP(window_),
+                                    kActions, G_N_ELEMENTS(kActions), this);
+
+    const char* findAccels[] = {"<Control>f", nullptr};
+    const char* nextAccels[] = {"F3", nullptr};
+    const char* prevAccels[] = {"<Shift>F3", nullptr};
+    gtk_application_set_accels_for_action(app_, "win.find",      findAccels);
+    gtk_application_set_accels_for_action(app_, "win.find-next", nextAccels);
+    gtk_application_set_accels_for_action(app_, "win.find-prev", prevAccels);
+}
 
 void MainWindow::OnOpenClicked() {
     GtkFileChooserNative* native = gtk_file_chooser_native_new(
@@ -123,6 +170,8 @@ void MainWindow::LoadFile(const char* utf8Path) {
     doc_ = std::move(doc);
     sidebar_->SetDocument(doc_.get());
     table_->SetDocument(doc_.get());
+    detail_->Clear();
+    ResetSearch();
 
     char title[512];
     std::snprintf(title, sizeof(title), "Logram — %s", BaseName(utf8Path));
@@ -135,11 +184,54 @@ void MainWindow::OnFiltersChanged() {
     if (!doc_) return;
     table_->Refresh();
     detail_->Clear();
+    ResetSearch();
     UpdateStatus();
 }
 
 void MainWindow::OnRowSelected(int lineId) {
     detail_->SetLine(doc_.get(), lineId);
+}
+
+void MainWindow::FocusSearch() {
+    gtk_widget_grab_focus(searchEntry_);
+}
+
+void MainWindow::SearchNext() { DoSearch(true); }
+void MainWindow::SearchPrev() { DoSearch(false); }
+
+void MainWindow::OnSearchChanged() {
+    // Restart search position so the next search starts from the top.
+    currentMatchPos_ = -1;
+}
+
+void MainWindow::ResetSearch() {
+    currentMatchPos_ = -1;
+}
+
+void MainWindow::DoSearch(bool forward) {
+    if (!doc_) return;
+    const char* text = gtk_editable_get_text(GTK_EDITABLE(searchEntry_));
+    if (!text || !*text) return;
+    const std::string pattern = text;
+    using Dir = LogDocument::SearchDirection;
+    const Dir dir = forward ? Dir::Forward : Dir::Backward;
+
+    int result = doc_->FindNext(pattern, dir, currentMatchPos_);
+    bool wrapped = false;
+    if (result < 0) {
+        const int from = forward
+            ? -1
+            : static_cast<int>(doc_->FilteredCount());
+        result = doc_->FindNext(pattern, dir, from);
+        if (result < 0) {
+            gtk_widget_error_bell(window_);
+            return;
+        }
+        wrapped = true;
+    }
+    if (wrapped) gtk_widget_error_bell(window_);
+    currentMatchPos_ = result;
+    table_->ScrollToPosition(static_cast<unsigned>(result));
 }
 
 void MainWindow::UpdateStatus() {

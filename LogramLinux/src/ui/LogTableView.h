@@ -21,6 +21,8 @@ public:
     void SetDocument(LogDocument* doc);
     // Call after the underlying document data changes (filters, reload).
     void Refresh();
+    // Scroll/focus to the given position within the filtered list.
+    void ScrollToPosition(unsigned position);
 
     // Fired when the user picks a new row. The argument is the document's
     // line id (index into AllLines), or -1 if nothing is selected.

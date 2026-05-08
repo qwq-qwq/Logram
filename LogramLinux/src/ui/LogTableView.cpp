@@ -213,6 +213,13 @@ void LogTableView::Refresh() {
     lastCount_ = newCount;
 }
 
+void LogTableView::ScrollToPosition(unsigned position) {
+    if (!doc_ || position >= doc_->FilteredIndices().size()) return;
+    gtk_single_selection_set_selected(selection_, position);
+    // Focusing the column view brings the focused (= selected) row into view.
+    gtk_widget_grab_focus(columnView_);
+}
+
 void LogTableView::OnSelectionChanged(unsigned position) {
     if (!onSelection_) return;
     if (!doc_ || position == GTK_INVALID_LIST_POSITION) {

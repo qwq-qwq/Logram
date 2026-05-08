@@ -21,13 +21,25 @@ public:
     void OnOpenClicked();
     void LoadFile(const char* utf8Path);
 
+    // Search actions (invoked via GAction accelerators).
+    void FocusSearch();
+    void SearchNext();
+    void SearchPrev();
+    void OnSearchChanged();
+
 private:
     void UpdateStatus();
     void OnFiltersChanged();
     void OnRowSelected(int lineId);
+    void DoSearch(bool forward);
+    void ResetSearch();
+    void InstallActions();
 
+    GtkApplication* app_ = nullptr;
     GtkWidget* window_ = nullptr;
     GtkWidget* statusLabel_ = nullptr;
+    GtkWidget* searchEntry_ = nullptr;
+    int currentMatchPos_ = -1;
     std::unique_ptr<LogTableView> table_;
     std::unique_ptr<FilterSidebar> sidebar_;
     std::unique_ptr<DetailPanel> detail_;
