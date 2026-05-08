@@ -5,6 +5,7 @@
 
 class LogDocument;
 class LogTableView;
+class FilterSidebar;
 
 class MainWindow {
 public:
@@ -20,8 +21,12 @@ public:
     void LoadFile(const char* utf8Path);
 
 private:
+    void UpdateStatus();
+    void OnFiltersChanged();
+
     GtkWidget* window_ = nullptr;
     GtkWidget* statusLabel_ = nullptr;
     std::unique_ptr<LogTableView> table_;
+    std::unique_ptr<FilterSidebar> sidebar_;
     std::unique_ptr<LogDocument> doc_;
 };

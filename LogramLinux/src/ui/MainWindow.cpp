@@ -1,5 +1,6 @@
 #include "ui/MainWindow.h"
 #include "ui/LogTableView.h"
+#include "ui/FilterSidebar.h"
 #include "core/LogDocument.h"
 
 #include <cstdio>
@@ -59,10 +60,21 @@ MainWindow::MainWindow(GtkApplication* app) {
     g_signal_connect(openBtn, "clicked", G_CALLBACK(OnOpenButtonClicked), this);
     gtk_header_bar_pack_start(GTK_HEADER_BAR(header), openBtn);
 
-    GtkWidget* vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
+    sidebar_ = std::make_unique<FilterSidebar>();
+    sidebar_->SetOnChanged([this]{ OnFiltersChanged(); });
 
     table_ = std::make_unique<LogTableView>();
-    gtk_box_append(GTK_BOX(vbox), table_->Widget());
+
+    GtkWidget* paned = gtk_paned_new(GTK_ORIENTATION_HORIZONTAL);
+    gtk_paned_set_start_child(GTK_PANED(paned), sidebar_->Widget());
+    gtk_paned_set_end_child(GTK_PANED(paned), table_->Widget());
+    gtk_paned_set_position(GTK_PANED(paned), 240);
+    gtk_paned_set_resize_start_child(GTK_PANED(paned), FALSE);
+    gtk_paned_set_shrink_start_child(GTK_PANED(paned), FALSE);
+
+    GtkWidget* vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
+    gtk_widget_set_vexpand(paned, TRUE);
+    gtk_box_append(GTK_BOX(vbox), paned);
 
     statusLabel_ = gtk_label_new("Откройте файл лога: кнопка Open…");
     gtk_widget_set_halign(statusLabel_, GTK_ALIGN_START);
@@ -99,15 +111,32 @@ void MainWindow::LoadFile(const char* utf8Path) {
         return;
     }
     doc_ = std::move(doc);
+    sidebar_->SetDocument(doc_.get());
     table_->SetDocument(doc_.get());
 
     char title[512];
     std::snprintf(title, sizeof(title), "Logram — %s", BaseName(utf8Path));
     gtk_window_set_title(GTK_WINDOW(window_), title);
 
+    UpdateStatus();
+}
+
+void MainWindow::OnFiltersChanged() {
+    if (!doc_) return;
+    table_->Refresh();
+    UpdateStatus();
+}
+
+void MainWindow::UpdateStatus() {
+    if (!doc_) {
+        gtk_label_set_text(GTK_LABEL(statusLabel_),
+                           "Откройте файл лога: кнопка Open…");
+        return;
+    }
     char buf[1024];
     std::snprintf(buf, sizeof(buf),
-                  "%d lines · %zu threads · %d errors · %s",
+                  "%d / %d lines · %zu threads · %d errors · %s",
+                  doc_->FilteredCount(),
                   doc_->TotalEvents(),
                   doc_->ActiveThreads().size(),
                   doc_->ErrorCount(),
