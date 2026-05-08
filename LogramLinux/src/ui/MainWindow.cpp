@@ -81,8 +81,7 @@ MainWindow::MainWindow(GtkApplication* app) : app_(app) {
 
     searchEntry_ = gtk_search_entry_new();
     gtk_widget_set_size_request(searchEntry_, 280, -1);
-    gtk_search_entry_set_placeholder_text(GTK_SEARCH_ENTRY(searchEntry_),
-                                          "Search… (Ctrl+F)");
+    g_object_set(searchEntry_, "placeholder-text", "Search… (Ctrl+F)", nullptr);
     g_signal_connect(searchEntry_, "activate",
                      G_CALLBACK(OnSearchActivate), this);
     g_signal_connect(searchEntry_, "search-changed",
