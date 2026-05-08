@@ -5,9 +5,14 @@
 
 namespace {
 
+void OnWindowDestroy(GtkWidget* /*window*/, gpointer user_data) {
+    delete static_cast<MainWindow*>(user_data);
+}
+
 void OnActivate(GtkApplication* app, gpointer /*user_data*/) {
-    GtkWidget* window = MainWindow::Create(app);
-    gtk_window_present(GTK_WINDOW(window));
+    auto* mw = new MainWindow(app);
+    g_signal_connect(mw->Widget(), "destroy", G_CALLBACK(OnWindowDestroy), mw);
+    gtk_window_present(GTK_WINDOW(mw->Widget()));
 }
 
 } // namespace
