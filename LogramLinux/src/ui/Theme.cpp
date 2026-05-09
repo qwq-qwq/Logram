@@ -1,5 +1,6 @@
 #include "ui/Theme.h"
 
+#include <array>
 #include <gtk/gtk.h>
 
 namespace {
@@ -181,4 +182,45 @@ void Theme::Apply() {
         GTK_STYLE_PROVIDER(provider),
         GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
     g_object_unref(provider);
+}
+
+const char* LevelHexColor(LogLevel level) {
+    // Mirror of LogramWin/src/ui/ThemeColors.cpp messageColor[] (Tokyo Night).
+    static constexpr std::array<const char*, kLogLevelCount> kColors = {{
+        "#a9b1d6", // Unknown
+        "#a9b1d6", // Info
+        "#565f89", // Debug
+        "#565f89", // Trace
+        "#e0af68", // Warn
+        "#f7768e", // Error
+        "#9ece6a", // Enter
+        "#9ece6a", // Leave
+        "#db7093", // OsErr
+        "#f7768e", // Exc
+        "#db7093", // ExcOs
+        "#a9b1d6", // Mem
+        "#a9b1d6", // Stack
+        "#db7093", // Fail
+        "#7aa2f7", // Sql
+        "#a9b1d6", // Cache
+        "#a9b1d6", // Res
+        "#73daca", // Db
+        "#7dcfff", // Http
+        "#b4f9ec", // Clnt
+        "#b4f9ec", // Srvr
+        "#a9b1d6", // Call
+        "#a9b1d6", // Ret
+        "#bb9af7", // Auth
+        "#7aa2f7", // Cust1
+        "#e0af68", // Cust2
+        "#a9b1d6", // Cust3
+        "#a9b1d6", // Cust4
+        "#a9b1d6", // Rotat
+        "#db7093", // DddER
+        "#a9b1d6", // DddIN
+        "#a9b1d6", // Mon
+    }};
+    const int idx = static_cast<int>(level);
+    if (idx < 0 || idx >= kLogLevelCount) return "#a9b1d6";
+    return kColors[idx];
 }

@@ -1,4 +1,5 @@
 #include "ui/LogTableView.h"
+#include "ui/Theme.h"
 #include "core/LogDocument.h"
 #include "core/LogLevel.h"
 #include "core/LogLine.h"
@@ -103,8 +104,13 @@ void FormatThreadCell(GtkLabel* label, LogDocument* doc, guint lineId, guint) {
 
 void FormatLevelCell(GtkLabel* label, LogDocument* doc, guint lineId, guint) {
     const auto& line = doc->AllLines()[lineId];
-    const auto& info = GetLogLevelInfo(static_cast<LogLevel>(line.level));
-    gtk_label_set_text(label, info.label);
+    const LogLevel level = static_cast<LogLevel>(line.level);
+    const auto& info = GetLogLevelInfo(level);
+    char* markup = g_markup_printf_escaped(
+        "<span foreground=\"%s\" weight=\"bold\">%s</span>",
+        LevelHexColor(level), info.label);
+    gtk_label_set_markup(label, markup);
+    g_free(markup);
 }
 
 void FormatTimeCell(GtkLabel* label, LogDocument* doc, guint lineId, guint) {
@@ -115,8 +121,14 @@ void FormatTimeCell(GtkLabel* label, LogDocument* doc, guint lineId, guint) {
 
 void FormatMessageCell(GtkLabel* label, LogDocument* doc, guint lineId, guint) {
     const auto& line = doc->AllLines()[lineId];
+    const LogLevel level = static_cast<LogLevel>(line.level);
     const std::string_view msg = GetMessage(doc->MappedBase(), line);
-    gtk_label_set_text(label, std::string(msg).c_str());
+    const std::string msgStr(msg);
+    char* markup = g_markup_printf_escaped(
+        "<span foreground=\"%s\">%s</span>",
+        LevelHexColor(level), msgStr.c_str());
+    gtk_label_set_markup(label, markup);
+    g_free(markup);
 }
 
 void OnFactorySetup(GtkSignalListItemFactory* /*factory*/,
