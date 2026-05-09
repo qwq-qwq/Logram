@@ -101,8 +101,8 @@ checkbutton {
     padding: 2px 4px;
 }
 checkbutton > check {
-    background-color: #1f2335;
-    border: 1px solid #2a2e44;
+    background-color: #1a1b26;
+    border: 1px solid #1f2335;
     border-radius: 4px;
     min-width: 18px;
     min-height: 18px;
@@ -113,15 +113,15 @@ checkbutton > check:checked,
 checkbutton check:checked,
 checkbutton:checked > check,
 checkbutton:checked check {
-    background-color: #1f2335;
+    background-color: #1a1b26;
     background-image: none;
-    border-color: #2a2e44;
+    border-color: #1f2335;
     color: #7aa2f7;
     -gtk-icon-source: -gtk-icontheme("checkbox-checked-symbolic");
     -gtk-icon-size: 16px;
 }
 checkbutton > check:hover {
-    border-color: #3d4a72;
+    border-color: #2a2e44;
 }
 
 columnview {
@@ -290,8 +290,8 @@ checkbutton {
     padding: 2px 4px;
 }
 checkbutton > check {
-    background-color: #0a0a0a;
-    border: 1px solid #303030;
+    background-color: #000000;
+    border: 1px solid #1a1a1a;
     border-radius: 4px;
     min-width: 18px;
     min-height: 18px;
@@ -302,15 +302,15 @@ checkbutton > check:checked,
 checkbutton check:checked,
 checkbutton:checked > check,
 checkbutton:checked check {
-    background-color: #0a0a0a;
+    background-color: #000000;
     background-image: none;
-    border-color: #303030;
+    border-color: #1a1a1a;
     color: #b0b0b0;
     -gtk-icon-source: -gtk-icontheme("checkbox-checked-symbolic");
     -gtk-icon-size: 16px;
 }
 checkbutton > check:hover {
-    border-color: #505050;
+    border-color: #303030;
 }
 
 columnview {
