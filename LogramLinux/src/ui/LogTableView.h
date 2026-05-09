@@ -38,6 +38,10 @@ public:
     // visual order (smallest filtered position first).
     std::vector<int> SelectedLineIds() const;
 
+    // Position-in-filtered of the row most recently focused/selected
+    // (the row shown in the detail panel). -1 if nothing is selected.
+    int LeadPosition() const { return leadPos_; }
+
     // Internal — called from a static GTK callback.
     void OnSelectionRangeChanged(unsigned position, unsigned n_items);
     void ShowContextMenu(double x, double y);

@@ -88,6 +88,7 @@ add_executable(Logram
     src/ui/DetailPanel.cpp
     src/ui/Theme.cpp
     src/ui/TimingDialog.cpp
+    src/ui/StatsDialog.cpp
 )
 target_include_directories(Logram PRIVATE src)
 # logram_resources is wrapped in WHOLE_ARCHIVE so the linker keeps the

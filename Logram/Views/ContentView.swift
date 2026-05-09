@@ -45,6 +45,10 @@ struct ContentView: View {
                             showDuration: showDuration,
                             selectedId: $document.selectedLineId,
                             onJumpToPair: jumpToPair,
+                            jumpEnabledProvider: {
+                                guard let sel = selectedLine else { return false }
+                                return sel.level == .enter || sel.level == .leave
+                            },
                             onFocusOnCall: focusOnCallSelected,
                             onClearFocus: clearFocusSelected,
                             focusActive: document.focusRange != nil
@@ -79,6 +83,17 @@ struct ContentView: View {
                            document.selectedLineId == nil ? nil : focusOnCallSelected)
         .focusedSceneValue(\.clearFocus,
                            document.focusRange == nil ? nil : clearFocusSelected)
+        .focusedSceneValue(\.showMethodTiming, {
+            document.buildMethodTimings()
+            showTimings = true
+        })
+        .focusedSceneValue(\.showStats, { showStats = true })
+        .focusedSceneValue(\.toggleDuration, {
+            if !showDuration && document.methodTimings.isEmpty {
+                document.buildMethodTimings()
+            }
+            showDuration.toggle()
+        })
         .task(id: pendingURL) {
             guard let url = pendingURL else { return }
             showDuration = false
@@ -123,10 +138,12 @@ struct ContentView: View {
 
                 Button { doSearch(.backward) } label: {
                     Image(systemName: "chevron.up")
+                        .font(.system(size: 14, weight: .semibold))
                 }
                 .buttonStyle(.borderless)
                 Button { doSearch(.forward) } label: {
                     Image(systemName: "chevron.down")
+                        .font(.system(size: 14, weight: .semibold))
                 }
                 .buttonStyle(.borderless)
             }
@@ -138,85 +155,23 @@ struct ContentView: View {
                 HStack(spacing: 2) {
                     Button { goToError(.backward) } label: {
                         Image(systemName: "chevron.up")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(.red)
                     }
                     .buttonStyle(.borderless)
                     .help("Previous Error")
 
                     Button { goToError(.forward) } label: {
                         Image(systemName: "chevron.down")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(.red)
                     }
                     .buttonStyle(.borderless)
                     .help("Next Error")
-
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .foregroundStyle(.red)
-                        .font(.system(size: 11))
                 }
-
-                // Jump to matching +/-
-                if let sel = selectedLine, (sel.level == .enter || sel.level == .leave) {
-                    Button { jumpToPair() } label: {
-                        Image(systemName: sel.level == .enter ? "arrow.down.to.line" : "arrow.up.to.line")
-                    }
-                    .buttonStyle(.borderless)
-                    .help("Jump to matching +/- (Cmd+J)")
-                }
-            } else if let sel = selectedLine, (sel.level == .enter || sel.level == .leave) {
-                Button { jumpToPair() } label: {
-                    Image(systemName: sel.level == .enter ? "arrow.down.to.line" : "arrow.up.to.line")
-                }
-                .buttonStyle(.borderless)
-                .help("Jump to matching +/- (Cmd+J)")
             }
 
             Spacer()
-
-            Divider().frame(height: 20)
-
-            Button {
-                if !showDuration && document.methodTimings.isEmpty {
-                    document.buildMethodTimings()
-                }
-                showDuration.toggle()
-            } label: {
-                Image(systemName: showDuration ? "timer" : "timer.circle")
-            }
-            .buttonStyle(.borderless)
-            .help("Toggle duration column")
-
-            Menu {
-                ForEach(ColorTheme.allCases) { t in
-                    Button {
-                        themeRaw = t.rawValue
-                    } label: {
-                        if t.rawValue == themeRaw {
-                            Label(t.displayName, systemImage: "checkmark")
-                        } else {
-                            Text(t.displayName)
-                        }
-                    }
-                }
-            } label: {
-                Image(systemName: "paintpalette")
-            }
-            .menuStyle(.borderlessButton)
-            .frame(width: 24)
-            .help("Color theme")
-
-            Divider().frame(height: 20)
-
-            Button {
-                document.buildMethodTimings()
-                showTimings = true
-            } label: {
-                Label("Timing", systemImage: "clock")
-            }
-
-            Button {
-                showStats = true
-            } label: {
-                Label("Stats", systemImage: "chart.bar")
-            }
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 6)

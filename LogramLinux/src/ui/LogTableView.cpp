@@ -313,6 +313,9 @@ void LogTableView::Refresh() {
     const guint newCount = doc_ ? static_cast<guint>(doc_->FilteredIndices().size()) : 0;
     g_list_model_items_changed(model_, 0, lastCount_, newCount);
     lastCount_ = newCount;
+    // After filter changes the row at leadPos_ may be a different line or
+    // out of range — invalidate so the next search starts cleanly.
+    if (leadPos_ >= static_cast<int>(newCount)) leadPos_ = -1;
 }
 
 void LogTableView::ScrollToPosition(unsigned position) {

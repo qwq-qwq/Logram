@@ -3,6 +3,7 @@
 #include "ui/FilterSidebar.h"
 #include "ui/DetailPanel.h"
 #include "ui/TimingDialog.h"
+#include "ui/StatsDialog.h"
 #include "ui/Theme.h"
 #include "core/LogDocument.h"
 #include "core/LogLine.h"
@@ -111,6 +112,9 @@ void OnToggleDurationAction(GSimpleAction* action, GVariant* /*param*/,
 void OnMethodTimingAction(GSimpleAction*, GVariant*, gpointer self) {
     static_cast<MainWindow*>(self)->ShowMethodTiming();
 }
+void OnStatsAction(GSimpleAction*, GVariant*, gpointer self) {
+    static_cast<MainWindow*>(self)->ShowStats();
+}
 void OnOpenAction(GSimpleAction*, GVariant*, gpointer self) {
     static_cast<MainWindow*>(self)->OnOpenClicked();
 }
@@ -148,8 +152,9 @@ MainWindow::MainWindow(GtkApplication* app) : app_(app) {
     g_menu_append_section(mainMenu, nullptr, G_MENU_MODEL(fileSec));
     g_object_unref(fileSec);
     GMenu* viewSec = g_menu_new();
-    g_menu_append(viewSec, "Show Duration",            "win.toggle-duration");
+    g_menu_append(viewSec, "Show Duration",             "win.toggle-duration");
     g_menu_append(viewSec, "Substitute SQL Parameters", "win.toggle-params");
+    g_menu_append(viewSec, "Statistics…",               "win.stats");
     g_menu_append(viewSec, "Method Timing…",            "win.method-timing");
     g_menu_append_section(mainMenu, nullptr, G_MENU_MODEL(viewSec));
     g_object_unref(viewSec);
@@ -275,6 +280,7 @@ void MainWindow::InstallActions() {
         {"next-error",    OnNextErrorAction,    nullptr, nullptr, nullptr, {0, 0, 0}},
         {"prev-error",    OnPrevErrorAction,    nullptr, nullptr, nullptr, {0, 0, 0}},
         {"method-timing", OnMethodTimingAction, nullptr, nullptr, nullptr, {0, 0, 0}},
+        {"stats",         OnStatsAction,        nullptr, nullptr, nullptr, {0, 0, 0}},
         {"about",         OnAboutAction,        nullptr, nullptr, nullptr, {0, 0, 0}},
     };
     g_action_map_add_action_entries(G_ACTION_MAP(window_),
@@ -319,6 +325,7 @@ void MainWindow::InstallActions() {
     const char* durAccels[]     = {"<Control>d",          nullptr};
     const char* paramsAccels[]  = {"<Control>p",          nullptr};
     const char* timingAccels[]  = {"<Control>m",          nullptr};
+    const char* statsAccels[]   = {"<Control>i",          nullptr};
     gtk_application_set_accels_for_action(app_, "win.open",            openAccels);
     gtk_application_set_accels_for_action(app_, "win.find",            findAccels);
     gtk_application_set_accels_for_action(app_, "win.find-next",       nextAccels);
@@ -332,6 +339,7 @@ void MainWindow::InstallActions() {
     gtk_application_set_accels_for_action(app_, "win.toggle-duration", durAccels);
     gtk_application_set_accels_for_action(app_, "win.toggle-params",   paramsAccels);
     gtk_application_set_accels_for_action(app_, "win.method-timing",   timingAccels);
+    gtk_application_set_accels_for_action(app_, "win.stats",           statsAccels);
 }
 
 void MainWindow::OnOpenClicked() {
@@ -564,6 +572,15 @@ void MainWindow::ToggleDuration(bool visible) {
     table_->Refresh();
 }
 
+void MainWindow::ShowStats() {
+    if (!doc_) {
+        gtk_widget_error_bell(window_);
+        return;
+    }
+    auto* dlg = new StatsDialog(GTK_WINDOW(window_), doc_.get());
+    dlg->Show(); // self-deletes on close-request
+}
+
 void MainWindow::ShowMethodTiming() {
     if (!doc_) {
         gtk_widget_error_bell(window_);
@@ -595,12 +612,12 @@ void MainWindow::SearchNext() { DoSearch(true); }
 void MainWindow::SearchPrev() { DoSearch(false); }
 
 void MainWindow::OnSearchChanged() {
-    // Restart search position so the next search starts from the top.
-    currentMatchPos_ = -1;
+    // No state to reset — DoSearch always reads the current lead position.
 }
 
 void MainWindow::ResetSearch() {
-    currentMatchPos_ = -1;
+    // Kept as a no-op for callers (LoadFile, OnFiltersChanged, etc.)
+    // until we have anything search-specific to clear.
 }
 
 void MainWindow::DoSearch(bool forward) {
@@ -611,21 +628,28 @@ void MainWindow::DoSearch(bool forward) {
     using Dir = LogDocument::SearchDirection;
     const Dir dir = forward ? Dir::Forward : Dir::Backward;
 
-    int result = doc_->FindNext(pattern, dir, currentMatchPos_);
-    bool wrapped = false;
+    // Search starts from the currently focused/selected row, not from a
+    // sticky "last match" position — matches macOS/Windows behavior.
+    // ScrollToPosition will move the lead to the result, so the next F3
+    // naturally continues from there. FindNext operates in filtered-index
+    // space, so this stays correct under any active filter (level/thread
+    // checkboxes, presets, Focus on Call) — invisible lines are skipped.
+    int from = table_->LeadPosition();
+    if (from >= doc_->FilteredCount()) from = -1; // stale after filter shrunk
+
+    int result = doc_->FindNext(pattern, dir, from);
     if (result < 0) {
-        const int from = forward
+        // No match after `from` → wrap around from the opposite end.
+        const int wrapFrom = forward
             ? -1
             : static_cast<int>(doc_->FilteredCount());
-        result = doc_->FindNext(pattern, dir, from);
+        result = doc_->FindNext(pattern, dir, wrapFrom);
         if (result < 0) {
             gtk_widget_error_bell(window_);
             return;
         }
-        wrapped = true;
+        gtk_widget_error_bell(window_); // beep on wrap
     }
-    if (wrapped) gtk_widget_error_bell(window_);
-    currentMatchPos_ = result;
     table_->ScrollToPosition(static_cast<unsigned>(result));
 }
 

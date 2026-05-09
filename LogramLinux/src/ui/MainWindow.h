@@ -40,6 +40,7 @@ public:
     // Menu actions.
     void ToggleDuration(bool visible);
     void ShowMethodTiming();
+    void ShowStats();
     void SwitchTheme(const char* themeId);
     void ShowAbout();
     // Programmatically navigate to a document line (used by the timing dialog).
@@ -58,7 +59,6 @@ private:
     GtkWidget* statusLabel_ = nullptr;
     GtkWidget* searchEntry_ = nullptr;
     bool timingsBuilt_ = false;
-    int currentMatchPos_ = -1;
     int selectedLineId_ = -1;
     std::unique_ptr<LogTableView> table_;
     std::unique_ptr<FilterSidebar> sidebar_;

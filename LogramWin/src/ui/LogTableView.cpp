@@ -176,12 +176,21 @@ LRESULT LogTableView::HandleMessage(UINT msg, WPARAM wParam, LPARAM lParam) {
             if (menu) {
                 bool hasSel = doc_ && doc_->SelectedLineId() >= 0;
                 bool focused = doc_ && doc_->FocusActive();
+                bool jumpable = false;
+                if (hasSel) {
+                    const auto& line = doc_->AllLines()[doc_->SelectedLineId()];
+                    LogLevel lvl = static_cast<LogLevel>(line.level);
+                    jumpable = (lvl == LogLevel::Enter || lvl == LogLevel::Leave);
+                }
                 AppendMenuW(menu,
                     MF_STRING | (hasSel ? 0 : MF_GRAYED),
                     ID_NAV_FOCUSCALL, L"Focus on Call\tCtrl+Shift+E");
                 AppendMenuW(menu,
                     MF_STRING | (focused ? 0 : MF_GRAYED),
                     ID_NAV_CLEARFOCUS, L"Clear Focus\tEsc");
+                AppendMenuW(menu,
+                    MF_STRING | (jumpable ? 0 : MF_GRAYED),
+                    ID_NAV_JUMPPAIR, L"Jump to matching pair\tCtrl+J");
                 int cmd = TrackPopupMenu(menu,
                     TPM_RETURNCMD | TPM_LEFTALIGN | TPM_TOPALIGN,
                     pt.x, pt.y, 0, GetParent(hwnd_), nullptr);
