@@ -14,6 +14,18 @@ struct ClearFocusKey: FocusedValueKey {
     typealias Value = () -> Void
 }
 
+struct ShowMethodTimingKey: FocusedValueKey {
+    typealias Value = () -> Void
+}
+
+struct ShowStatsKey: FocusedValueKey {
+    typealias Value = () -> Void
+}
+
+struct ToggleDurationKey: FocusedValueKey {
+    typealias Value = () -> Void
+}
+
 extension FocusedValues {
     var openLogFile: (() -> Void)? {
         get { self[OpenLogFileKey.self] }
@@ -26,6 +38,18 @@ extension FocusedValues {
     var clearFocus: (() -> Void)? {
         get { self[ClearFocusKey.self] }
         set { self[ClearFocusKey.self] = newValue }
+    }
+    var showMethodTiming: (() -> Void)? {
+        get { self[ShowMethodTimingKey.self] }
+        set { self[ShowMethodTimingKey.self] = newValue }
+    }
+    var showStats: (() -> Void)? {
+        get { self[ShowStatsKey.self] }
+        set { self[ShowStatsKey.self] = newValue }
+    }
+    var toggleDuration: (() -> Void)? {
+        get { self[ToggleDurationKey.self] }
+        set { self[ToggleDurationKey.self] = newValue }
     }
 }
 
@@ -76,6 +100,11 @@ struct LogramApp: App {
     @FocusedValue(\.openLogFile) var openLogFile
     @FocusedValue(\.focusOnCall) var focusOnCall
     @FocusedValue(\.clearFocus) var clearFocus
+    @FocusedValue(\.showMethodTiming) var showMethodTiming
+    @FocusedValue(\.showStats) var showStats
+    @FocusedValue(\.toggleDuration) var toggleDuration
+    // Same key as ContentView's @AppStorage — they share state automatically.
+    @AppStorage("colorTheme") private var themeRaw = ColorTheme.tokyoNight.rawValue
 
     var body: some Scene {
         WindowGroup(for: URL?.self) { $url in
@@ -100,11 +129,36 @@ struct LogramApp: App {
                     .keyboardShortcut(.escape, modifiers: [])
                     .disabled(clearFocus == nil)
             }
+            CommandMenu("Tools") {
+                Menu("Theme") {
+                    ForEach(ColorTheme.allCases) { t in
+                        Button {
+                            themeRaw = t.rawValue
+                        } label: {
+                            if t.rawValue == themeRaw {
+                                Label(t.displayName, systemImage: "checkmark")
+                            } else {
+                                Text(t.displayName)
+                            }
+                        }
+                    }
+                }
+                Divider()
+                Button("Toggle Duration Column") { toggleDuration?() }
+                    .keyboardShortcut("d", modifiers: .command)
+                    .disabled(toggleDuration == nil)
+                Button("Statistics…") { showStats?() }
+                    .keyboardShortcut("i", modifiers: .command)
+                    .disabled(showStats == nil)
+                Button("Method Timing…") { showMethodTiming?() }
+                    .keyboardShortcut("m", modifiers: .command)
+                    .disabled(showMethodTiming == nil)
+            }
             CommandGroup(replacing: .appInfo) {
                 Button("About Logram") {
                     NSApplication.shared.orderFrontStandardAboutPanel(options: [
                         .applicationName: "Logram",
-                        .applicationVersion: "1.1",
+                        .applicationVersion: "1.2",
                         .credits: NSAttributedString(
                             string: "UnityBase Log Analyzer\nhttps://logram.perek.rest",
                             attributes: [

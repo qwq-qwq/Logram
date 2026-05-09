@@ -15,6 +15,12 @@ jobs:
     permissions:
       contents: write
 
+    env:
+      # When secrets are absent (e.g. PR from a fork) we fall back to ad-hoc.
+      HAS_SIGNING: ${{ secrets.MACOS_CERTIFICATE != '' && secrets.MACOS_DEVELOPER_ID != '' }}
+      # Notarisation runs only for tagged releases AND when Apple-ID secrets exist.
+      DO_NOTARIZE: ${{ startsWith(github.ref, 'refs/tags/v') && secrets.APPLE_ID != '' && secrets.APPLE_APP_PASSWORD != '' && secrets.APPLE_TEAM_ID != '' }}
+
     steps:
       - uses: actions/checkout@v4
 
@@ -31,7 +37,48 @@ jobs:
           xcodebuild -version
           xcrun --show-sdk-version
 
-      - name: Build Logram.app
+      - name: Import Developer ID certificate
+        if: env.HAS_SIGNING == 'true'
+        env:
+          CERT_B64: ${{ secrets.MACOS_CERTIFICATE }}
+          CERT_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+          KEYCHAIN_PASSWORD: ${{ secrets.MACOS_KEYCHAIN_PASSWORD }}
+        run: |
+          KEYCHAIN_PATH="$RUNNER_TEMP/build.keychain"
+          CERT_PATH="$RUNNER_TEMP/cert.p12"
+          echo "$CERT_B64" | base64 --decode > "$CERT_PATH"
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security import "$CERT_PATH" \
+            -P "$CERT_PASSWORD" \
+            -A -t cert -f pkcs12 \
+            -k "$KEYCHAIN_PATH"
+          security set-key-partition-list \
+            -S apple-tool:,apple:,codesign: \
+            -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security list-keychain -d user -s "$KEYCHAIN_PATH" $(security list-keychain -d user | xargs)
+          rm -f "$CERT_PATH"
+
+      - name: Build Logram.app (signed)
+        if: env.HAS_SIGNING == 'true'
+        env:
+          DEV_ID: ${{ secrets.MACOS_DEVELOPER_ID }}
+          TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          xcodebuild \
+            -project Logram.xcodeproj \
+            -scheme Logram \
+            -configuration Release \
+            CODE_SIGN_STYLE=Manual \
+            CODE_SIGN_IDENTITY="$DEV_ID" \
+            DEVELOPMENT_TEAM="$TEAM_ID" \
+            OTHER_CODE_SIGN_FLAGS="--timestamp --options=runtime" \
+            CONFIGURATION_BUILD_DIR="$PWD/build" \
+            clean build
+
+      - name: Build Logram.app (ad-hoc)
+        if: env.HAS_SIGNING != 'true'
         run: |
           xcodebuild \
             -project Logram.xcodeproj \
@@ -43,10 +90,32 @@ jobs:
             CONFIGURATION_BUILD_DIR="$PWD/build" \
             clean build
 
+      - name: Notarize and staple
+        if: env.DO_NOTARIZE == 'true'
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          cd build
+          ditto -c -k --sequesterRsrc --keepParent Logram.app Logram-notary.zip
+          xcrun notarytool submit Logram-notary.zip \
+            --apple-id "$APPLE_ID" \
+            --password "$APPLE_APP_PASSWORD" \
+            --team-id "$APPLE_TEAM_ID" \
+            --wait
+          xcrun stapler staple Logram.app
+          rm -f Logram-notary.zip
+
       - name: Package Logram.app
         run: |
           cd build
           ditto -c -k --sequesterRsrc --keepParent Logram.app ../Logram-macos.zip
+
+      - name: Cleanup keychain
+        if: always() && env.HAS_SIGNING == 'true'
+        run: |
+          security delete-keychain "$RUNNER_TEMP/build.keychain" || true
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -63,13 +132,9 @@ jobs:
           body: |
             ## macOS
 
-            Приложение подписано ad-hoc (без Apple Developer ID), поэтому при первом запуске macOS скажет, что файл «повреждён». Это карантин Gatekeeper — снимается одной командой в Терминале после того, как перетащили `Logram.app` в `/Applications`:
+            Приложение подписано Developer ID Application и нотарифицировано Apple — запускается обычным двойным кликом, без Gatekeeper-предупреждений.
 
-            ```bash
-            xattr -dr com.apple.quarantine /Applications/Logram.app
-            ```
-
-            После этого приложение запускается обычным двойным кликом.
+            Установка: распакуйте `Logram-macos.zip`, перетащите `Logram.app` в `/Applications`.
 
             ## Windows
 
@@ -114,3 +179,27 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: Logram-windows.zip
+
+  linux:
+    name: Build Linux
+    runs-on: ubuntu-24.04
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake ninja-build pkg-config libgtk-4-dev
+
+      - name: Configure CMake
+        working-directory: LogramLinux
+        run: cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        working-directory: LogramLinux
+        run: cmake --build build
+
+      - name: Run parser tests
+        working-directory: LogramLinux/build
+        run: ctest --output-on-failure

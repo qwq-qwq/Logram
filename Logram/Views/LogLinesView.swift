@@ -11,6 +11,7 @@ struct LogLinesView: View {
     let showDuration: Bool
     @Binding var selectedId: Int?
     var onJumpToPair: (() -> Void)?
+    var jumpEnabledProvider: (() -> Bool)?
     var onFocusOnCall: (() -> Void)?
     var onClearFocus: (() -> Void)?
     var focusActive: Bool = false
@@ -20,6 +21,7 @@ struct LogLinesView: View {
             allLines: allLines, indices: indices, theme: theme,
             showDuration: showDuration, selectedId: $selectedId,
             onJumpToPair: onJumpToPair,
+            jumpEnabledProvider: jumpEnabledProvider,
             onFocusOnCall: onFocusOnCall,
             onClearFocus: onClearFocus,
             focusActive: focusActive
@@ -34,6 +36,8 @@ class LogNSTableView: NSTableView {
     var onJumpToPair: (() -> Void)?
     var onFocusOnCall: (() -> Void)?
     var onClearFocus: (() -> Void)?
+    var onJumpToPairMenu: (() -> Void)?
+    var jumpEnabledProvider: (() -> Bool)?
     var focusActive: Bool = false
 
     override func menu(for event: NSEvent) -> NSMenu? {
@@ -59,11 +63,20 @@ class LogNSTableView: NSTableView {
         clearItem.target = self
         clearItem.isEnabled = focusActive
         menu.addItem(clearItem)
+
+        let jumpItem = NSMenuItem(title: "Jump to matching pair",
+                                  action: #selector(jumpToPairAction),
+                                  keyEquivalent: "j")
+        jumpItem.keyEquivalentModifierMask = [.command]
+        jumpItem.target = self
+        jumpItem.isEnabled = jumpEnabledProvider?() ?? false
+        menu.addItem(jumpItem)
         return menu
     }
 
     @objc private func focusOnCallAction() { onFocusOnCall?() }
     @objc private func clearFocusAction()  { onClearFocus?() }
+    @objc private func jumpToPairAction()  { onJumpToPairMenu?() }
 
     override func keyDown(with event: NSEvent) {
         let cmd = event.modifierFlags.contains(.command)
@@ -89,6 +102,7 @@ struct LogTableView: NSViewRepresentable {
     let showDuration: Bool
     @Binding var selectedId: Int?
     var onJumpToPair: (() -> Void)?
+    var jumpEnabledProvider: (() -> Bool)?
     var onFocusOnCall: (() -> Void)?
     var onClearFocus: (() -> Void)?
     var focusActive: Bool = false
@@ -124,6 +138,8 @@ struct LogTableView: NSViewRepresentable {
             coordinator?.copyRows(rows)
         }
         tableView.onJumpToPair = onJumpToPair
+        tableView.onJumpToPairMenu = onJumpToPair
+        tableView.jumpEnabledProvider = jumpEnabledProvider
         tableView.onFocusOnCall = onFocusOnCall
         tableView.onClearFocus = onClearFocus
         tableView.focusActive = focusActive
@@ -154,6 +170,8 @@ struct LogTableView: NSViewRepresentable {
         coord.currentTheme = theme
         coord.currentShowDuration = showDuration
         tableView.onJumpToPair = onJumpToPair
+        tableView.onJumpToPairMenu = onJumpToPair
+        tableView.jumpEnabledProvider = jumpEnabledProvider
         tableView.onFocusOnCall = onFocusOnCall
         tableView.onClearFocus = onClearFocus
         tableView.focusActive = focusActive

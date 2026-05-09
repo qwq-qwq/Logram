@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=Logram
+GenericName=Log Analyzer
+Comment=UnityBase log file analyzer
+Exec=Logram %F
+Icon=com.unitybase.Logram
+Terminal=false
+Categories=Development;Utility;
+MimeType=text/x-log;text/plain;
+StartupWMClass=com.unitybase.Logram
+Keywords=log;UnityBase;UB;analyzer;
