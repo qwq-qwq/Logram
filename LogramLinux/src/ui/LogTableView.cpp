@@ -95,11 +95,13 @@ void FormatThreadCell(GtkLabel* label, LogDocument* doc, guint lineId, guint) {
     const auto& line = doc->AllLines()[lineId];
     if (line.thread < 0) {
         gtk_label_set_text(label, "");
-    } else {
-        char buf[8];
-        std::snprintf(buf, sizeof(buf), "%d", line.thread);
-        gtk_label_set_text(label, buf);
+        return;
     }
+    char* markup = g_markup_printf_escaped(
+        "<span foreground=\"%s\" weight=\"bold\">%d</span>",
+        ThreadHexColor(line.thread), line.thread);
+    gtk_label_set_markup(label, markup);
+    g_free(markup);
 }
 
 void FormatLevelCell(GtkLabel* label, LogDocument* doc, guint lineId, guint) {

@@ -111,6 +111,10 @@ void FilterSidebar::SetDocument(LogDocument* doc) {
     Rebuild();
 }
 
+void FilterSidebar::Refresh() {
+    Rebuild();
+}
+
 void FilterSidebar::Rebuild() {
     ClearBox(levelsBox_);
     ClearBox(threadsBox_);

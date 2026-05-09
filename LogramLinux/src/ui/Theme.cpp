@@ -242,3 +242,23 @@ const char* LevelHexColor(LogLevel level) {
     if (idx < 0 || idx >= kLogLevelCount) return "#a9b1d6";
     return kColors[idx];
 }
+
+const char* ThreadHexColor(int threadIdx) {
+    // Mirror of LogramWin/src/ui/ThemeColors.cpp threadColors[12].
+    static constexpr std::array<const char*, 12> kThread = {{
+        "#f75454", // 0  systemRed
+        "#337aff", // 1  systemBlue
+        "#33c759", // 2  systemGreen
+        "#ff9d0a", // 3  systemOrange
+        "#b052de", // 4  systemPurple
+        "#59c7cc", // 5  systemTeal
+        "#ff2e54", // 6  systemPink
+        "#00c7bf", // 7  systemMint
+        "#5957d6", // 8  systemIndigo
+        "#a3855e", // 9  systemBrown
+        "#63d2ff", // 10 systemCyan
+        "#ffd60a", // 11 systemYellow
+    }};
+    if (threadIdx < 0) return "#a9b1d6";
+    return kThread[threadIdx % kThread.size()];
+}

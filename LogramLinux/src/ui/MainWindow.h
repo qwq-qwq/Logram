@@ -30,6 +30,7 @@ public:
     // Row actions (invoked via GAction accelerators).
     void CopySelectedLine();
     void JumpToPair();
+    void ToggleFocusOnCall();
 
 private:
     void UpdateStatus();

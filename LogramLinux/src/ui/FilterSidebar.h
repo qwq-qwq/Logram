@@ -19,6 +19,9 @@ public:
 
     GtkWidget* Widget() const { return scroller_; }
     void SetDocument(LogDocument* doc);
+    // Re-syncs the checkboxes with the document's current masks. Use when
+    // the document's enabled masks were changed externally (e.g. FocusOnCall).
+    void Refresh();
     void SetOnChanged(std::function<void()> cb) { onChanged_ = std::move(cb); }
 
     // Internal — invoked from C-style GTK callbacks.

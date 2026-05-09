@@ -75,6 +75,9 @@ void OnCopyAction(GSimpleAction*, GVariant*, gpointer self) {
 void OnJumpPairAction(GSimpleAction*, GVariant*, gpointer self) {
     static_cast<MainWindow*>(self)->JumpToPair();
 }
+void OnFocusCallAction(GSimpleAction*, GVariant*, gpointer self) {
+    static_cast<MainWindow*>(self)->ToggleFocusOnCall();
+}
 
 } // namespace
 
@@ -143,25 +146,28 @@ MainWindow::~MainWindow() = default;
 
 void MainWindow::InstallActions() {
     static const GActionEntry kActions[] = {
-        {"find",       OnFindAction,     nullptr, nullptr, nullptr, {0, 0, 0}},
-        {"find-next",  OnFindNextAction, nullptr, nullptr, nullptr, {0, 0, 0}},
-        {"find-prev",  OnFindPrevAction, nullptr, nullptr, nullptr, {0, 0, 0}},
-        {"copy",       OnCopyAction,     nullptr, nullptr, nullptr, {0, 0, 0}},
-        {"jump-pair",  OnJumpPairAction, nullptr, nullptr, nullptr, {0, 0, 0}},
+        {"find",       OnFindAction,      nullptr, nullptr, nullptr, {0, 0, 0}},
+        {"find-next",  OnFindNextAction,  nullptr, nullptr, nullptr, {0, 0, 0}},
+        {"find-prev",  OnFindPrevAction,  nullptr, nullptr, nullptr, {0, 0, 0}},
+        {"copy",       OnCopyAction,      nullptr, nullptr, nullptr, {0, 0, 0}},
+        {"jump-pair",  OnJumpPairAction,  nullptr, nullptr, nullptr, {0, 0, 0}},
+        {"focus-call", OnFocusCallAction, nullptr, nullptr, nullptr, {0, 0, 0}},
     };
     g_action_map_add_action_entries(G_ACTION_MAP(window_),
                                     kActions, G_N_ELEMENTS(kActions), this);
 
-    const char* findAccels[]  = {"<Control>f", nullptr};
-    const char* nextAccels[]  = {"F3", nullptr};
-    const char* prevAccels[]  = {"<Shift>F3", nullptr};
-    const char* copyAccels[]  = {"<Control>c", nullptr};
-    const char* jumpAccels[]  = {"<Control>j", nullptr};
+    const char* findAccels[]  = {"<Control>f",        nullptr};
+    const char* nextAccels[]  = {"F3",                nullptr};
+    const char* prevAccels[]  = {"<Shift>F3",         nullptr};
+    const char* copyAccels[]  = {"<Control>c",        nullptr};
+    const char* jumpAccels[]  = {"<Control>j",        nullptr};
+    const char* focusAccels[] = {"<Control><Shift>e", nullptr};
     gtk_application_set_accels_for_action(app_, "win.find",       findAccels);
     gtk_application_set_accels_for_action(app_, "win.find-next",  nextAccels);
     gtk_application_set_accels_for_action(app_, "win.find-prev",  prevAccels);
     gtk_application_set_accels_for_action(app_, "win.copy",       copyAccels);
     gtk_application_set_accels_for_action(app_, "win.jump-pair",  jumpAccels);
+    gtk_application_set_accels_for_action(app_, "win.focus-call", focusAccels);
 }
 
 void MainWindow::OnOpenClicked() {
@@ -218,6 +224,24 @@ void MainWindow::CopySelectedLine() {
     const std::string text(raw);
     GdkClipboard* clip = gtk_widget_get_clipboard(window_);
     gdk_clipboard_set_text(clip, text.c_str());
+}
+
+void MainWindow::ToggleFocusOnCall() {
+    if (!doc_) return;
+    if (doc_->FocusActive()) {
+        doc_->ClearFocus();
+    } else {
+        if (selectedLineId_ < 0 || !doc_->FocusOnCall(selectedLineId_)) {
+            gtk_widget_error_bell(window_);
+            return;
+        }
+    }
+    doc_->ApplyFilters();
+    sidebar_->Refresh();
+    table_->Refresh();
+    detail_->Clear();
+    ResetSearch();
+    UpdateStatus();
 }
 
 void MainWindow::JumpToPair() {
@@ -290,12 +314,22 @@ void MainWindow::UpdateStatus() {
         return;
     }
     char buf[1024];
-    std::snprintf(buf, sizeof(buf),
-                  "%d / %d lines · %zu threads · %d errors · %s",
-                  doc_->FilteredCount(),
-                  doc_->TotalEvents(),
-                  doc_->ActiveThreads().size(),
-                  doc_->ErrorCount(),
-                  doc_->DurationFormatted().c_str());
+    if (doc_->FocusActive()) {
+        std::snprintf(buf, sizeof(buf),
+                      "[Focused on thread %d, lines %d–%d]   %d / %d lines",
+                      doc_->FocusThread(),
+                      doc_->FocusStart() + 1,
+                      doc_->FocusEnd() + 1,
+                      doc_->FilteredCount(),
+                      doc_->TotalEvents());
+    } else {
+        std::snprintf(buf, sizeof(buf),
+                      "%d / %d lines · %zu threads · %d errors · %s",
+                      doc_->FilteredCount(),
+                      doc_->TotalEvents(),
+                      doc_->ActiveThreads().size(),
+                      doc_->ErrorCount(),
+                      doc_->DurationFormatted().c_str());
+    }
     gtk_label_set_text(GTK_LABEL(statusLabel_), buf);
 }

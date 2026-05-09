@@ -12,3 +12,7 @@ public:
 // Hex string ("#rrggbb") for the Tokyo Night message-color of a log level.
 // Matches LogramWin/src/ui/ThemeColors.cpp messageColor[].
 const char* LevelHexColor(LogLevel level);
+
+// Hex string ("#rrggbb") for a thread index, cycling through a 12-color
+// palette identical to LogramWin/src/ui/ThemeColors.cpp threadColors[].
+const char* ThreadHexColor(int threadIdx);
