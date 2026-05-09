@@ -270,9 +270,9 @@ LogTableView::LogTableView() {
 
     // Build the right-click context menu (reused on every popup).
     GMenu* menu = g_menu_new();
-    g_menu_append(menu, "Jump to matching pair", "win.jump-pair");
     g_menu_append(menu, "Focus on call",         "win.focus-call");
     g_menu_append(menu, "Cancel focus",          "win.cancel-focus");
+    g_menu_append(menu, "Jump to matching pair", "win.jump-pair");
 
     popover_ = gtk_popover_menu_new_from_model(G_MENU_MODEL(menu));
     gtk_popover_set_has_arrow(GTK_POPOVER(popover_), FALSE);
