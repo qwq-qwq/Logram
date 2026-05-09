@@ -31,6 +31,7 @@ public:
     void CopySelectedLine();
     void JumpToPair();
     void ToggleFocusOnCall();
+    void CancelFocus();
     void GotoError(bool forward);
 
     // Header-bar params toggle.
