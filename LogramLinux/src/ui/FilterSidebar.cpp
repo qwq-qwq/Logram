@@ -344,12 +344,11 @@ void FilterSidebar::ShowRowContextMenu(GtkWidget* row, double x, double y) {
     // the popover anchors near the actual click instead of the scroller's
     // origin.
     double sx = 0, sy = 0;
+    graphene_point_t in;
+    in.x = static_cast<float>(x);
+    in.y = static_cast<float>(y);
     graphene_point_t out;
-    if (gtk_widget_compute_point(
-            row, scroller_,
-            &GRAPHENE_POINT_INIT(static_cast<float>(x),
-                                 static_cast<float>(y)),
-            &out)) {
+    if (gtk_widget_compute_point(row, scroller_, &in, &out)) {
         sx = out.x;
         sy = out.y;
     }
