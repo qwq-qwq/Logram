@@ -40,6 +40,36 @@ target_link_libraries(logram_core PUBLIC Threads::Threads)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(GTK4 REQUIRED IMPORTED_TARGET gtk4>=4.14)
 
+# --- GResource (app icons) ---
+find_program(GLIB_COMPILE_RESOURCES glib-compile-resources REQUIRED)
+set(LOGRAM_GRESOURCE_XML
+    ${CMAKE_CURRENT_SOURCE_DIR}/resources/logram.gresource.xml)
+set(LOGRAM_GRESOURCE_C
+    ${CMAKE_CURRENT_BINARY_DIR}/logram_resources.c)
+
+# Use --generate-dependencies to make CMake re-run the compile when any of
+# the referenced PNGs change.
+execute_process(
+    COMMAND ${GLIB_COMPILE_RESOURCES}
+            --generate-dependencies
+            --sourcedir=${CMAKE_CURRENT_SOURCE_DIR}/resources
+            ${LOGRAM_GRESOURCE_XML}
+    OUTPUT_VARIABLE LOGRAM_GRESOURCE_DEPS_RAW
+    OUTPUT_STRIP_TRAILING_WHITESPACE)
+string(REPLACE "\n" ";" LOGRAM_GRESOURCE_DEPS "${LOGRAM_GRESOURCE_DEPS_RAW}")
+list(TRANSFORM LOGRAM_GRESOURCE_DEPS
+    PREPEND "${CMAKE_CURRENT_SOURCE_DIR}/resources/")
+
+add_custom_command(
+    OUTPUT ${LOGRAM_GRESOURCE_C}
+    COMMAND ${GLIB_COMPILE_RESOURCES}
+            --target=${LOGRAM_GRESOURCE_C}
+            --generate-source
+            --sourcedir=${CMAKE_CURRENT_SOURCE_DIR}/resources
+            ${LOGRAM_GRESOURCE_XML}
+    DEPENDS ${LOGRAM_GRESOURCE_XML} ${LOGRAM_GRESOURCE_DEPS}
+    VERBATIM)
+
 # --- Main executable ---
 add_executable(Logram
     src/main.cpp
@@ -49,6 +79,7 @@ add_executable(Logram
     src/ui/FilterSidebar.cpp
     src/ui/DetailPanel.cpp
     src/ui/Theme.cpp
+    ${LOGRAM_GRESOURCE_C}
 )
 target_include_directories(Logram PRIVATE src)
 target_link_libraries(Logram PRIVATE
