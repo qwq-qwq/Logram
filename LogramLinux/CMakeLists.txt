@@ -60,10 +60,13 @@ add_custom_command(
     COMMAND ${GLIB_COMPILE_RESOURCES}
             --target=${LOGRAM_GRESOURCE_C}
             --generate-source
+            --c-name=logram
             --sourcedir=${CMAKE_CURRENT_SOURCE_DIR}/resources
             ${LOGRAM_GRESOURCE_XML}
     DEPENDS ${LOGRAM_GRESOURCE_XML} ${LOGRAM_GRESOURCE_DEPS}
     VERBATIM)
+# Mark explicitly as generated so add_executable picks it up correctly.
+set_source_files_properties(${LOGRAM_GRESOURCE_C} PROPERTIES GENERATED TRUE)
 
 # --- Main executable ---
 add_executable(Logram
