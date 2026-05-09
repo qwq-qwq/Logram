@@ -104,13 +104,13 @@ checkbutton > check {
     background-color: #1f2335;
     background-image: none;
     border: 1px solid #4a5478;
-    border-radius: 4px;
-    min-width: 18px;
-    min-height: 18px;
+    border-radius: 3px;
+    min-width: 14px;
+    min-height: 14px;
     margin-right: 6px;
     box-shadow: none;
     outline: none;
-    -gtk-icon-size: 12px;
+    -gtk-icon-size: 10px;
 }
 checkbutton > check:checked,
 checkbutton check:checked,
@@ -122,7 +122,7 @@ checkbutton:checked check {
     color: #7aa2f7;
     box-shadow: none;
     outline: none;
-    -gtk-icon-size: 12px;
+    -gtk-icon-size: 10px;
 }
 checkbutton > check:hover {
     border-color: #6479a8;
@@ -303,13 +303,13 @@ checkbutton > check {
     background-color: #0a0a0a;
     background-image: none;
     border: 1px solid #555555;
-    border-radius: 4px;
-    min-width: 18px;
-    min-height: 18px;
+    border-radius: 3px;
+    min-width: 14px;
+    min-height: 14px;
     margin-right: 6px;
     box-shadow: none;
     outline: none;
-    -gtk-icon-size: 12px;
+    -gtk-icon-size: 10px;
 }
 checkbutton > check:checked,
 checkbutton check:checked,
@@ -321,7 +321,7 @@ checkbutton:checked check {
     color: #b0b0b0;
     box-shadow: none;
     outline: none;
-    -gtk-icon-size: 12px;
+    -gtk-icon-size: 10px;
 }
 checkbutton > check:hover {
     border-color: #808080;
