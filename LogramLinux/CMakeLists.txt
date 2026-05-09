@@ -98,6 +98,20 @@ target_link_libraries(Logram PRIVATE
     PkgConfig::GTK4
 )
 
+# --- Install rules (icons + .desktop for GNOME Shell / taskbar) ---
+include(GNUInstallDirs)
+
+install(TARGETS Logram
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+
+install(FILES resources/com.unitybase.Logram.desktop
+    DESTINATION ${CMAKE_INSTALL_DATADIR}/applications)
+
+foreach(SIZE 16 32 64 128 256 512)
+    install(FILES resources/icons/hicolor/${SIZE}x${SIZE}/apps/com.unitybase.Logram.png
+        DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/${SIZE}x${SIZE}/apps)
+endforeach()
+
 # --- Tests ---
 option(BUILD_TESTS "Build tests" ON)
 if(BUILD_TESTS)
