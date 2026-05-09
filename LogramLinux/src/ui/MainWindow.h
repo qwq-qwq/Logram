@@ -27,6 +27,10 @@ public:
     void SearchPrev();
     void OnSearchChanged();
 
+    // Row actions (invoked via GAction accelerators).
+    void CopySelectedLine();
+    void JumpToPair();
+
 private:
     void UpdateStatus();
     void OnFiltersChanged();
@@ -40,6 +44,7 @@ private:
     GtkWidget* statusLabel_ = nullptr;
     GtkWidget* searchEntry_ = nullptr;
     int currentMatchPos_ = -1;
+    int selectedLineId_ = -1;
     std::unique_ptr<LogTableView> table_;
     std::unique_ptr<FilterSidebar> sidebar_;
     std::unique_ptr<DetailPanel> detail_;
