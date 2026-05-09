@@ -32,10 +32,12 @@ public:
 
     // Internal — called from a static GTK callback.
     void OnSelectionChanged(unsigned position);
+    void ShowContextMenu(double x, double y);
 
 private:
     GtkWidget* scroller_ = nullptr;
     GtkWidget* columnView_ = nullptr;
+    GtkWidget* popover_ = nullptr;
     GListModel* model_ = nullptr;
     GtkSingleSelection* selection_ = nullptr;
     LogDocument* doc_ = nullptr;

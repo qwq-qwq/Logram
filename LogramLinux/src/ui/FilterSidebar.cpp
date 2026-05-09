@@ -156,10 +156,12 @@ void FilterSidebar::Rebuild() {
         GtkWidget* check = gtk_check_button_new();
         GtkWidget* label = gtk_label_new(nullptr);
         gtk_widget_set_halign(label, GTK_ALIGN_START);
+        const char ch[2] = { static_cast<char>(0x21 + t), '\0' };
         char* markup = g_markup_printf_escaped(
-            "<span foreground=\"%s\" weight=\"bold\">Thread %d</span>"
+            "<span foreground=\"%s\" weight=\"bold\">%s</span>"
+            "  <span foreground=\"#a9b1d6\">Thread %d</span>"
             " <span foreground=\"#565f89\">(%d)</span>",
-            ThreadHexColor(t), t, perThread[t]);
+            ThreadHexColor(t), ch, t, perThread[t]);
         gtk_label_set_markup(GTK_LABEL(label), markup);
         g_free(markup);
         gtk_check_button_set_child(GTK_CHECK_BUTTON(check), label);

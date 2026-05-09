@@ -91,9 +91,13 @@ void FormatThreadCell(GtkLabel* label, LogDocument* doc, guint lineId, guint) {
         gtk_label_set_text(label, "");
         return;
     }
+    // UB log format: thread index is encoded as a printable character
+    // starting at '!' (0x21). Render the same glyph so the column matches
+    // the raw log format and the macOS/Windows builds.
+    const char ch[2] = { static_cast<char>(0x21 + line.thread), '\0' };
     char* markup = g_markup_printf_escaped(
-        "<span foreground=\"%s\" weight=\"bold\">%d</span>",
-        ThreadHexColor(line.thread), line.thread);
+        "<span foreground=\"%s\" weight=\"bold\">%s</span>",
+        ThreadHexColor(line.thread), ch);
     gtk_label_set_markup(label, markup);
     g_free(markup);
 }
@@ -199,6 +203,11 @@ void OnSelectionPropertyChanged(GObject* selection, GParamSpec* /*pspec*/,
         GTK_SINGLE_SELECTION(selection));
     self->OnSelectionChanged(pos);
 }
+
+void OnRightClickPressed(GtkGestureClick* /*gesture*/, int /*n_press*/,
+                         double x, double y, gpointer user_data) {
+    static_cast<LogTableView*>(user_data)->ShowContextMenu(x, y);
+}
 } // namespace
 
 LogTableView::LogTableView() {
@@ -215,10 +224,10 @@ LogTableView::LogTableView() {
     gtk_column_view_set_show_column_separators(GTK_COLUMN_VIEW(columnView_), FALSE);
 
     GtkColumnView* cv = GTK_COLUMN_VIEW(columnView_);
-    gtk_column_view_append_column(cv, MakeColumn("Time",    FormatTimeCell,   110, false));
-    gtk_column_view_append_column(cv, MakeColumn("Thread",  FormatThreadCell,  72, false));
-    gtk_column_view_append_column(cv, MakeColumn("Level",   FormatLevelCell,   80, false));
-    gtk_column_view_append_column(cv, MakeColumn("Message", FormatMessageCell, 0, true));
+    gtk_column_view_append_column(cv, MakeColumn("Time",    FormatTimeCell,    96, false));
+    gtk_column_view_append_column(cv, MakeColumn("Thread",  FormatThreadCell,  32, false));
+    gtk_column_view_append_column(cv, MakeColumn("Level",   FormatLevelCell,   64, false));
+    gtk_column_view_append_column(cv, MakeColumn("Message", FormatMessageCell,  0, true));
 
     // Hide the column header row to match macOS/Windows look. GtkColumnView
     // exposes its header as the first child of its internal layout.
@@ -232,10 +241,38 @@ LogTableView::LogTableView() {
     gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(scroller_), columnView_);
     gtk_widget_set_hexpand(scroller_, TRUE);
     gtk_widget_set_vexpand(scroller_, TRUE);
+
+    // Build the right-click context menu (reused on every popup).
+    GMenu* menu = g_menu_new();
+    g_menu_append(menu, "Copy line",            "win.copy");
+    g_menu_append(menu, "Jump to matching pair","win.jump-pair");
+    g_menu_append(menu, "Focus on call",        "win.focus-call");
+    GMenu* errSection = g_menu_new();
+    g_menu_append(errSection, "Next error",     "win.next-error");
+    g_menu_append(errSection, "Previous error", "win.prev-error");
+    g_menu_append_section(menu, nullptr, G_MENU_MODEL(errSection));
+    g_object_unref(errSection);
+
+    popover_ = gtk_popover_menu_new_from_model(G_MENU_MODEL(menu));
+    gtk_popover_set_has_arrow(GTK_POPOVER(popover_), FALSE);
+    gtk_widget_set_parent(popover_, columnView_);
+    g_object_unref(menu);
+
+    GtkGesture* rclick = gtk_gesture_click_new();
+    gtk_gesture_single_set_button(GTK_GESTURE_SINGLE(rclick),
+                                  GDK_BUTTON_SECONDARY);
+    g_signal_connect(rclick, "pressed",
+                     G_CALLBACK(OnRightClickPressed), this);
+    gtk_widget_add_controller(columnView_, GTK_EVENT_CONTROLLER(rclick));
 }
 
 LogTableView::~LogTableView() {
-    // GtkWidget tree owns itself once attached to a window; nothing to free here.
+    // popover_ was set as child of columnView_ via gtk_widget_set_parent;
+    // unparent so it gets freed with us, not leaked alongside the column view.
+    if (popover_) {
+        gtk_widget_unparent(popover_);
+        popover_ = nullptr;
+    }
 }
 
 void LogTableView::SetDocument(LogDocument* doc) {
@@ -259,6 +296,13 @@ void LogTableView::ScrollToPosition(unsigned position) {
         /*column=*/nullptr,
         static_cast<GtkListScrollFlags>(GTK_LIST_SCROLL_FOCUS | GTK_LIST_SCROLL_SELECT),
         /*scroll=*/nullptr);
+}
+
+void LogTableView::ShowContextMenu(double x, double y) {
+    if (!popover_) return;
+    const GdkRectangle rect = {static_cast<int>(x), static_cast<int>(y), 1, 1};
+    gtk_popover_set_pointing_to(GTK_POPOVER(popover_), &rect);
+    gtk_popover_popup(GTK_POPOVER(popover_));
 }
 
 void LogTableView::OnSelectionChanged(unsigned position) {

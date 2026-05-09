@@ -104,6 +104,21 @@ MainWindow::MainWindow(GtkApplication* app) : app_(app) {
     g_signal_connect(openBtn, "clicked", G_CALLBACK(OnOpenButtonClicked), this);
     gtk_header_bar_pack_start(GTK_HEADER_BAR(header), openBtn);
 
+    // pack_end accumulates right-to-left; first call → rightmost.
+    // Desired order (left → right):
+    //   [Params] [Search] [↑Error] [↓Error]
+    GtkWidget* nextErrBtn = gtk_button_new_from_icon_name("go-down-symbolic");
+    gtk_widget_add_css_class(nextErrBtn, "flat");
+    gtk_widget_set_tooltip_text(nextErrBtn, "Next error (Ctrl+Shift+Down)");
+    gtk_actionable_set_action_name(GTK_ACTIONABLE(nextErrBtn), "win.next-error");
+    gtk_header_bar_pack_end(GTK_HEADER_BAR(header), nextErrBtn);
+
+    GtkWidget* prevErrBtn = gtk_button_new_from_icon_name("go-up-symbolic");
+    gtk_widget_add_css_class(prevErrBtn, "flat");
+    gtk_widget_set_tooltip_text(prevErrBtn, "Previous error (Ctrl+Shift+Up)");
+    gtk_actionable_set_action_name(GTK_ACTIONABLE(prevErrBtn), "win.prev-error");
+    gtk_header_bar_pack_end(GTK_HEADER_BAR(header), prevErrBtn);
+
     searchEntry_ = gtk_search_entry_new();
     gtk_widget_set_size_request(searchEntry_, 280, -1);
     gtk_search_entry_set_placeholder_text(GTK_SEARCH_ENTRY(searchEntry_),
