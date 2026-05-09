@@ -1,12 +1,12 @@
 #pragma once
 
 #include <gtk/gtk.h>
+#include <string>
 
 class LogDocument;
 
-// Bottom panel showing the raw text (and pretty-formatted SQL/JSON) of the
-// currently selected log line. No syntax highlighting yet — that arrives
-// alongside theming.
+// Bottom panel showing the (formatted) text of the currently selected log
+// line. Applies SQL or JSON syntax highlighting via GtkTextBuffer tags.
 class DetailPanel {
 public:
     DetailPanel();
@@ -21,6 +21,11 @@ public:
     void Clear();
 
 private:
+    void ApplyTagBytes(const char* tag, const std::string& src, int charBase,
+                       size_t byteStart, size_t byteEnd);
+    void HighlightSql(const std::string& src, int charBase);
+    void HighlightJson(const std::string& src, int charBase);
+
     GtkWidget* scroller_ = nullptr;
     GtkWidget* textView_ = nullptr;
     GtkTextBuffer* buffer_ = nullptr;

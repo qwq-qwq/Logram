@@ -1,4 +1,5 @@
 #include "ui/FilterSidebar.h"
+#include "ui/Theme.h"
 #include "core/LogDocument.h"
 #include "core/LogLevel.h"
 
@@ -128,10 +129,19 @@ void FilterSidebar::Rebuild() {
     for (int i = 0; i < kLogLevelCount; ++i) {
         if (perLevel[i] <= 0) continue;
         const auto& info = GetLogLevelInfo(static_cast<LogLevel>(i));
-        char label[64];
-        std::snprintf(label, sizeof(label), "%s (%d)", info.label, perLevel[i]);
+        const LogLevel level = static_cast<LogLevel>(i);
 
-        GtkWidget* check = gtk_check_button_new_with_label(label);
+        GtkWidget* check = gtk_check_button_new();
+        GtkWidget* label = gtk_label_new(nullptr);
+        gtk_widget_set_halign(label, GTK_ALIGN_START);
+        char* markup = g_markup_printf_escaped(
+            "<span foreground=\"%s\">%s</span>"
+            " <span foreground=\"#565f89\">(%d)</span>",
+            LevelHexColor(level), info.label, perLevel[i]);
+        gtk_label_set_markup(GTK_LABEL(label), markup);
+        g_free(markup);
+        gtk_check_button_set_child(GTK_CHECK_BUTTON(check), label);
+
         gtk_check_button_set_active(GTK_CHECK_BUTTON(check),
             (levelMask >> i) & 1ULL);
         g_object_set_data(G_OBJECT(check), kLevelIdKey, GINT_TO_POINTER(i));
@@ -142,10 +152,18 @@ void FilterSidebar::Rebuild() {
 
     for (int t : doc_->ActiveThreads()) {
         if (t < 0 || t >= kMaxThreads) continue;
-        char label[32];
-        std::snprintf(label, sizeof(label), "Thread %d (%d)", t, perThread[t]);
 
-        GtkWidget* check = gtk_check_button_new_with_label(label);
+        GtkWidget* check = gtk_check_button_new();
+        GtkWidget* label = gtk_label_new(nullptr);
+        gtk_widget_set_halign(label, GTK_ALIGN_START);
+        char* markup = g_markup_printf_escaped(
+            "<span foreground=\"%s\" weight=\"bold\">Thread %d</span>"
+            " <span foreground=\"#565f89\">(%d)</span>",
+            ThreadHexColor(t), t, perThread[t]);
+        gtk_label_set_markup(GTK_LABEL(label), markup);
+        g_free(markup);
+        gtk_check_button_set_child(GTK_CHECK_BUTTON(check), label);
+
         gtk_check_button_set_active(GTK_CHECK_BUTTON(check),
             (threadMask >> t) & 1ULL);
         g_object_set_data(G_OBJECT(check), kThreadIdKey, GINT_TO_POINTER(t));

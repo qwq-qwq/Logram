@@ -85,12 +85,6 @@ namespace {
 using CellFormatter = void (*)(GtkLabel* label, LogDocument* doc,
                                guint lineId, guint position);
 
-void FormatLineNoCell(GtkLabel* label, LogDocument*, guint, guint position) {
-    char buf[16];
-    std::snprintf(buf, sizeof(buf), "%u", position + 1);
-    gtk_label_set_text(label, buf);
-}
-
 void FormatThreadCell(GtkLabel* label, LogDocument* doc, guint lineId, guint) {
     const auto& line = doc->AllLines()[lineId];
     if (line.thread < 0) {
@@ -221,7 +215,6 @@ LogTableView::LogTableView() {
     gtk_column_view_set_show_column_separators(GTK_COLUMN_VIEW(columnView_), FALSE);
 
     GtkColumnView* cv = GTK_COLUMN_VIEW(columnView_);
-    gtk_column_view_append_column(cv, MakeColumn("#",       FormatLineNoCell,  72, false));
     gtk_column_view_append_column(cv, MakeColumn("Thread",  FormatThreadCell,  72, false));
     gtk_column_view_append_column(cv, MakeColumn("Level",   FormatLevelCell,   80, false));
     gtk_column_view_append_column(cv, MakeColumn("Time",    FormatTimeCell,   110, false));
