@@ -142,7 +142,11 @@ jobs:
 
             ## Linux
 
-            Распакуйте `Logram-linux.tar.gz`, инструкции по установке — в `INSTALL.md` внутри архива (быстрый user-only вариант через `~/.local/`). Требует Ubuntu 24.04+ или другой дистрибутив с GTK 4.14+.
+            ```bash
+            sudo apt install ./logram_1.2.0_amd64.deb
+            ```
+
+            Появляется в Activities, ассоциируется с `.log` файлами (правый клик → Open With Logram). Удаление — `sudo apt remove logram`. Требует Ubuntu 24.04+ или другой Debian-based дистрибутив с GTK 4.14+.
 
             ---
 
@@ -208,45 +212,39 @@ jobs:
         working-directory: LogramLinux/build
         run: ctest --output-on-failure
 
-      - name: Package Logram (tar.gz)
+      - name: Strip binary
+        run: strip LogramLinux/build/Logram
+
+      - name: Build .deb package
+        working-directory: LogramLinux/build
         run: |
-          STAGE="$RUNNER_TEMP/Logram-linux"
-          mkdir -p "$STAGE/bin" "$STAGE/share/applications"
-          mkdir -p "$STAGE/share/icons/hicolor"
-          cp LogramLinux/build/Logram "$STAGE/bin/Logram"
-          strip "$STAGE/bin/Logram" || true
-          cp LogramLinux/resources/com.unitybase.Logram.desktop \
-             "$STAGE/share/applications/"
-          cp -R LogramLinux/resources/icons/hicolor/* \
-                "$STAGE/share/icons/hicolor/"
-          cat > "$STAGE/INSTALL.md" <<'EOF'
-          # Logram for Linux
+          cpack -G DEB
+          ls -la *.deb
+          cp *.deb "$GITHUB_WORKSPACE/"
 
-          Quick install into your user prefix (no root needed):
-
-          ```bash
-          mkdir -p ~/.local/bin ~/.local/share/applications ~/.local/share/icons/hicolor
-          cp -v bin/Logram ~/.local/bin/
-          cp -v share/applications/com.unitybase.Logram.desktop ~/.local/share/applications/
-          cp -Rv share/icons/hicolor/* ~/.local/share/icons/hicolor/
-          update-desktop-database ~/.local/share/applications 2>/dev/null || true
-          gtk-update-icon-cache ~/.local/share/icons/hicolor 2>/dev/null || true
-          ```
-
-          Then launch from Activities (search "Logram") or run `~/.local/bin/Logram`.
-
-          Requires GTK 4.14 (Ubuntu 24.04+, Fedora 40+).
-          EOF
-          tar -czf "$GITHUB_WORKSPACE/Logram-linux.tar.gz" -C "$RUNNER_TEMP" Logram-linux
+      - name: Verify package
+        run: |
+          DEB=$(ls "$GITHUB_WORKSPACE"/logram_*.deb)
+          echo "::group::dpkg -I $DEB"
+          dpkg -I "$DEB"
+          echo "::endgroup::"
+          echo "::group::dpkg -c $DEB (contents)"
+          dpkg -c "$DEB"
+          echo "::endgroup::"
+          # Smoke install in CI to catch missing deps before users do.
+          sudo apt-get install -y "$DEB"
+          which Logram
+          file "$(which Logram)"
+          sudo apt-get remove -y logram
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: Logram-linux
-          path: Logram-linux.tar.gz
+          path: logram_*.deb
 
       - name: Attach to Release
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
-          files: Logram-linux.tar.gz
+          files: logram_*.deb

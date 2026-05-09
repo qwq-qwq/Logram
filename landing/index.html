@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Logram — аналізатор логів UnityBase для macOS та Windows</title>
-<meta name="description" content="Нативний аналізатор логів UnityBase для macOS і Windows: мільйон рядків, чотири формати, метод-таймінги, SQL-підсвітка, вкладки." />
+<title>Logram — аналізатор логів UnityBase для macOS, Windows та Linux</title>
+<meta name="description" content="Нативний аналізатор логів UnityBase для macOS, Windows та Linux: мільйон рядків, чотири формати, метод-таймінги, SQL-підсвітка, вкладки." />
 
 <link rel="canonical" href="https://logram.perek.rest/" />
 <link rel="alternate" hreflang="uk" href="https://logram.perek.rest/" />
@@ -17,8 +17,8 @@
 
 <meta property="og:type" content="website" />
 <meta property="og:url" content="https://logram.perek.rest/" />
-<meta property="og:title" content="Logram — аналізатор логів UnityBase для macOS та Windows" />
-<meta property="og:description" content="Мільйон рядків без пауз. Чотири формати UB-логів, метод-таймінги, SQL з підстановкою cust1, теми Tokyo Night і TTY. Нативно на macOS і Windows." />
+<meta property="og:title" content="Logram — аналізатор логів UnityBase для macOS, Windows та Linux" />
+<meta property="og:description" content="Мільйон рядків без пауз. Чотири формати UB-логів, метод-таймінги, SQL з підстановкою cust1, теми Tokyo Night і TTY. Нативно на macOS, Windows та Linux." />
 <meta property="og:image" content="https://logram.perek.rest/assets/screenshot.png" />
 <meta property="og:image:width" content="2560" />
 <meta property="og:image:height" content="1600" />
@@ -28,8 +28,8 @@
 <meta property="og:site_name" content="Logram" />
 
 <meta name="twitter:card" content="summary_large_image" />
-<meta name="twitter:title" content="Logram — аналізатор логів UnityBase для macOS та Windows" />
-<meta name="twitter:description" content="Мільйон рядків без пауз. Нативний аналізатор для macOS (SwiftUI) і Windows (Win32 + Direct2D)." />
+<meta name="twitter:title" content="Logram — аналізатор логів UnityBase для macOS, Windows та Linux" />
+<meta name="twitter:description" content="Мільйон рядків без пауз. Нативний аналізатор для macOS (SwiftUI), Windows (Win32 + Direct2D) та Linux (GTK4)." />
 <meta name="twitter:image" content="https://logram.perek.rest/assets/screenshot.png" />
 
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%230f1016'/><circle cx='16' cy='16' r='6' fill='%239ece6a'/><circle cx='16' cy='16' r='10' fill='none' stroke='%239ece6a' stroke-opacity='.25' stroke-width='2'/></svg>" />
@@ -58,14 +58,14 @@
       <a href="/ru/" hreflang="ru">RU</a>
       <a href="/en/" hreflang="en">EN</a>
     </div>
-    <div class="nav-meta">v1.1 / macOS + Win</div>
+    <div class="nav-meta">v1.2 / macOS + Win + Linux</div>
   </div>
 </nav>
 
 <header class="hero">
   <div class="hero-meta">
-    <span>REL <b>2026.04</b></span>
-    <span>TGT <b>MACOS 14+ / WIN10+</b></span>
+    <span>REL <b>2026.05</b></span>
+    <span>TGT <b>MACOS 14+ / WIN10+ / UBUNTU 24+</b></span>
     <span>SWIFT <b>5.9</b></span>
     <span>C++ <b>20</b></span>
     <span>LINES <b>&infin;</b></span>
@@ -84,7 +84,7 @@
       Logram відкриває <b>багатогігабайтні</b> логи UnityBase і перетворює їх на читабельний
       потік&nbsp;&mdash; з парними <b>+/-</b> таймерами, підсвіченим SQL, підставленими
       <b>cust1</b>-параметрами та фільтрами за рівнями й потоками в один клік.
-      Нативно на <b>macOS</b> і <b>Windows</b>.
+      Нативно на <b>macOS</b>, <b>Windows</b> та <b>Linux</b>.
     </p>
 
     <div class="cta-row">
@@ -100,7 +100,7 @@
     <div class="hero-stats">
       <div><span class="k">32</span><span class="l">Рівні UB</span></div>
       <div><span class="k">04</span><span class="l">Формати</span></div>
-      <div><span class="k">02</span><span class="l">Платформи</span></div>
+      <div><span class="k">03</span><span class="l">Платформи</span></div>
       <div><span class="k"><em>&infin;</em></span><span class="l">Рядків усього</span></div>
     </div>
   </div>
@@ -207,7 +207,7 @@
     <article class="feat reveal">
       <div class="feat-kicker"><span class="no">F.04</span> Теми</div>
       <h3 class="feat-title">Tokyo&nbsp;Night<br>або <em>TTY</em>.</h3>
-      <p class="feat-body">Кольори потоків, badge рівнів і підсвітка рядків &mdash; перемикаються без перезавантаження. На обох платформах.</p>
+      <p class="feat-body">Кольори потоків, badge рівнів і підсвітка рядків &mdash; перемикаються без перезавантаження. На всіх трьох платформах.</p>
       <div class="feat-visual">
         <div class="swatches">
           <div class="swatch swatch-tokyo">
@@ -253,8 +253,8 @@
 
 <section class="architecture" id="architecture">
   <div class="section-tag"><span class="num">03</span><span class="bar"></span>Інженерія</div>
-  <h2 class="section-title reveal">Дві платформи.<br><em>Нуль компромісів.</em></h2>
-  <p class="section-lead reveal">Не Electron. Не мультиплатформенний фреймворк. Дві нативні реалізації &mdash; кожна використовує найкраще зі своєї ОС.</p>
+  <h2 class="section-title reveal">Три платформи.<br><em>Нуль компромісів.</em></h2>
+  <p class="section-lead reveal">Не Electron. Не мультиплатформенний фреймворк. Три нативні реалізації &mdash; кожна використовує найкраще зі своєї ОС. Парсер і SQL-логіка C++20 шаряться між Windows і Linux.</p>
 
   <div class="arch-dual reveal">
     <div class="arch-platform">
@@ -289,12 +289,28 @@
         <div class="arch-item"><span class="idx">05</span><span class="ti">Portable <em>.exe</em>, без runtime</span><span class="det">~440 KB</span></div>
       </div>
     </div>
+    <div class="arch-platform">
+      <div class="arch-platform-head">
+        <span class="arch-icon">&#9737;</span>
+        <div>
+          <h4>Linux</h4>
+          <span class="arch-stack">C++20 &middot; GTK4 &middot; GtkColumnView</span>
+        </div>
+      </div>
+      <div class="arch-list">
+        <div class="arch-item"><span class="idx">01</span><span class="ti"><em>GtkColumnView</em> + GListModel</span><span class="det">мільйони рядків</span></div>
+        <div class="arch-item"><span class="idx">02</span><span class="ti"><em>mmap(2)</em>, шарений з Win core</span><span class="det">0 копій</span></div>
+        <div class="arch-item"><span class="idx">03</span><span class="ti"><em>SoA</em> LogLineHot &mdash; той самий, що Win</span><span class="det">верифіковано тестами</span></div>
+        <div class="arch-item"><span class="idx">04</span><span class="ti"><em>GResource</em> для іконок</span><span class="det">embedded</span></div>
+        <div class="arch-item"><span class="idx">05</span><span class="ti">Native <em>.deb</em>, apt-сумісний</span><span class="det">~500 KB</span></div>
+      </div>
+    </div>
   </div>
 </section>
 
 <section class="final" id="download">
   <h2>Логи.<br><em>Прочитано.</em></h2>
-  <p>macOS 14+ (Apple Silicon та Intel) &middot; Windows 10+ (x64). Нативні збірки, без Electron, без телеметрії.</p>
+  <p>macOS 14+ (Apple Silicon та Intel) &middot; Windows 10+ (x64) &middot; Ubuntu 24.04+ (GTK 4.14+). Нативні збірки, без Electron, без телеметрії.</p>
   <div class="cta-row">
     <a class="btn btn-primary" href="https://github.com/qwq-qwq/Logram/releases/latest" target="_blank" rel="noopener">Завантажити <span class="arr">&rarr;</span></a>
     <a class="btn btn-ghost" href="https://github.com/qwq-qwq/Logram" target="_blank" rel="noopener">Зібрати з вихідників</a>
@@ -304,7 +320,7 @@
 <footer>
   <div>&copy; 2026 &middot; LOGRAM</div>
   <div class="mid">Сергій Перекрестов &middot; для розробників UnityBase</div>
-  <div class="right">MIT &middot; Swift 5.9 + C++20</div>
+  <div class="right">MIT &middot; Swift 5.9 + C++20 + GTK4</div>
 </footer>
 
 <script src="/assets/app.js" defer></script>
