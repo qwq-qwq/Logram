@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!--
+    Distribution build entitlements for Developer ID + notarization.
+    Apple notary service rejects bundles with get-task-allow=true (debugger
+    attach permission); making it explicitly false is the canonical fix.
+    -->
+    <key>com.apple.security.get-task-allow</key>
+    <false/>
+</dict>
+</plist>
