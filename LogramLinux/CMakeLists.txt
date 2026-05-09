@@ -47,18 +47,13 @@ set(LOGRAM_GRESOURCE_XML
 set(LOGRAM_GRESOURCE_C
     ${CMAKE_CURRENT_BINARY_DIR}/logram_resources.c)
 
-# Use --generate-dependencies to make CMake re-run the compile when any of
-# the referenced PNGs change.
-execute_process(
-    COMMAND ${GLIB_COMPILE_RESOURCES}
-            --generate-dependencies
-            --sourcedir=${CMAKE_CURRENT_SOURCE_DIR}/resources
-            ${LOGRAM_GRESOURCE_XML}
-    OUTPUT_VARIABLE LOGRAM_GRESOURCE_DEPS_RAW
-    OUTPUT_STRIP_TRAILING_WHITESPACE)
-string(REPLACE "\n" ";" LOGRAM_GRESOURCE_DEPS "${LOGRAM_GRESOURCE_DEPS_RAW}")
-list(TRANSFORM LOGRAM_GRESOURCE_DEPS
-    PREPEND "${CMAKE_CURRENT_SOURCE_DIR}/resources/")
+set(LOGRAM_GRESOURCE_DEPS
+    ${CMAKE_CURRENT_SOURCE_DIR}/resources/icons/hicolor/16x16/apps/com.unitybase.Logram.png
+    ${CMAKE_CURRENT_SOURCE_DIR}/resources/icons/hicolor/32x32/apps/com.unitybase.Logram.png
+    ${CMAKE_CURRENT_SOURCE_DIR}/resources/icons/hicolor/64x64/apps/com.unitybase.Logram.png
+    ${CMAKE_CURRENT_SOURCE_DIR}/resources/icons/hicolor/128x128/apps/com.unitybase.Logram.png
+    ${CMAKE_CURRENT_SOURCE_DIR}/resources/icons/hicolor/256x256/apps/com.unitybase.Logram.png
+    ${CMAKE_CURRENT_SOURCE_DIR}/resources/icons/hicolor/512x512/apps/com.unitybase.Logram.png)
 
 add_custom_command(
     OUTPUT ${LOGRAM_GRESOURCE_C}
