@@ -97,13 +97,35 @@ jobs:
           APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
+          set -e
           cd build
           ditto -c -k --sequesterRsrc --keepParent Logram.app Logram-notary.zip
-          xcrun notarytool submit Logram-notary.zip \
+
+          # Submit, capture submission ID, then poll status separately so we
+          # can fetch the detailed Apple log when (not "if") something fails.
+          SUBMIT_OUT=$(xcrun notarytool submit Logram-notary.zip \
             --apple-id "$APPLE_ID" \
             --password "$APPLE_APP_PASSWORD" \
             --team-id "$APPLE_TEAM_ID" \
-            --wait
+            --wait \
+            --output-format json)
+          echo "$SUBMIT_OUT"
+
+          SUB_ID=$(echo "$SUBMIT_OUT"  | python3 -c 'import sys,json;print(json.load(sys.stdin)["id"])')
+          STATUS=$(echo "$SUBMIT_OUT" | python3 -c 'import sys,json;print(json.load(sys.stdin)["status"])')
+
+          echo "::group::Notarization log ($SUB_ID, status=$STATUS)"
+          xcrun notarytool log "$SUB_ID" \
+            --apple-id "$APPLE_ID" \
+            --password "$APPLE_APP_PASSWORD" \
+            --team-id "$APPLE_TEAM_ID" || true
+          echo "::endgroup::"
+
+          if [ "$STATUS" != "Accepted" ]; then
+            echo "Notarization failed with status: $STATUS — see log above."
+            exit 1
+          fi
+
           xcrun stapler staple Logram.app
           rm -f Logram-notary.zip
 
@@ -191,6 +213,8 @@ jobs:
   linux:
     name: Build Linux
     runs-on: ubuntu-24.04
+    permissions:
+      contents: write
 
     steps:
       - uses: actions/checkout@v4
