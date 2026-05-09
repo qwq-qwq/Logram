@@ -66,7 +66,7 @@ const Preset kPresets[] = {
                 LevelBit(LogLevel::Cust1) | LevelBit(LogLevel::Cust2)},
     {"HTTP",    LevelBit(LogLevel::Http)  | LevelBit(LogLevel::Clnt)  |
                 LevelBit(LogLevel::Srvr)},
-    {"Methods", LevelBit(LogLevel::Enter) | LevelBit(LogLevel::Leave)},
+    {"+/-",     LevelBit(LogLevel::Enter) | LevelBit(LogLevel::Leave)},
 };
 
 GtkWidget* MakeSectionHeader(const char* text) {

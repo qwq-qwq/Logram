@@ -3,6 +3,7 @@
 #include "ui/FilterSidebar.h"
 #include "ui/DetailPanel.h"
 #include "ui/TimingDialog.h"
+#include "ui/Theme.h"
 #include "core/LogDocument.h"
 #include "core/LogLine.h"
 
@@ -110,6 +111,14 @@ void OnMethodTimingAction(GSimpleAction*, GVariant*, gpointer self) {
 void OnOpenAction(GSimpleAction*, GVariant*, gpointer self) {
     static_cast<MainWindow*>(self)->OnOpenClicked();
 }
+void OnThemeChange(GSimpleAction* action, GVariant* value, gpointer self) {
+    g_simple_action_set_state(action, value);
+    const char* id = g_variant_get_string(value, nullptr);
+    static_cast<MainWindow*>(self)->SwitchTheme(id);
+}
+void OnAboutAction(GSimpleAction*, GVariant*, gpointer self) {
+    static_cast<MainWindow*>(self)->ShowAbout();
+}
 
 } // namespace
 
@@ -141,6 +150,30 @@ MainWindow::MainWindow(GtkApplication* app) : app_(app) {
     g_menu_append(viewSec, "Method Timing…",            "win.method-timing");
     g_menu_append_section(mainMenu, nullptr, G_MENU_MODEL(viewSec));
     g_object_unref(viewSec);
+
+    // Theme submenu — radio items via stateful string action.
+    GMenu* themeSub = g_menu_new();
+    GMenuItem* tnItem = g_menu_item_new("Tokyo Night", nullptr);
+    g_menu_item_set_action_and_target_value(tnItem, "win.theme",
+        g_variant_new_string("tokyo-night"));
+    g_menu_append_item(themeSub, tnItem);
+    g_object_unref(tnItem);
+    GMenuItem* ttyItem = g_menu_item_new("TTY", nullptr);
+    g_menu_item_set_action_and_target_value(ttyItem, "win.theme",
+        g_variant_new_string("tty"));
+    g_menu_append_item(themeSub, ttyItem);
+    g_object_unref(ttyItem);
+    GMenu* themeSec = g_menu_new();
+    g_menu_append_submenu(themeSec, "Theme", G_MENU_MODEL(themeSub));
+    g_menu_append_section(mainMenu, nullptr, G_MENU_MODEL(themeSec));
+    g_object_unref(themeSub);
+    g_object_unref(themeSec);
+
+    // About section.
+    GMenu* aboutSec = g_menu_new();
+    g_menu_append(aboutSec, "About Logram", "win.about");
+    g_menu_append_section(mainMenu, nullptr, G_MENU_MODEL(aboutSec));
+    g_object_unref(aboutSec);
 
     GtkWidget* menuBtn = gtk_menu_button_new();
     gtk_menu_button_set_icon_name(GTK_MENU_BUTTON(menuBtn),
@@ -238,6 +271,7 @@ void MainWindow::InstallActions() {
         {"next-error",    OnNextErrorAction,    nullptr, nullptr, nullptr, {0, 0, 0}},
         {"prev-error",    OnPrevErrorAction,    nullptr, nullptr, nullptr, {0, 0, 0}},
         {"method-timing", OnMethodTimingAction, nullptr, nullptr, nullptr, {0, 0, 0}},
+        {"about",         OnAboutAction,        nullptr, nullptr, nullptr, {0, 0, 0}},
     };
     g_action_map_add_action_entries(G_ACTION_MAP(window_),
                                     kActions, G_N_ELEMENTS(kActions), this);
@@ -257,6 +291,16 @@ void MainWindow::InstallActions() {
                      G_CALLBACK(OnToggleParamsAction), this);
     g_action_map_add_action(G_ACTION_MAP(window_), G_ACTION(paramsAction));
     g_object_unref(paramsAction);
+
+    // Theme radio: stateful string action; menu radio items pick one value.
+    const char* initialTheme =
+        Theme::Current() == ThemeId::TTY ? "tty" : "tokyo-night";
+    GSimpleAction* themeAction = g_simple_action_new_stateful(
+        "theme", G_VARIANT_TYPE_STRING, g_variant_new_string(initialTheme));
+    g_signal_connect(themeAction, "change-state",
+                     G_CALLBACK(OnThemeChange), this);
+    g_action_map_add_action(G_ACTION_MAP(window_), G_ACTION(themeAction));
+    g_object_unref(themeAction);
 
     const char* openAccels[]    = {"<Control>o",          nullptr};
     const char* findAccels[]    = {"<Control>f",          nullptr};
@@ -457,6 +501,35 @@ void MainWindow::FocusSearch() {
 
 void MainWindow::SetParamsEnabled(bool enabled) {
     detail_->SetParamsEnabled(enabled);
+}
+
+void MainWindow::ShowAbout() {
+    GtkAboutDialog* dlg = GTK_ABOUT_DIALOG(gtk_about_dialog_new());
+    gtk_about_dialog_set_program_name(dlg, "Logram");
+    gtk_about_dialog_set_version(dlg, "1.2");
+    gtk_about_dialog_set_comments(dlg, "UnityBase log file analyzer");
+    gtk_about_dialog_set_website(dlg, "https://logram.perek.rest");
+    gtk_about_dialog_set_website_label(dlg, "logram.perek.rest");
+    gtk_about_dialog_set_logo_icon_name(dlg, "com.unitybase.Logram");
+    gtk_about_dialog_set_license_type(dlg, GTK_LICENSE_MIT_X11);
+    gtk_window_set_transient_for(GTK_WINDOW(dlg), GTK_WINDOW(window_));
+    gtk_window_set_modal(GTK_WINDOW(dlg), TRUE);
+    gtk_window_present(GTK_WINDOW(dlg));
+}
+
+void MainWindow::SwitchTheme(const char* themeId) {
+    const ThemeId id =
+        (themeId && std::strcmp(themeId, "tty") == 0) ? ThemeId::TTY
+                                                      : ThemeId::TokyoNight;
+    Theme::SetCurrent(id);
+    Theme::Apply();
+    // Pango markup in the table/sidebar/detail-header captures theme colors
+    // at format time, so each consumer needs a refresh to pick up new hex.
+    if (sidebar_) sidebar_->Refresh();
+    if (table_)   table_->Refresh();
+    if (doc_ && selectedLineId_ >= 0 && detail_) {
+        detail_->SetLine(doc_.get(), selectedLineId_);
+    }
 }
 
 void MainWindow::ToggleDuration(bool visible) {

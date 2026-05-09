@@ -39,6 +39,8 @@ public:
     // Menu actions.
     void ToggleDuration(bool visible);
     void ShowMethodTiming();
+    void SwitchTheme(const char* themeId);
+    void ShowAbout();
     // Programmatically navigate to a document line (used by the timing dialog).
     void GoToLineId(int lineId);
 
