@@ -47,6 +47,28 @@ void OnRowRightClick(GtkGestureClick* /*g*/, int /*n*/,
     if (self && check) self->ShowRowContextMenu(check, x, y);
 }
 
+constexpr uint64_t LevelBit(LogLevel l) {
+    return uint64_t(1) << static_cast<int>(l);
+}
+
+struct Preset {
+    const char* label;
+    uint64_t mask;
+};
+
+const Preset kPresets[] = {
+    {"Errors",  LevelBit(LogLevel::Warn)  | LevelBit(LogLevel::Error) |
+                LevelBit(LogLevel::OsErr) | LevelBit(LogLevel::Exc)   |
+                LevelBit(LogLevel::ExcOs) | LevelBit(LogLevel::Fail)  |
+                LevelBit(LogLevel::DddER)},
+    {"SQL",     LevelBit(LogLevel::Sql)   | LevelBit(LogLevel::Cache) |
+                LevelBit(LogLevel::Res)   | LevelBit(LogLevel::Db)    |
+                LevelBit(LogLevel::Cust1) | LevelBit(LogLevel::Cust2)},
+    {"HTTP",    LevelBit(LogLevel::Http)  | LevelBit(LogLevel::Clnt)  |
+                LevelBit(LogLevel::Srvr)},
+    {"Methods", LevelBit(LogLevel::Enter) | LevelBit(LogLevel::Leave)},
+};
+
 GtkWidget* MakeSectionHeader(const char* text) {
     GtkWidget* label = gtk_label_new(nullptr);
     char markup[64];
@@ -86,7 +108,35 @@ FilterSidebar::FilterSidebar() {
     gtk_widget_set_margin_bottom(vbox, 8);
 
     gtk_box_append(GTK_BOX(vbox), MakeSectionHeader("Levels"));
-    gtk_box_append(GTK_BOX(vbox), MakeAllNoneRow(this, /*forLevels=*/true));
+
+    // Single quick-filter row: All first, then presets. None is reachable
+    // via right-click on any level row (matches macOS layout).
+    GtkWidget* presetsRow = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 4);
+
+    auto addLevelButton = [&](const char* label, std::function<void()> action) {
+        GtkWidget* b = gtk_button_new_with_label(label);
+        gtk_widget_add_css_class(b, "flat");
+        gtk_widget_set_hexpand(b, TRUE);
+        auto* heap = new std::function<void()>(std::move(action));
+        g_signal_connect_data(b, "clicked",
+            G_CALLBACK(+[](GtkButton*, gpointer ud) {
+                (*static_cast<std::function<void()>*>(ud))();
+            }),
+            heap,
+            +[](gpointer ud, GClosure*) {
+                delete static_cast<std::function<void()>*>(ud);
+            },
+            G_CONNECT_DEFAULT);
+        gtk_box_append(GTK_BOX(presetsRow), b);
+    };
+
+    addLevelButton("All", [this]{ OnAllLevels(true); });
+    for (const auto& p : kPresets) {
+        const uint64_t mask = p.mask;
+        addLevelButton(p.label, [this, mask]{ OnPresetClicked(mask); });
+    }
+    gtk_box_append(GTK_BOX(vbox), presetsRow);
+
     levelsBox_ = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
     gtk_box_append(GTK_BOX(vbox), levelsBox_);
 
@@ -258,6 +308,20 @@ void FilterSidebar::OnLevelOnlyThis(int levelId) {
 void FilterSidebar::OnThreadOnlyThis(int threadId) {
     if (!doc_) return;
     doc_->SetEnabledThreadMask(uint64_t(1) << threadId);
+    Rebuild();
+    NotifyChanged();
+}
+
+void FilterSidebar::OnPresetClicked(uint64_t mask) {
+    if (!doc_) return;
+    // Toggle: if the current mask is exactly the preset, restore "All".
+    // Otherwise switch to "only these levels". Threads are not affected.
+    const uint64_t cur = doc_->EnabledLevelMask();
+    if (cur == mask) {
+        doc_->SetEnabledLevelMask(~uint64_t(0));
+    } else {
+        doc_->SetEnabledLevelMask(mask);
+    }
     Rebuild();
     NotifyChanged();
 }

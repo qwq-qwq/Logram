@@ -1,6 +1,7 @@
 #pragma once
 
 #include <gtk/gtk.h>
+#include <cstdint>
 #include <functional>
 
 class LogDocument;
@@ -31,6 +32,7 @@ public:
     void OnAllThreads(bool enable);
     void OnLevelOnlyThis(int levelId);
     void OnThreadOnlyThis(int threadId);
+    void OnPresetClicked(uint64_t mask);
     void ShowRowContextMenu(GtkWidget* row, double x, double y);
 
 private:
