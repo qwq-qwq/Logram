@@ -106,7 +106,10 @@ FilterSidebar::FilterSidebar() {
 }
 
 FilterSidebar::~FilterSidebar() {
-    // contextPopover_ is unparented by scroller_'s "destroy" signal handler.
+    if (contextPopover_) {
+        gtk_widget_unparent(contextPopover_);
+        contextPopover_ = nullptr;
+    }
 }
 
 void FilterSidebar::ClearBox(GtkWidget* box) {
@@ -278,11 +281,6 @@ void FilterSidebar::ShowRowContextMenu(GtkWidget* row, double x, double y) {
         contextPopover_ = gtk_popover_new();
         gtk_popover_set_has_arrow(GTK_POPOVER(contextPopover_), FALSE);
         gtk_widget_set_parent(contextPopover_, scroller_);
-        // See LogTableView.cpp — popover must be explicitly unparented; tie
-        // it to the parent's destroy signal.
-        g_signal_connect_swapped(scroller_, "destroy",
-                                 G_CALLBACK(gtk_widget_unparent),
-                                 contextPopover_);
     }
 
     GtkWidget* box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
