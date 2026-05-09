@@ -38,6 +38,15 @@ void OnNoThreadsClicked(GtkButton*, gpointer user_data) {
     static_cast<FilterSidebar*>(user_data)->OnAllThreads(false);
 }
 
+void OnRowRightClick(GtkGestureClick* /*g*/, int /*n*/,
+                     double x, double y, gpointer user_data) {
+    auto* check = GTK_WIDGET(g_object_get_data(G_OBJECT(user_data),
+                                               "logram-row-widget"));
+    auto* self  = static_cast<FilterSidebar*>(
+        g_object_get_data(G_OBJECT(user_data), "logram-row-self"));
+    if (self && check) self->ShowRowContextMenu(check, x, y);
+}
+
 GtkWidget* MakeSectionHeader(const char* text) {
     GtkWidget* label = gtk_label_new(nullptr);
     char markup[64];
@@ -147,6 +156,17 @@ void FilterSidebar::Rebuild() {
         g_object_set_data(G_OBJECT(check), kLevelIdKey, GINT_TO_POINTER(i));
         g_signal_connect(check, "toggled",
                          G_CALLBACK(OnLevelCheckToggled), this);
+
+        // Right-click context menu on the row.
+        GtkGesture* rclick = gtk_gesture_click_new();
+        gtk_gesture_single_set_button(GTK_GESTURE_SINGLE(rclick),
+                                      GDK_BUTTON_SECONDARY);
+        g_object_set_data(G_OBJECT(rclick), "logram-row-widget", check);
+        g_object_set_data(G_OBJECT(rclick), "logram-row-self",   this);
+        g_signal_connect(rclick, "pressed",
+                         G_CALLBACK(OnRowRightClick), rclick);
+        gtk_widget_add_controller(check, GTK_EVENT_CONTROLLER(rclick));
+
         gtk_box_append(GTK_BOX(levelsBox_), check);
     }
 
@@ -171,6 +191,16 @@ void FilterSidebar::Rebuild() {
         g_object_set_data(G_OBJECT(check), kThreadIdKey, GINT_TO_POINTER(t));
         g_signal_connect(check, "toggled",
                          G_CALLBACK(OnThreadCheckToggled), this);
+
+        GtkGesture* rclick = gtk_gesture_click_new();
+        gtk_gesture_single_set_button(GTK_GESTURE_SINGLE(rclick),
+                                      GDK_BUTTON_SECONDARY);
+        g_object_set_data(G_OBJECT(rclick), "logram-row-widget", check);
+        g_object_set_data(G_OBJECT(rclick), "logram-row-self",   this);
+        g_signal_connect(rclick, "pressed",
+                         G_CALLBACK(OnRowRightClick), rclick);
+        gtk_widget_add_controller(check, GTK_EVENT_CONTROLLER(rclick));
+
         gtk_box_append(GTK_BOX(threadsBox_), check);
     }
 }
@@ -211,4 +241,85 @@ void FilterSidebar::OnAllThreads(bool enable) {
     doc_->SetEnabledThreadMask(enable ? ~uint64_t(0) : 0);
     Rebuild();
     NotifyChanged();
+}
+
+void FilterSidebar::OnLevelOnlyThis(int levelId) {
+    if (!doc_) return;
+    doc_->SetEnabledLevelMask(uint64_t(1) << levelId);
+    Rebuild();
+    NotifyChanged();
+}
+
+void FilterSidebar::OnThreadOnlyThis(int threadId) {
+    if (!doc_) return;
+    doc_->SetEnabledThreadMask(uint64_t(1) << threadId);
+    Rebuild();
+    NotifyChanged();
+}
+
+void FilterSidebar::ShowRowContextMenu(GtkWidget* row, double x, double y) {
+    if (!row) return;
+
+    // Determine whether this row belongs to Levels or Threads.
+    const bool isLevel =
+        g_object_get_qdata(G_OBJECT(row),
+                           g_quark_from_static_string(kLevelIdKey)) != nullptr;
+    const int id = GPOINTER_TO_INT(
+        g_object_get_data(G_OBJECT(row),
+                          isLevel ? kLevelIdKey : kThreadIdKey));
+
+    if (!contextPopover_) {
+        contextPopover_ = gtk_popover_new();
+        gtk_popover_set_has_arrow(GTK_POPOVER(contextPopover_), FALSE);
+    }
+
+    GtkWidget* box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
+    gtk_widget_set_margin_start(box, 4);
+    gtk_widget_set_margin_end(box,   4);
+    gtk_widget_set_margin_top(box,   4);
+    gtk_widget_set_margin_bottom(box,4);
+
+    auto makeBtn = [&](const char* label, std::function<void()> action) {
+        GtkWidget* b = gtk_button_new_with_label(label);
+        gtk_widget_add_css_class(b, "flat");
+        gtk_widget_set_halign(b, GTK_ALIGN_FILL);
+        auto* heap = new std::function<void()>(std::move(action));
+        g_signal_connect_data(b, "clicked",
+            G_CALLBACK(+[](GtkButton*, gpointer ud) {
+                auto* fn = static_cast<std::function<void()>*>(ud);
+                (*fn)();
+            }),
+            heap,
+            +[](gpointer ud, GClosure*) {
+                delete static_cast<std::function<void()>*>(ud);
+            },
+            G_CONNECT_DEFAULT);
+        gtk_box_append(GTK_BOX(box), b);
+        return b;
+    };
+
+    auto popdown = [this]{
+        gtk_popover_popdown(GTK_POPOVER(contextPopover_));
+    };
+
+    if (isLevel) {
+        makeBtn("All",       [this, popdown]{ OnAllLevels(true); popdown(); });
+        makeBtn("None",      [this, popdown]{ OnAllLevels(false); popdown(); });
+        makeBtn("Only this", [this, id, popdown]{ OnLevelOnlyThis(id); popdown(); });
+    } else {
+        makeBtn("All",       [this, popdown]{ OnAllThreads(true); popdown(); });
+        makeBtn("None",      [this, popdown]{ OnAllThreads(false); popdown(); });
+        makeBtn("Only this", [this, id, popdown]{ OnThreadOnlyThis(id); popdown(); });
+    }
+
+    gtk_popover_set_child(GTK_POPOVER(contextPopover_), box);
+    if (gtk_widget_get_parent(contextPopover_) != row) {
+        if (gtk_widget_get_parent(contextPopover_)) {
+            gtk_widget_unparent(contextPopover_);
+        }
+        gtk_widget_set_parent(contextPopover_, row);
+    }
+    const GdkRectangle rect = {static_cast<int>(x), static_cast<int>(y), 1, 1};
+    gtk_popover_set_pointing_to(GTK_POPOVER(contextPopover_), &rect);
+    gtk_popover_popup(GTK_POPOVER(contextPopover_));
 }

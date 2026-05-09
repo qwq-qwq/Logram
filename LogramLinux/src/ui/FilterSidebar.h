@@ -29,6 +29,9 @@ public:
     void OnThreadToggled(int threadId, bool active);
     void OnAllLevels(bool enable);
     void OnAllThreads(bool enable);
+    void OnLevelOnlyThis(int levelId);
+    void OnThreadOnlyThis(int threadId);
+    void ShowRowContextMenu(GtkWidget* row, double x, double y);
 
 private:
     void Rebuild();
@@ -38,6 +41,7 @@ private:
     GtkWidget* scroller_ = nullptr;
     GtkWidget* levelsBox_ = nullptr;
     GtkWidget* threadsBox_ = nullptr;
+    GtkWidget* contextPopover_ = nullptr;
     LogDocument* doc_ = nullptr;
     std::function<void()> onChanged_;
 };
