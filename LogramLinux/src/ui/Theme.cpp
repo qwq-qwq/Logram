@@ -101,9 +101,9 @@ checkbutton {
     padding: 2px 4px;
 }
 checkbutton > check {
-    background-color: transparent;
+    background-color: #1f2335;
     background-image: none;
-    border: 1px solid transparent;
+    border: 1px solid #2a2e44;
     border-radius: 4px;
     min-width: 18px;
     min-height: 18px;
@@ -113,13 +113,13 @@ checkbutton > check:checked,
 checkbutton check:checked,
 checkbutton:checked > check,
 checkbutton:checked check {
-    background-color: transparent;
+    background-color: #1f2335;
     background-image: none;
-    border-color: transparent;
+    border-color: #2a2e44;
     color: #7aa2f7;
 }
 checkbutton > check:hover {
-    border-color: #2a2e44;
+    border-color: #3d4a72;
 }
 
 columnview {
@@ -288,9 +288,9 @@ checkbutton {
     padding: 2px 4px;
 }
 checkbutton > check {
-    background-color: transparent;
+    background-color: #0a0a0a;
     background-image: none;
-    border: 1px solid transparent;
+    border: 1px solid #2a2a2a;
     border-radius: 4px;
     min-width: 18px;
     min-height: 18px;
@@ -300,13 +300,13 @@ checkbutton > check:checked,
 checkbutton check:checked,
 checkbutton:checked > check,
 checkbutton:checked check {
-    background-color: transparent;
+    background-color: #0a0a0a;
     background-image: none;
-    border-color: transparent;
+    border-color: #2a2a2a;
     color: #b0b0b0;
 }
 checkbutton > check:hover {
-    border-color: #303030;
+    border-color: #404040;
 }
 
 columnview {
