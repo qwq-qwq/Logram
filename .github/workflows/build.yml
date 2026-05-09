@@ -73,6 +73,7 @@ jobs:
             CODE_SIGN_STYLE=Manual \
             CODE_SIGN_IDENTITY="$DEV_ID" \
             DEVELOPMENT_TEAM="$TEAM_ID" \
+            CODE_SIGN_ENTITLEMENTS="Logram/Logram.entitlements" \
             OTHER_CODE_SIGN_FLAGS="--timestamp --options=runtime" \
             CONFIGURATION_BUILD_DIR="$PWD/build" \
             clean build
