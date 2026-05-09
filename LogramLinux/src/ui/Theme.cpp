@@ -111,14 +111,14 @@ checkbutton > check:checked,
 checkbutton check:checked,
 checkbutton:checked > check,
 checkbutton:checked check {
-    background-color: #7aa2f7;
-    border-color: #7aa2f7;
-    color: #16161e;
+    background-color: #3d4a72;
+    border-color: #3d4a72;
+    color: #a9b1d6;
 }
 checkbutton > check:checked:hover,
 checkbutton:checked > check:hover {
-    background-color: #8db4ff;
-    border-color: #8db4ff;
+    background-color: #4a5a8a;
+    border-color: #4a5a8a;
 }
 
 columnview {
@@ -297,14 +297,14 @@ checkbutton > check:checked,
 checkbutton check:checked,
 checkbutton:checked > check,
 checkbutton:checked check {
-    background-color: #00d7d7;
-    border-color: #00d7d7;
-    color: #000000;
+    background-color: #2e5f5f;
+    border-color: #2e5f5f;
+    color: #c0c0c0;
 }
 checkbutton > check:checked:hover,
 checkbutton:checked > check:hover {
-    background-color: #33e6e6;
-    border-color: #33e6e6;
+    background-color: #3d7878;
+    border-color: #3d7878;
 }
 
 columnview {
