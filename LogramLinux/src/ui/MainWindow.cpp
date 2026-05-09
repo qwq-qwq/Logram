@@ -152,19 +152,27 @@ MainWindow::MainWindow(GtkApplication* app) : app_(app) {
     gtk_header_bar_pack_start(GTK_HEADER_BAR(header), menuBtn);
 
     // pack_end accumulates right-to-left; first call → rightmost.
-    // Desired order (left → right):
-    //   [Params] [Search] [↑Error] [↓Error]
-    GtkWidget* nextErrBtn = gtk_button_new_from_icon_name("go-down-symbolic");
-    gtk_widget_add_css_class(nextErrBtn, "flat");
-    gtk_widget_set_tooltip_text(nextErrBtn, "Next error (Ctrl+Shift+Down)");
-    gtk_actionable_set_action_name(GTK_ACTIONABLE(nextErrBtn), "win.next-error");
-    gtk_header_bar_pack_end(GTK_HEADER_BAR(header), nextErrBtn);
-
-    GtkWidget* prevErrBtn = gtk_button_new_from_icon_name("go-up-symbolic");
-    gtk_widget_add_css_class(prevErrBtn, "flat");
-    gtk_widget_set_tooltip_text(prevErrBtn, "Previous error (Ctrl+Shift+Up)");
-    gtk_actionable_set_action_name(GTK_ACTIONABLE(prevErrBtn), "win.prev-error");
-    gtk_header_bar_pack_end(GTK_HEADER_BAR(header), prevErrBtn);
+    // Final order (left → right):
+    //   [Search field] [↑search] [↓search] [↑error] [↓error]
+    auto makeNavBtn = [&](const char* icon, const char* tooltip,
+                          const char* action, const char* extraClass) {
+        GtkWidget* b = gtk_button_new_from_icon_name(icon);
+        gtk_widget_add_css_class(b, "flat");
+        if (extraClass) gtk_widget_add_css_class(b, extraClass);
+        gtk_widget_set_tooltip_text(b, tooltip);
+        gtk_actionable_set_action_name(GTK_ACTIONABLE(b), action);
+        gtk_header_bar_pack_end(GTK_HEADER_BAR(header), b);
+    };
+    // Error nav (rendered red via CSS class .error-nav).
+    makeNavBtn("go-down-symbolic", "Next error (Ctrl+Shift+Down)",
+               "win.next-error", "error-nav");
+    makeNavBtn("go-up-symbolic",   "Previous error (Ctrl+Shift+Up)",
+               "win.prev-error", "error-nav");
+    // Search nav.
+    makeNavBtn("go-down-symbolic", "Next match (F3)",
+               "win.find-next", nullptr);
+    makeNavBtn("go-up-symbolic",   "Previous match (Shift+F3)",
+               "win.find-prev", nullptr);
 
     searchEntry_ = gtk_search_entry_new();
     gtk_widget_set_size_request(searchEntry_, 280, -1);

@@ -243,6 +243,8 @@ LogTableView::LogTableView() {
     columnView_ = gtk_column_view_new(selection_);
     gtk_column_view_set_show_row_separators(GTK_COLUMN_VIEW(columnView_), FALSE);
     gtk_column_view_set_show_column_separators(GTK_COLUMN_VIEW(columnView_), FALSE);
+    // Required for mouse drag-select with GtkMultiSelection — off by default.
+    gtk_column_view_set_enable_rubberband(GTK_COLUMN_VIEW(columnView_), TRUE);
 
     GtkColumnView* cv = GTK_COLUMN_VIEW(columnView_);
     gtk_column_view_append_column(cv, MakeColumn("Time",     FormatTimeCell,     96, false));

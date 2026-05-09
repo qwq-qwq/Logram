@@ -55,6 +55,15 @@ headerbar button:active {
     background-color: #283457;
 }
 
+/* Error-navigation arrows in the headerbar — tinted muted coral so they
+   read as "error nav" at a glance, distinct from the neutral search arrows. */
+headerbar button.error-nav image {
+    color: #f7768e;
+}
+headerbar button.error-nav:hover image {
+    color: #ff8fa3;
+}
+
 entry, searchentry {
     background-color: #1f2335;
     color: #c0caf5;
