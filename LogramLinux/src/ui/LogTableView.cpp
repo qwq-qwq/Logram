@@ -131,10 +131,33 @@ void FormatMessageCell(GtkLabel* label, LogDocument* doc, guint lineId, guint) {
     g_free(markup);
 }
 
+// CSS classes for the few levels that get a subtle row-background tint
+// (matches macOS/Win behavior — only Error/Warn family).
+constexpr const char* kAllRowTintClasses[] = {
+    "row-warn", "row-error", "row-osErr", "row-exc", "row-excOs"
+};
+
+const char* RowTintClass(LogLevel level) {
+    switch (level) {
+        case LogLevel::Warn:  return "row-warn";
+        case LogLevel::Error: return "row-error";
+        case LogLevel::OsErr: return "row-osErr";
+        case LogLevel::Exc:   return "row-exc";
+        case LogLevel::ExcOs: return "row-excOs";
+        default:              return nullptr;
+    }
+}
+
+void ApplyRowTint(GtkWidget* w, LogLevel level) {
+    for (const char* c : kAllRowTintClasses) gtk_widget_remove_css_class(w, c);
+    if (const char* cls = RowTintClass(level)) gtk_widget_add_css_class(w, cls);
+}
+
 void OnFactorySetup(GtkSignalListItemFactory* /*factory*/,
                     GtkListItem* listItem, gpointer /*user_data*/) {
     GtkWidget* label = gtk_label_new(nullptr);
-    gtk_widget_set_halign(label, GTK_ALIGN_START);
+    gtk_widget_set_halign(label, GTK_ALIGN_FILL);
+    gtk_widget_set_hexpand(label, TRUE);
     gtk_label_set_xalign(GTK_LABEL(label), 0.0f);
     gtk_label_set_single_line_mode(GTK_LABEL(label), TRUE);
     gtk_label_set_ellipsize(GTK_LABEL(label), PANGO_ELLIPSIZE_END);
@@ -148,6 +171,8 @@ void OnFactoryBind(GtkSignalListItemFactory* /*factory*/,
     LogRow* row = LOGRAM_ROW(gtk_list_item_get_item(listItem));
     if (!label || !row || !row->doc) return;
     formatter(label, row->doc, row->lineId, gtk_list_item_get_position(listItem));
+    const auto& line = row->doc->AllLines()[row->lineId];
+    ApplyRowTint(GTK_WIDGET(label), static_cast<LogLevel>(line.level));
 }
 
 GtkColumnViewColumn* MakeColumn(const char* title, CellFormatter formatter,

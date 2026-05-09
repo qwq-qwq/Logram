@@ -148,6 +148,24 @@ columnview > header > button:hover {
     color: #a9b1d6;
 }
 
+/* Per-level row background tints (Error/Warn family only, ~6% alpha).
+   Selector excludes selected rows so the selection highlight wins. */
+columnview > listview > row:not(:selected) label.row-warn {
+    background-color: rgba(224, 175, 104, 0.05);
+}
+columnview > listview > row:not(:selected) label.row-error {
+    background-color: rgba(247, 118, 142, 0.07);
+}
+columnview > listview > row:not(:selected) label.row-osErr {
+    background-color: rgba(229, 132, 152, 0.06);
+}
+columnview > listview > row:not(:selected) label.row-exc {
+    background-color: rgba(247, 118, 142, 0.07);
+}
+columnview > listview > row:not(:selected) label.row-excOs {
+    background-color: rgba(229, 132, 152, 0.06);
+}
+
 /* Detail panel (read-only TextView) */
 textview, textview text {
     background-color: #1a1b26;
