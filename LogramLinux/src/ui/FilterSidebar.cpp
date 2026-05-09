@@ -293,6 +293,14 @@ void FilterSidebar::ShowRowContextMenu(GtkWidget* row, double x, double y) {
         GtkWidget* b = gtk_button_new_with_label(label);
         gtk_widget_add_css_class(b, "flat");
         gtk_widget_set_halign(b, GTK_ALIGN_FILL);
+        // Default GtkButton centers its label; override to left-align.
+        if (GtkWidget* lbl = gtk_button_get_child(GTK_BUTTON(b))) {
+            if (GTK_IS_LABEL(lbl)) {
+                gtk_label_set_xalign(GTK_LABEL(lbl), 0.0f);
+                gtk_widget_set_halign(lbl, GTK_ALIGN_START);
+                gtk_widget_set_hexpand(lbl, TRUE);
+            }
+        }
         auto* heap = new std::function<void()>(std::move(action));
         g_signal_connect_data(b, "clicked",
             G_CALLBACK(+[](GtkButton*, gpointer ud) {
