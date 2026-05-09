@@ -96,6 +96,10 @@ MainWindow::MainWindow(GtkApplication* app) : app_(app) {
     window_ = gtk_application_window_new(app);
     gtk_window_set_title(GTK_WINDOW(window_), "Logram");
     gtk_window_set_default_size(GTK_WINDOW(window_), 1280, 800);
+    // Resolved through the icon-theme search path that GtkApplication
+    // automatically registers from /com/unitybase/Logram/icons in our
+    // bundled GResource (logram.gresource.xml).
+    gtk_window_set_icon_name(GTK_WINDOW(window_), "com.unitybase.Logram");
 
     GtkWidget* header = gtk_header_bar_new();
     gtk_window_set_titlebar(GTK_WINDOW(window_), header);
