@@ -76,9 +76,9 @@ std::string FindParamsForSql(LogDocument* doc, int lineId) {
     return {};
 }
 
-void OnParamsToggled(GtkCheckButton* btn, gpointer self) {
+void OnParamsToggled(GtkToggleButton* btn, gpointer self) {
     static_cast<DetailPanel*>(self)->SetParamsEnabled(
-        gtk_check_button_get_active(btn));
+        gtk_toggle_button_get_active(btn));
 }
 
 } // namespace
@@ -92,8 +92,11 @@ DetailPanel::DetailPanel() {
     gtk_widget_set_margin_top(toolbar,    4);
     gtk_widget_set_margin_bottom(toolbar, 4);
 
-    paramsToggle_ = gtk_check_button_new_with_label("Substitute SQL parameters");
-    gtk_check_button_set_active(GTK_CHECK_BUTTON(paramsToggle_), TRUE);
+    paramsToggle_ = gtk_toggle_button_new_with_label("Substitute SQL parameters");
+    gtk_widget_add_css_class(paramsToggle_, "flat");
+    gtk_widget_set_halign(paramsToggle_, GTK_ALIGN_END);
+    gtk_widget_set_hexpand(paramsToggle_, TRUE);
+    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(paramsToggle_), TRUE);
     g_signal_connect(paramsToggle_, "toggled",
                      G_CALLBACK(OnParamsToggled), this);
     gtk_box_append(GTK_BOX(toolbar), paramsToggle_);
