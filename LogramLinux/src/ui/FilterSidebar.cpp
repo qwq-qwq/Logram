@@ -105,7 +105,12 @@ FilterSidebar::FilterSidebar() {
     gtk_widget_set_size_request(scroller_, 220, -1);
 }
 
-FilterSidebar::~FilterSidebar() = default;
+FilterSidebar::~FilterSidebar() {
+    if (contextPopover_) {
+        gtk_widget_unparent(contextPopover_);
+        contextPopover_ = nullptr;
+    }
+}
 
 void FilterSidebar::ClearBox(GtkWidget* box) {
     GtkWidget* child = gtk_widget_get_first_child(box);
@@ -258,7 +263,7 @@ void FilterSidebar::OnThreadOnlyThis(int threadId) {
 }
 
 void FilterSidebar::ShowRowContextMenu(GtkWidget* row, double x, double y) {
-    if (!row) return;
+    if (!row || !scroller_) return;
 
     // Determine whether this row belongs to Levels or Threads.
     const bool isLevel =
@@ -268,9 +273,14 @@ void FilterSidebar::ShowRowContextMenu(GtkWidget* row, double x, double y) {
         g_object_get_data(G_OBJECT(row),
                           isLevel ? kLevelIdKey : kThreadIdKey));
 
+    // The popover is parented once to the stable scroller_. Parenting it to
+    // the row instead would tie its lifetime to that row — and the moment the
+    // user picks any menu item we Rebuild() the rows, destroying the popover
+    // mid-callback and leaving contextPopover_ dangling.
     if (!contextPopover_) {
         contextPopover_ = gtk_popover_new();
         gtk_popover_set_has_arrow(GTK_POPOVER(contextPopover_), FALSE);
+        gtk_widget_set_parent(contextPopover_, scroller_);
     }
 
     GtkWidget* box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
@@ -298,28 +308,52 @@ void FilterSidebar::ShowRowContextMenu(GtkWidget* row, double x, double y) {
         return b;
     };
 
-    auto popdown = [this]{
-        gtk_popover_popdown(GTK_POPOVER(contextPopover_));
-    };
-
+    // Hide before invoking the action so the popover is not asked to popdown
+    // after Rebuild() may have already replaced its children.
     if (isLevel) {
-        makeBtn("All",       [this, popdown]{ OnAllLevels(true); popdown(); });
-        makeBtn("None",      [this, popdown]{ OnAllLevels(false); popdown(); });
-        makeBtn("Only this", [this, id, popdown]{ OnLevelOnlyThis(id); popdown(); });
+        makeBtn("All",       [this]{
+            gtk_popover_popdown(GTK_POPOVER(contextPopover_));
+            OnAllLevels(true);
+        });
+        makeBtn("None",      [this]{
+            gtk_popover_popdown(GTK_POPOVER(contextPopover_));
+            OnAllLevels(false);
+        });
+        makeBtn("Only this", [this, id]{
+            gtk_popover_popdown(GTK_POPOVER(contextPopover_));
+            OnLevelOnlyThis(id);
+        });
     } else {
-        makeBtn("All",       [this, popdown]{ OnAllThreads(true); popdown(); });
-        makeBtn("None",      [this, popdown]{ OnAllThreads(false); popdown(); });
-        makeBtn("Only this", [this, id, popdown]{ OnThreadOnlyThis(id); popdown(); });
+        makeBtn("All",       [this]{
+            gtk_popover_popdown(GTK_POPOVER(contextPopover_));
+            OnAllThreads(true);
+        });
+        makeBtn("None",      [this]{
+            gtk_popover_popdown(GTK_POPOVER(contextPopover_));
+            OnAllThreads(false);
+        });
+        makeBtn("Only this", [this, id]{
+            gtk_popover_popdown(GTK_POPOVER(contextPopover_));
+            OnThreadOnlyThis(id);
+        });
     }
 
     gtk_popover_set_child(GTK_POPOVER(contextPopover_), box);
-    if (gtk_widget_get_parent(contextPopover_) != row) {
-        if (gtk_widget_get_parent(contextPopover_)) {
-            gtk_widget_unparent(contextPopover_);
-        }
-        gtk_widget_set_parent(contextPopover_, row);
+
+    // Translate gesture coords from the row's space into scroller_ space so
+    // the popover anchors near the actual click instead of the scroller's
+    // origin.
+    double sx = 0, sy = 0;
+    graphene_point_t out;
+    if (gtk_widget_compute_point(
+            row, scroller_,
+            &GRAPHENE_POINT_INIT(static_cast<float>(x),
+                                 static_cast<float>(y)),
+            &out)) {
+        sx = out.x;
+        sy = out.y;
     }
-    const GdkRectangle rect = {static_cast<int>(x), static_cast<int>(y), 1, 1};
+    const GdkRectangle rect = {static_cast<int>(sx), static_cast<int>(sy), 1, 1};
     gtk_popover_set_pointing_to(GTK_POPOVER(contextPopover_), &rect);
     gtk_popover_popup(GTK_POPOVER(contextPopover_));
 }
