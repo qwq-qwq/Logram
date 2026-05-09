@@ -27,19 +27,22 @@ void OnOpenButtonClicked(GtkButton* /*btn*/, gpointer self) {
     static_cast<MainWindow*>(self)->OnOpenClicked();
 }
 
-void OnFileChooserResponse(GtkNativeDialog* native, int response, gpointer self) {
-    if (response == GTK_RESPONSE_ACCEPT) {
-        GFile* file = gtk_file_chooser_get_file(GTK_FILE_CHOOSER(native));
-        if (file) {
-            char* path = g_file_get_path(file);
-            if (path) {
-                static_cast<MainWindow*>(self)->LoadFile(path);
-                g_free(path);
-            }
-            g_object_unref(file);
+void OnFileDialogOpenFinished(GObject* source, GAsyncResult* result,
+                              gpointer user_data) {
+    GError* error = nullptr;
+    GFile* file = gtk_file_dialog_open_finish(GTK_FILE_DIALOG(source),
+                                              result, &error);
+    if (file) {
+        char* path = g_file_get_path(file);
+        if (path) {
+            static_cast<MainWindow*>(user_data)->LoadFile(path);
+            g_free(path);
         }
+        g_object_unref(file);
+    } else if (error) {
+        // Dismissed by the user or other error — nothing to do.
+        g_clear_error(&error);
     }
-    g_object_unref(native);
 }
 
 const char* BaseName(const char* path) {
@@ -81,7 +84,8 @@ MainWindow::MainWindow(GtkApplication* app) : app_(app) {
 
     searchEntry_ = gtk_search_entry_new();
     gtk_widget_set_size_request(searchEntry_, 280, -1);
-    g_object_set(searchEntry_, "placeholder-text", "Search… (Ctrl+F)", nullptr);
+    gtk_search_entry_set_placeholder_text(GTK_SEARCH_ENTRY(searchEntry_),
+                                          "Search… (Ctrl+F)");
     g_signal_connect(searchEntry_, "activate",
                      G_CALLBACK(OnSearchActivate), this);
     g_signal_connect(searchEntry_, "search-changed",
@@ -147,14 +151,11 @@ void MainWindow::InstallActions() {
 }
 
 void MainWindow::OnOpenClicked() {
-    GtkFileChooserNative* native = gtk_file_chooser_native_new(
-        "Open Log File",
-        GTK_WINDOW(window_),
-        GTK_FILE_CHOOSER_ACTION_OPEN,
-        "_Open",
-        "_Cancel");
-    g_signal_connect(native, "response", G_CALLBACK(OnFileChooserResponse), this);
-    gtk_native_dialog_show(GTK_NATIVE_DIALOG(native));
+    GtkFileDialog* dialog = gtk_file_dialog_new();
+    gtk_file_dialog_set_title(dialog, "Open Log File");
+    gtk_file_dialog_open(dialog, GTK_WINDOW(window_), /*cancellable=*/nullptr,
+                         OnFileDialogOpenFinished, this);
+    g_object_unref(dialog);
 }
 
 void MainWindow::LoadFile(const char* utf8Path) {

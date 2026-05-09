@@ -36,8 +36,9 @@ find_package(Threads REQUIRED)
 target_link_libraries(logram_core PUBLIC Threads::Threads)
 
 # --- GTK4 (UI) ---
+# Minimum target: Ubuntu 24.04 LTS, which ships GTK 4.14 / GLib 2.80.
 find_package(PkgConfig REQUIRED)
-pkg_check_modules(GTK4 REQUIRED IMPORTED_TARGET gtk4)
+pkg_check_modules(GTK4 REQUIRED IMPORTED_TARGET gtk4>=4.14)
 
 # --- Main executable ---
 add_executable(Logram

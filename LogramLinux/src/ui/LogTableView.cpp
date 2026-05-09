@@ -215,9 +215,12 @@ void LogTableView::Refresh() {
 
 void LogTableView::ScrollToPosition(unsigned position) {
     if (!doc_ || position >= doc_->FilteredIndices().size()) return;
-    gtk_single_selection_set_selected(selection_, position);
-    // Focusing the column view brings the focused (= selected) row into view.
-    gtk_widget_grab_focus(columnView_);
+    gtk_column_view_scroll_to(
+        GTK_COLUMN_VIEW(columnView_),
+        position,
+        /*column=*/nullptr,
+        static_cast<GtkListScrollFlags>(GTK_LIST_SCROLL_FOCUS | GTK_LIST_SCROLL_SELECT),
+        /*scroll=*/nullptr);
 }
 
 void LogTableView::OnSelectionChanged(unsigned position) {
