@@ -260,6 +260,13 @@ LogTableView::LogTableView() {
     gtk_widget_set_parent(popover_, columnView_);
     g_object_unref(menu);
 
+    // GTK4 quirk: popover attached via gtk_widget_set_parent does not get
+    // released by the parent's own dispose — must explicitly unparent. Tie
+    // it to the parent's destroy signal so we don't depend on C++ destructor
+    // ordering vs. window-tree teardown.
+    g_signal_connect_swapped(columnView_, "destroy",
+                             G_CALLBACK(gtk_widget_unparent), popover_);
+
     GtkGesture* rclick = gtk_gesture_click_new();
     gtk_gesture_single_set_button(GTK_GESTURE_SINGLE(rclick),
                                   GDK_BUTTON_SECONDARY);
@@ -269,12 +276,7 @@ LogTableView::LogTableView() {
 }
 
 LogTableView::~LogTableView() {
-    // popover_ was set as child of columnView_ via gtk_widget_set_parent;
-    // unparent so it gets freed with us, not leaked alongside the column view.
-    if (popover_) {
-        gtk_widget_unparent(popover_);
-        popover_ = nullptr;
-    }
+    // popover_ is unparented by the columnView_'s "destroy" signal handler.
 }
 
 void LogTableView::SetDocument(LogDocument* doc) {
