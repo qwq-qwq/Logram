@@ -100,6 +100,26 @@ checkbutton {
     color: #a9b1d6;
     padding: 2px 4px;
 }
+checkbutton > check {
+    background-color: #1f2335;
+    border: 1px solid #2a2e44;
+    border-radius: 3px;
+    min-width: 14px;
+    min-height: 14px;
+}
+checkbutton > check:checked,
+checkbutton check:checked,
+checkbutton:checked > check,
+checkbutton:checked check {
+    background-color: #7aa2f7;
+    border-color: #7aa2f7;
+    color: #16161e;
+}
+checkbutton > check:checked:hover,
+checkbutton:checked > check:hover {
+    background-color: #8db4ff;
+    border-color: #8db4ff;
+}
 
 columnview {
     background-color: #1a1b26;
@@ -265,6 +285,26 @@ scrollbar trough {
 checkbutton {
     color: #c0c0c0;
     padding: 2px 4px;
+}
+checkbutton > check {
+    background-color: #0a0a0a;
+    border: 1px solid #303030;
+    border-radius: 3px;
+    min-width: 14px;
+    min-height: 14px;
+}
+checkbutton > check:checked,
+checkbutton check:checked,
+checkbutton:checked > check,
+checkbutton:checked check {
+    background-color: #00d7d7;
+    border-color: #00d7d7;
+    color: #000000;
+}
+checkbutton > check:checked:hover,
+checkbutton:checked > check:hover {
+    background-color: #33e6e6;
+    border-color: #33e6e6;
 }
 
 columnview {
