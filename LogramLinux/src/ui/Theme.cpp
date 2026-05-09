@@ -297,14 +297,14 @@ checkbutton > check:checked,
 checkbutton check:checked,
 checkbutton:checked > check,
 checkbutton:checked check {
-    background-color: #2e5f5f;
-    border-color: #2e5f5f;
-    color: #c0c0c0;
+    background-color: #2d5a2d;
+    border-color: #2d5a2d;
+    color: #b8d8b8;
 }
 checkbutton > check:checked:hover,
 checkbutton:checked > check:hover {
-    background-color: #3d7878;
-    border-color: #3d7878;
+    background-color: #3a703a;
+    border-color: #3a703a;
 }
 
 columnview {
