@@ -19,6 +19,14 @@ namespace {
 // scrollbars, paned, entries, textview, status). Per-level cell colors come
 // next via Pango markup in the column factories.
 const char kCss[] = R"CSS(
+/* Override the system accent color so Ubuntu's default orange does not bleed
+   into checkboxes / focus rings / selected-row highlights. Tokyo Night blue. */
+@define-color accent_color #7aa2f7;
+@define-color accent_bg_color #7aa2f7;
+@define-color accent_fg_color #16161e;
+@define-color theme_selected_bg_color #283457;
+@define-color theme_selected_fg_color #c0caf5;
+
 window, .background {
     background-color: #1a1b26;
     color: #a9b1d6;
@@ -96,17 +104,40 @@ checkbutton {
     color: #a9b1d6;
     padding: 2px 4px;
 }
+/* Idle indicator: use the elevated bg + a faint border so the empty box is
+   still visible on the dark sidebar. */
+checkbutton > check,
 checkbutton check {
     background-color: #1f2335;
+    background-image: none;
     border: 1px solid #2a2e44;
     border-radius: 3px;
     min-width: 14px;
     min-height: 14px;
+    color: #16161e;
 }
-checkbutton:checked check {
+/* Checked / indeterminate — keep the Tokyo Night accent regardless of the
+   system accent color (Ubuntu defaults to orange, which clashes here).
+   Multiple selectors cover the variations between Adwaita versions: the
+   :checked state may sit on the `check` element itself or propagate from
+   the parent `checkbutton`. */
+checkbutton > check:checked,
+checkbutton check:checked,
+checkbutton:checked > check,
+checkbutton:checked check,
+check:checked,
+checkbutton > check:indeterminate,
+check:indeterminate {
     background-color: #7aa2f7;
+    background-image: none;
     border-color: #7aa2f7;
     color: #16161e;
+}
+checkbutton > check:checked:hover,
+checkbutton:checked > check:hover,
+check:checked:hover {
+    background-color: #8db4ff;
+    border-color: #8db4ff;
 }
 
 /* Column view (the log table) */
