@@ -108,7 +108,6 @@ checkbutton > check {
     min-width: 18px;
     min-height: 18px;
     margin-right: 6px;
-    -gtk-icon-size: 16px;
 }
 checkbutton > check:checked,
 checkbutton check:checked,
@@ -118,8 +117,6 @@ checkbutton:checked check {
     background-image: none;
     border-color: transparent;
     color: #7aa2f7;
-    -gtk-icon-source: -gtk-icontheme("checkbox-checked-symbolic");
-    -gtk-icon-size: 16px;
 }
 checkbutton > check:hover {
     border-color: #2a2e44;
@@ -298,7 +295,6 @@ checkbutton > check {
     min-width: 18px;
     min-height: 18px;
     margin-right: 6px;
-    -gtk-icon-size: 16px;
 }
 checkbutton > check:checked,
 checkbutton check:checked,
@@ -308,8 +304,6 @@ checkbutton:checked check {
     background-image: none;
     border-color: transparent;
     color: #b0b0b0;
-    -gtk-icon-source: -gtk-icontheme("checkbox-checked-symbolic");
-    -gtk-icon-size: 16px;
 }
 checkbutton > check:hover {
     border-color: #303030;
