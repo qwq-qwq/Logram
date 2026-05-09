@@ -90,6 +90,9 @@ void OnJumpPairAction(GSimpleAction*, GVariant*, gpointer self) {
 void OnFocusCallAction(GSimpleAction*, GVariant*, gpointer self) {
     static_cast<MainWindow*>(self)->ToggleFocusOnCall();
 }
+void OnCancelFocusAction(GSimpleAction*, GVariant*, gpointer self) {
+    static_cast<MainWindow*>(self)->CancelFocus();
+}
 void OnNextErrorAction(GSimpleAction*, GVariant*, gpointer self) {
     static_cast<MainWindow*>(self)->GotoError(true);
 }
@@ -268,6 +271,7 @@ void MainWindow::InstallActions() {
         {"copy",          OnCopyAction,         nullptr, nullptr, nullptr, {0, 0, 0}},
         {"jump-pair",     OnJumpPairAction,     nullptr, nullptr, nullptr, {0, 0, 0}},
         {"focus-call",    OnFocusCallAction,    nullptr, nullptr, nullptr, {0, 0, 0}},
+        {"cancel-focus",  OnCancelFocusAction,  nullptr, nullptr, nullptr, {0, 0, 0}},
         {"next-error",    OnNextErrorAction,    nullptr, nullptr, nullptr, {0, 0, 0}},
         {"prev-error",    OnPrevErrorAction,    nullptr, nullptr, nullptr, {0, 0, 0}},
         {"method-timing", OnMethodTimingAction, nullptr, nullptr, nullptr, {0, 0, 0}},
@@ -309,6 +313,7 @@ void MainWindow::InstallActions() {
     const char* copyAccels[]    = {"<Control>c",          nullptr};
     const char* jumpAccels[]    = {"<Control>j",          nullptr};
     const char* focusAccels[]   = {"<Control><Shift>e",   nullptr};
+    const char* cancelFocusAccels[] = {"Escape",          nullptr};
     const char* nextErrAccels[] = {"<Control><Shift>Down", nullptr};
     const char* prevErrAccels[] = {"<Control><Shift>Up",   nullptr};
     const char* durAccels[]     = {"<Control>d",          nullptr};
@@ -321,6 +326,7 @@ void MainWindow::InstallActions() {
     gtk_application_set_accels_for_action(app_, "win.copy",            copyAccels);
     gtk_application_set_accels_for_action(app_, "win.jump-pair",       jumpAccels);
     gtk_application_set_accels_for_action(app_, "win.focus-call",      focusAccels);
+    gtk_application_set_accels_for_action(app_, "win.cancel-focus",    cancelFocusAccels);
     gtk_application_set_accels_for_action(app_, "win.next-error",      nextErrAccels);
     gtk_application_set_accels_for_action(app_, "win.prev-error",      prevErrAccels);
     gtk_application_set_accels_for_action(app_, "win.toggle-duration", durAccels);
@@ -409,6 +415,20 @@ void MainWindow::ToggleFocusOnCall() {
             return;
         }
     }
+    doc_->ApplyFilters();
+    sidebar_->Refresh();
+    table_->Refresh();
+    detail_->Clear();
+    ResetSearch();
+    UpdateStatus();
+}
+
+void MainWindow::CancelFocus() {
+    if (!doc_ || !doc_->FocusActive()) {
+        gtk_widget_error_bell(window_);
+        return;
+    }
+    doc_->ClearFocus();
     doc_->ApplyFilters();
     sidebar_->Refresh();
     table_->Refresh();
