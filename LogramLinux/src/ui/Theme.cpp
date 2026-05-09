@@ -472,7 +472,11 @@ const char* CurrentCss() {
 } // namespace
 
 void Theme::Apply() {
+    // Force base theme to plain Adwaita so distro accent overrides
+    // (Ubuntu Yaru, etc.) don't leak through into our checkbox/accent
+    // styling. Our CSS then layers cleanly on top of Adwaita defaults.
     g_object_set(gtk_settings_get_default(),
+                 "gtk-theme-name", "Adwaita",
                  "gtk-application-prefer-dark-theme", TRUE, nullptr);
 
     // Replace any previously applied provider so the new CSS overrides
@@ -486,10 +490,12 @@ void Theme::Apply() {
     }
     g_currentProvider = gtk_css_provider_new();
     gtk_css_provider_load_from_string(g_currentProvider, CurrentCss());
+    // PRIORITY_USER+1 beats Yaru's accent override on Ubuntu, which itself
+    // installs at USER priority via the system style settings.
     gtk_style_context_add_provider_for_display(
         display,
         GTK_STYLE_PROVIDER(g_currentProvider),
-        GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
+        GTK_STYLE_PROVIDER_PRIORITY_USER + 1);
 }
 
 void Theme::SetCurrent(ThemeId id) { g_currentTheme = id; }
