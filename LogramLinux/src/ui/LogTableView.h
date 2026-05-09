@@ -2,6 +2,7 @@
 
 #include <gtk/gtk.h>
 #include <functional>
+#include <vector>
 
 class LogDocument;
 
@@ -30,8 +31,12 @@ public:
         onSelection_ = std::move(cb);
     }
 
+    // Returns the document line IDs of all currently selected rows in
+    // visual order (smallest filtered position first).
+    std::vector<int> SelectedLineIds() const;
+
     // Internal — called from a static GTK callback.
-    void OnSelectionChanged(unsigned position);
+    void OnSelectionRangeChanged(unsigned position, unsigned n_items);
     void ShowContextMenu(double x, double y);
 
 private:
@@ -39,8 +44,9 @@ private:
     GtkWidget* columnView_ = nullptr;
     GtkWidget* popover_ = nullptr;
     GListModel* model_ = nullptr;
-    GtkSingleSelection* selection_ = nullptr;
+    GtkSelectionModel* selection_ = nullptr;
     LogDocument* doc_ = nullptr;
     unsigned lastCount_ = 0;
+    int leadPos_ = -1; // position-in-filtered of the row shown in detail panel
     std::function<void(int)> onSelection_;
 };

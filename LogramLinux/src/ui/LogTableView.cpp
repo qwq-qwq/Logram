@@ -196,12 +196,11 @@ GtkColumnViewColumn* MakeColumn(const char* title, CellFormatter formatter,
 // ---------------- LogTableView ----------------
 
 namespace {
-void OnSelectionPropertyChanged(GObject* selection, GParamSpec* /*pspec*/,
-                                gpointer user_data) {
-    auto* self = static_cast<LogTableView*>(user_data);
-    const guint pos = gtk_single_selection_get_selected(
-        GTK_SINGLE_SELECTION(selection));
-    self->OnSelectionChanged(pos);
+void OnSelectionRangeChangedCb(GtkSelectionModel* /*sm*/,
+                               guint position, guint n_items,
+                               gpointer user_data) {
+    static_cast<LogTableView*>(user_data)
+        ->OnSelectionRangeChanged(position, n_items);
 }
 
 void OnRightClickPressed(GtkGestureClick* /*gesture*/, int /*n_press*/,
@@ -214,12 +213,15 @@ LogTableView::LogTableView() {
     auto* rowModel = log_row_model_new();
     model_ = G_LIST_MODEL(rowModel);
 
-    selection_ = gtk_single_selection_new(model_);
-    // gtk_single_selection_new takes ownership of model_ ref; keep the pointer.
-    g_signal_connect(selection_, "notify::selected",
-                     G_CALLBACK(OnSelectionPropertyChanged), this);
+    // Multi-selection so the user can drag-select a range, Ctrl-click to add
+    // disjoint rows, Shift-click for ranges. ColumnView routes the standard
+    // mouse/keyboard interactions automatically.
+    selection_ = GTK_SELECTION_MODEL(gtk_multi_selection_new(model_));
+    // gtk_multi_selection_new takes ownership of model_ ref; keep pointer.
+    g_signal_connect(selection_, "selection-changed",
+                     G_CALLBACK(OnSelectionRangeChangedCb), this);
 
-    columnView_ = gtk_column_view_new(GTK_SELECTION_MODEL(selection_));
+    columnView_ = gtk_column_view_new(selection_);
     gtk_column_view_set_show_row_separators(GTK_COLUMN_VIEW(columnView_), FALSE);
     gtk_column_view_set_show_column_separators(GTK_COLUMN_VIEW(columnView_), FALSE);
 
@@ -290,6 +292,9 @@ void LogTableView::Refresh() {
 
 void LogTableView::ScrollToPosition(unsigned position) {
     if (!doc_ || position >= doc_->FilteredIndices().size()) return;
+    // For Find / Next-error / Jump-to-pair we want a single highlighted row,
+    // not an additive range. Clear first, then scroll_to with SELECT.
+    gtk_selection_model_unselect_all(selection_);
     gtk_column_view_scroll_to(
         GTK_COLUMN_VIEW(columnView_),
         position,
@@ -305,16 +310,42 @@ void LogTableView::ShowContextMenu(double x, double y) {
     gtk_popover_popup(GTK_POPOVER(popover_));
 }
 
-void LogTableView::OnSelectionChanged(unsigned position) {
+void LogTableView::OnSelectionRangeChanged(unsigned position, unsigned n_items) {
+    if (!doc_) return;
+
+    // Find the first selected position inside the changed range. For a fresh
+    // click that's the click target; for drag/shift extension it's the
+    // anchor. If nothing in the range is selected (deselection), keep the
+    // previous lead — the document panel should not blank out.
+    int lead = -1;
+    const guint end = position + n_items;
+    for (guint i = position; i < end; ++i) {
+        if (gtk_selection_model_is_selected(selection_, i)) {
+            lead = static_cast<int>(i);
+            break;
+        }
+    }
+    if (lead < 0) return;
+    leadPos_ = lead;
+
     if (!onSelection_) return;
-    if (!doc_ || position == GTK_INVALID_LIST_POSITION) {
-        onSelection_(-1);
-        return;
-    }
     const auto& filtered = doc_->FilteredIndices();
-    if (position >= filtered.size()) {
-        onSelection_(-1);
-        return;
+    if (static_cast<size_t>(lead) >= filtered.size()) return;
+    onSelection_(static_cast<int>(filtered[lead]));
+}
+
+std::vector<int> LogTableView::SelectedLineIds() const {
+    std::vector<int> out;
+    if (!doc_) return out;
+    const auto& filtered = doc_->FilteredIndices();
+    const guint count = g_list_model_get_n_items(model_);
+    out.reserve(16);
+    for (guint i = 0; i < count; ++i) {
+        if (gtk_selection_model_is_selected(selection_, i)) {
+            if (i < filtered.size()) {
+                out.push_back(static_cast<int>(filtered[i]));
+            }
+        }
     }
-    onSelection_(static_cast<int>(filtered[position]));
+    return out;
 }

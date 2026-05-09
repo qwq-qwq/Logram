@@ -256,16 +256,30 @@ void MainWindow::OnRowSelected(int lineId) {
 }
 
 void MainWindow::CopySelectedLine() {
-    if (!doc_ || selectedLineId_ < 0 ||
-        static_cast<size_t>(selectedLineId_) >= doc_->AllLines().size()) {
+    if (!doc_) {
         gtk_widget_error_bell(window_);
         return;
     }
-    const auto& line = doc_->AllLines()[selectedLineId_];
-    const std::string_view raw = GetRawLine(doc_->MappedBase(), line);
-    const std::string text(raw);
+    auto ids = table_->SelectedLineIds();
+    if (ids.empty() && selectedLineId_ >= 0) {
+        ids.push_back(selectedLineId_);
+    }
+    if (ids.empty()) {
+        gtk_widget_error_bell(window_);
+        return;
+    }
+    const auto& lines = doc_->AllLines();
+    std::string out;
+    out.reserve(ids.size() * 128);
+    for (size_t i = 0; i < ids.size(); ++i) {
+        const int id = ids[i];
+        if (id < 0 || static_cast<size_t>(id) >= lines.size()) continue;
+        const std::string_view raw = GetRawLine(doc_->MappedBase(), lines[id]);
+        out.append(raw.data(), raw.size());
+        if (i + 1 < ids.size()) out.push_back('\n');
+    }
     GdkClipboard* clip = gtk_widget_get_clipboard(window_);
-    gdk_clipboard_set_text(clip, text.c_str());
+    gdk_clipboard_set_text(clip, out.c_str());
 }
 
 void MainWindow::ToggleFocusOnCall() {
