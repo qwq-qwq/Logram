@@ -60,6 +60,11 @@ void OnSearchChanged(GtkSearchEntry* /*entry*/, gpointer self) {
     static_cast<MainWindow*>(self)->OnSearchChanged();
 }
 
+void OnParamsToggled(GtkToggleButton* btn, gpointer self) {
+    auto* mw = static_cast<MainWindow*>(self);
+    mw->SetParamsEnabled(gtk_toggle_button_get_active(btn));
+}
+
 void OnFindAction(GSimpleAction*, GVariant*, gpointer self) {
     static_cast<MainWindow*>(self)->FocusSearch();
 }
@@ -77,6 +82,12 @@ void OnJumpPairAction(GSimpleAction*, GVariant*, gpointer self) {
 }
 void OnFocusCallAction(GSimpleAction*, GVariant*, gpointer self) {
     static_cast<MainWindow*>(self)->ToggleFocusOnCall();
+}
+void OnNextErrorAction(GSimpleAction*, GVariant*, gpointer self) {
+    static_cast<MainWindow*>(self)->GotoError(true);
+}
+void OnPrevErrorAction(GSimpleAction*, GVariant*, gpointer self) {
+    static_cast<MainWindow*>(self)->GotoError(false);
 }
 
 } // namespace
@@ -102,6 +113,16 @@ MainWindow::MainWindow(GtkApplication* app) : app_(app) {
     g_signal_connect(searchEntry_, "search-changed",
                      G_CALLBACK(::OnSearchChanged), this);
     gtk_header_bar_pack_end(GTK_HEADER_BAR(header), searchEntry_);
+
+    paramsToggle_ = gtk_toggle_button_new_with_label("Params");
+    gtk_widget_add_css_class(paramsToggle_, "flat");
+    gtk_widget_set_tooltip_text(paramsToggle_,
+                                "Substitute SQL bind parameters from the "
+                                "matching Cust1 line on the same thread");
+    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(paramsToggle_), TRUE);
+    g_signal_connect(paramsToggle_, "toggled",
+                     G_CALLBACK(::OnParamsToggled), this);
+    gtk_header_bar_pack_end(GTK_HEADER_BAR(header), paramsToggle_);
 
     sidebar_ = std::make_unique<FilterSidebar>();
     sidebar_->SetOnChanged([this]{ OnFiltersChanged(); });
@@ -152,22 +173,28 @@ void MainWindow::InstallActions() {
         {"copy",       OnCopyAction,      nullptr, nullptr, nullptr, {0, 0, 0}},
         {"jump-pair",  OnJumpPairAction,  nullptr, nullptr, nullptr, {0, 0, 0}},
         {"focus-call", OnFocusCallAction, nullptr, nullptr, nullptr, {0, 0, 0}},
+        {"next-error", OnNextErrorAction, nullptr, nullptr, nullptr, {0, 0, 0}},
+        {"prev-error", OnPrevErrorAction, nullptr, nullptr, nullptr, {0, 0, 0}},
     };
     g_action_map_add_action_entries(G_ACTION_MAP(window_),
                                     kActions, G_N_ELEMENTS(kActions), this);
 
-    const char* findAccels[]  = {"<Control>f",        nullptr};
-    const char* nextAccels[]  = {"F3",                nullptr};
-    const char* prevAccels[]  = {"<Shift>F3",         nullptr};
-    const char* copyAccels[]  = {"<Control>c",        nullptr};
-    const char* jumpAccels[]  = {"<Control>j",        nullptr};
-    const char* focusAccels[] = {"<Control><Shift>e", nullptr};
+    const char* findAccels[]  = {"<Control>f",          nullptr};
+    const char* nextAccels[]  = {"F3",                  nullptr};
+    const char* prevAccels[]  = {"<Shift>F3",           nullptr};
+    const char* copyAccels[]  = {"<Control>c",          nullptr};
+    const char* jumpAccels[]  = {"<Control>j",          nullptr};
+    const char* focusAccels[] = {"<Control><Shift>e",   nullptr};
+    const char* nextErrAccels[] = {"<Control><Shift>Down", nullptr};
+    const char* prevErrAccels[] = {"<Control><Shift>Up",   nullptr};
     gtk_application_set_accels_for_action(app_, "win.find",       findAccels);
     gtk_application_set_accels_for_action(app_, "win.find-next",  nextAccels);
     gtk_application_set_accels_for_action(app_, "win.find-prev",  prevAccels);
     gtk_application_set_accels_for_action(app_, "win.copy",       copyAccels);
     gtk_application_set_accels_for_action(app_, "win.jump-pair",  jumpAccels);
     gtk_application_set_accels_for_action(app_, "win.focus-call", focusAccels);
+    gtk_application_set_accels_for_action(app_, "win.next-error", nextErrAccels);
+    gtk_application_set_accels_for_action(app_, "win.prev-error", prevErrAccels);
 }
 
 void MainWindow::OnOpenClicked() {
@@ -244,6 +271,63 @@ void MainWindow::ToggleFocusOnCall() {
     UpdateStatus();
 }
 
+void MainWindow::GotoError(bool forward) {
+    if (!doc_) return;
+    const auto& filtered = doc_->FilteredIndices();
+    const auto& lines = doc_->AllLines();
+    if (filtered.empty()) {
+        gtk_widget_error_bell(window_);
+        return;
+    }
+
+    // Map current selection (lineId in AllLines) to a position in filtered.
+    int curPos = -1;
+    if (selectedLineId_ >= 0) {
+        for (size_t i = 0; i < filtered.size(); ++i) {
+            if (static_cast<int>(filtered[i]) == selectedLineId_) {
+                curPos = static_cast<int>(i);
+                break;
+            }
+        }
+    }
+
+    auto isErr = [&](size_t pos) {
+        const auto& line = lines[filtered[pos]];
+        return GetLogLevelInfo(static_cast<LogLevel>(line.level)).isError;
+    };
+
+    const int n = static_cast<int>(filtered.size());
+    int found = -1;
+    bool wrapped = false;
+
+    if (forward) {
+        for (int i = curPos + 1; i < n; ++i) {
+            if (isErr(i)) { found = i; break; }
+        }
+        if (found < 0) {
+            for (int i = 0; i <= curPos && i < n; ++i) {
+                if (isErr(i)) { found = i; wrapped = true; break; }
+            }
+        }
+    } else {
+        for (int i = curPos - 1; i >= 0; --i) {
+            if (isErr(i)) { found = i; break; }
+        }
+        if (found < 0) {
+            for (int i = n - 1; i > curPos; --i) {
+                if (isErr(i)) { found = i; wrapped = true; break; }
+            }
+        }
+    }
+
+    if (found < 0) {
+        gtk_widget_error_bell(window_);
+        return;
+    }
+    if (wrapped) gtk_widget_error_bell(window_);
+    table_->ScrollToPosition(static_cast<unsigned>(found));
+}
+
 void MainWindow::JumpToPair() {
     if (!doc_ || selectedLineId_ < 0) {
         gtk_widget_error_bell(window_);
@@ -267,6 +351,10 @@ void MainWindow::JumpToPair() {
 
 void MainWindow::FocusSearch() {
     gtk_widget_grab_focus(searchEntry_);
+}
+
+void MainWindow::SetParamsEnabled(bool enabled) {
+    detail_->SetParamsEnabled(enabled);
 }
 
 void MainWindow::SearchNext() { DoSearch(true); }

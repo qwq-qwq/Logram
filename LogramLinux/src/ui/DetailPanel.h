@@ -33,7 +33,6 @@ private:
     void HighlightJson(const std::string& src, int charBase);
 
     GtkWidget* root_ = nullptr;
-    GtkWidget* paramsToggle_ = nullptr;
     GtkWidget* textView_ = nullptr;
     GtkTextBuffer* buffer_ = nullptr;
     LogDocument* doc_ = nullptr;

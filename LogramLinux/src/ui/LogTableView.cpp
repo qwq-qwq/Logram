@@ -215,10 +215,16 @@ LogTableView::LogTableView() {
     gtk_column_view_set_show_column_separators(GTK_COLUMN_VIEW(columnView_), FALSE);
 
     GtkColumnView* cv = GTK_COLUMN_VIEW(columnView_);
+    gtk_column_view_append_column(cv, MakeColumn("Time",    FormatTimeCell,   110, false));
     gtk_column_view_append_column(cv, MakeColumn("Thread",  FormatThreadCell,  72, false));
     gtk_column_view_append_column(cv, MakeColumn("Level",   FormatLevelCell,   80, false));
-    gtk_column_view_append_column(cv, MakeColumn("Time",    FormatTimeCell,   110, false));
     gtk_column_view_append_column(cv, MakeColumn("Message", FormatMessageCell, 0, true));
+
+    // Hide the column header row to match macOS/Windows look. GtkColumnView
+    // exposes its header as the first child of its internal layout.
+    if (GtkWidget* header = gtk_widget_get_first_child(columnView_)) {
+        gtk_widget_set_visible(header, FALSE);
+    }
 
     scroller_ = gtk_scrolled_window_new();
     gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scroller_),
