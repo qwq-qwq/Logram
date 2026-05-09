@@ -1,6 +1,6 @@
 # Logram
 
-Native cross-platform UnityBase log analyzer for **macOS** and **Windows**.
+Native cross-platform UnityBase log analyzer for **macOS**, **Windows** and **Linux**.
 
 Opens multi-gigabyte UB server logs and turns them into a readable stream with filters, method timing, SQL highlighting, and cust1 parameter substitution.
 
@@ -13,30 +13,32 @@ Opens multi-gigabyte UB server logs and turns them into a readable stream with f
 ## Features
 
 - **4 log formats** auto-detected: mORMot 1, mORMot 2 HiRes, journald, console
-- **32 UB log levels** with colored badges and glyph icons in the macOS sidebar
-- **Filter by level and thread** with one-click presets (Errors, SQL, HTTP, +/-)
+- **32 UB log levels** with colored badges and glyph icons in the sidebar
+- **Filter by level and thread** with one-click presets (All, Errors, SQL, HTTP, +/-)
 - **Sticky focus** — the selected line stays selected and centered when filter checkboxes are toggled
-- **Method timing** pairs `+` and `-` entries, sorted by duration
+- **Focus on Call** — Ctrl/Cmd+Shift+E narrows the view to the enclosing `+/-` pair on the same thread
+- **Method timing** pairs `+` and `-` entries, sorted by duration (top 1000)
+- **Statistics** events/sec, distribution by level, HTTP/SQL counts
 - **SQL highlighting** with cust1 parameter substitution
 - **Tabs** native macOS window tabs (Cmd+N)
 - **Themes** Tokyo Night and TTY
-- **Keyboard-driven** Cmd+J (jump to pair), Cmd+C (copy), F3 (find next)
+- **Keyboard-driven** Cmd/Ctrl+J (jump to pair), Cmd/Ctrl+C (copy), F3 (find next), Ctrl+Shift+↓/↑ (next/prev error)
 - **Drag & drop** log files into the window
 
 ## Architecture
 
-Two independent native implementations sharing the same parser logic and feature set:
+Three independent native implementations sharing the same parser logic and feature set. The C++ core (`LogramWin/src/core`, `LogramWin/src/sql`) is reused verbatim by the Linux build.
 
-| | macOS | Windows |
-|---|---|---|
-| Language | Swift 5.9 | C++20 |
-| UI | SwiftUI + NSTableView | Win32 + Direct2D + DirectWrite |
-| Log table | NSViewRepresentable | Custom D2D control, 60fps |
-| File I/O | Data(mappedIfSafe) | Memory-mapped (MapViewOfFile) |
-| Line struct | LogLine (~120 bytes) | LogLineHot (20 bytes SoA) |
-| Parsing | async chunks + Task.yield | std::jthread x CPU cores |
-| Detail panel | SwiftUI | RichEdit + manual highlighting |
-| Binary size | ~1.2 MB (.app) | ~440 KB (.exe) |
+| | macOS | Windows | Linux |
+|---|---|---|---|
+| Language | Swift 5.9 | C++20 | C++20 |
+| UI | SwiftUI + NSTableView | Win32 + Direct2D + DirectWrite | GTK4 + GtkColumnView |
+| Log table | NSViewRepresentable | Custom D2D control, 60fps | GListModel virtualization |
+| File I/O | Data(mappedIfSafe) | Memory-mapped (MapViewOfFile) | mmap(2) |
+| Line struct | LogLine (~120 bytes) | LogLineHot (20 bytes SoA) | LogLineHot (shared with Win) |
+| Parsing | async chunks + Task.yield | std::jthread × CPU cores | std::jthread × CPU cores |
+| Detail panel | SwiftUI | RichEdit + manual highlighting | GtkTextView + tags |
+| Binary size | ~1.2 MB (.app) | ~440 KB (.exe) | ~500 KB |
 
 ## Build
 
@@ -59,6 +61,18 @@ cmake --build build --config Release
 ```
 
 Requires Windows 10+, Visual Studio 2022, x64 only.
+
+### Linux
+
+```bash
+sudo apt install build-essential cmake ninja-build pkg-config libgtk-4-dev
+cd LogramLinux
+cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+cmake --build build
+./build/Logram
+```
+
+Requires Ubuntu 24.04+ (or any distro with GTK 4.14+).
 
 ## UB Log Format
 

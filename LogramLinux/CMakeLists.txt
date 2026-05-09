@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.24)
-project(Logram VERSION 1.0.0 LANGUAGES CXX C)
+project(Logram VERSION 1.2.0 LANGUAGES CXX C)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -122,3 +122,31 @@ if(BUILD_TESTS)
     target_link_libraries(parser_tests PRIVATE logram_core)
     add_test(NAME ParserTests COMMAND parser_tests)
 endif()
+
+# --- CPack: .deb package ---
+# `cpack -G DEB` from the build dir emits logram_<ver>_<arch>.deb that wraps
+# the install rules above. Dependencies are auto-resolved via SHLIBDEPS, so
+# `apt install ./logram_*.deb` pulls in the right libgtk-4-1 / libglib etc.
+set(CPACK_PACKAGE_NAME              "logram")
+set(CPACK_PACKAGE_VERSION           "${PROJECT_VERSION}")
+set(CPACK_PACKAGE_VENDOR            "Sergey Perekrestov")
+set(CPACK_PACKAGE_CONTACT           "Sergey Perekrestov <qwq.z.qwq@gmail.com>")
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY
+    "Native UnityBase log analyzer")
+set(CPACK_PACKAGE_HOMEPAGE_URL      "https://logram.perek.rest")
+
+set(CPACK_GENERATOR                 "DEB")
+set(CPACK_DEBIAN_PACKAGE_NAME       "logram")
+set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Sergey Perekrestov <qwq.z.qwq@gmail.com>")
+set(CPACK_DEBIAN_PACKAGE_SECTION    "devel")
+set(CPACK_DEBIAN_PACKAGE_PRIORITY   "optional")
+set(CPACK_DEBIAN_PACKAGE_HOMEPAGE   "https://logram.perek.rest")
+set(CPACK_DEBIAN_PACKAGE_DESCRIPTION
+    "Native UnityBase log analyzer for Linux.\n Opens multi-gigabyte UB server logs and turns them into a readable\n stream with filters, method timing, SQL highlighting and cust1\n parameter substitution. GTK4 native UI, no Electron.")
+# Auto-detect dependencies from the linked .so files. Falls back to a
+# manual list if shlibdeps fails (e.g. dpkg-shlibdeps not on PATH).
+set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS  ON)
+set(CPACK_DEBIAN_PACKAGE_DEPENDS    "libgtk-4-1 (>= 4.14), libglib2.0-0 (>= 2.80)")
+# logram_1.2.0_amd64.deb naming.
+set(CPACK_DEBIAN_FILE_NAME          "DEB-DEFAULT")
+include(CPack)
