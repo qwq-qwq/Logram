@@ -108,6 +108,8 @@ checkbutton > check {
     min-width: 18px;
     min-height: 18px;
     margin-right: 6px;
+    box-shadow: none;
+    outline: none;
 }
 checkbutton > check:checked,
 checkbutton check:checked,
@@ -117,9 +119,17 @@ checkbutton:checked check {
     background-image: none;
     border-color: #2a2e44;
     color: #7aa2f7;
+    box-shadow: none;
+    outline: none;
 }
 checkbutton > check:hover {
     border-color: #3d4a72;
+}
+checkbutton:focus,
+checkbutton:focus-within,
+checkbutton > check:focus {
+    outline: none;
+    box-shadow: none;
 }
 
 columnview {
@@ -295,6 +305,8 @@ checkbutton > check {
     min-width: 18px;
     min-height: 18px;
     margin-right: 6px;
+    box-shadow: none;
+    outline: none;
 }
 checkbutton > check:checked,
 checkbutton check:checked,
@@ -304,9 +316,17 @@ checkbutton:checked check {
     background-image: none;
     border-color: #2a2a2a;
     color: #b0b0b0;
+    box-shadow: none;
+    outline: none;
 }
 checkbutton > check:hover {
     border-color: #404040;
+}
+checkbutton:focus,
+checkbutton:focus-within,
+checkbutton > check:focus {
+    outline: none;
+    box-shadow: none;
 }
 
 columnview {
