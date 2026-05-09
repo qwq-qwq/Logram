@@ -1,5 +1,6 @@
 #include "ui/App.h"
 #include "ui/MainWindow.h"
+#include "ui/Theme.h"
 
 #include <gtk/gtk.h>
 
@@ -10,6 +11,7 @@ void OnWindowDestroy(GtkWidget* /*window*/, gpointer user_data) {
 }
 
 void OnActivate(GtkApplication* app, gpointer /*user_data*/) {
+    Theme::Apply();
     auto* mw = new MainWindow(app);
     g_signal_connect(mw->Widget(), "destroy", G_CALLBACK(OnWindowDestroy), mw);
     gtk_window_present(GTK_WINDOW(mw->Widget()));
