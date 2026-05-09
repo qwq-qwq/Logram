@@ -24,6 +24,9 @@ public:
     void Refresh();
     // Scroll/focus to the given position within the filtered list.
     void ScrollToPosition(unsigned position);
+    // Show/hide the Duration column. Off by default (matches macOS/Windows).
+    void SetDurationVisible(bool visible);
+    bool IsDurationVisible() const { return durationVisible_; }
 
     // Fired when the user picks a new row. The argument is the document's
     // line id (index into AllLines), or -1 if nothing is selected.
@@ -43,10 +46,12 @@ private:
     GtkWidget* scroller_ = nullptr;
     GtkWidget* columnView_ = nullptr;
     GtkWidget* popover_ = nullptr;
+    GtkColumnViewColumn* durationColumn_ = nullptr;
     GListModel* model_ = nullptr;
     GtkSelectionModel* selection_ = nullptr;
     LogDocument* doc_ = nullptr;
     unsigned lastCount_ = 0;
     int leadPos_ = -1; // position-in-filtered of the row shown in detail panel
+    bool durationVisible_ = false;
     std::function<void(int)> onSelection_;
 };

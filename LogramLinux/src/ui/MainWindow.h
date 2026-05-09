@@ -36,6 +36,12 @@ public:
     // Header-bar params toggle.
     void SetParamsEnabled(bool enabled);
 
+    // Menu actions.
+    void ToggleDuration(bool visible);
+    void ShowMethodTiming();
+    // Programmatically navigate to a document line (used by the timing dialog).
+    void GoToLineId(int lineId);
+
 private:
     void UpdateStatus();
     void OnFiltersChanged();
@@ -48,7 +54,7 @@ private:
     GtkWidget* window_ = nullptr;
     GtkWidget* statusLabel_ = nullptr;
     GtkWidget* searchEntry_ = nullptr;
-    GtkWidget* paramsToggle_ = nullptr;
+    bool timingsBuilt_ = false;
     int currentMatchPos_ = -1;
     int selectedLineId_ = -1;
     std::unique_ptr<LogTableView> table_;

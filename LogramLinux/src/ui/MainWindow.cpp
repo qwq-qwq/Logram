@@ -2,6 +2,7 @@
 #include "ui/LogTableView.h"
 #include "ui/FilterSidebar.h"
 #include "ui/DetailPanel.h"
+#include "ui/TimingDialog.h"
 #include "core/LogDocument.h"
 #include "core/LogLine.h"
 
@@ -60,9 +61,14 @@ void OnSearchChanged(GtkSearchEntry* /*entry*/, gpointer self) {
     static_cast<MainWindow*>(self)->OnSearchChanged();
 }
 
-void OnParamsToggled(GtkToggleButton* btn, gpointer self) {
-    auto* mw = static_cast<MainWindow*>(self);
-    mw->SetParamsEnabled(gtk_toggle_button_get_active(btn));
+void OnToggleParamsAction(GSimpleAction* action, GVariant* /*param*/,
+                          gpointer self) {
+    GVariant* state = g_action_get_state(G_ACTION(action));
+    const gboolean was = g_variant_get_boolean(state);
+    g_variant_unref(state);
+    const gboolean now = !was;
+    g_simple_action_set_state(action, g_variant_new_boolean(now));
+    static_cast<MainWindow*>(self)->SetParamsEnabled(now);
 }
 
 void OnFindAction(GSimpleAction*, GVariant*, gpointer self) {
@@ -89,6 +95,21 @@ void OnNextErrorAction(GSimpleAction*, GVariant*, gpointer self) {
 void OnPrevErrorAction(GSimpleAction*, GVariant*, gpointer self) {
     static_cast<MainWindow*>(self)->GotoError(false);
 }
+void OnToggleDurationAction(GSimpleAction* action, GVariant* /*param*/,
+                            gpointer self) {
+    GVariant* state = g_action_get_state(G_ACTION(action));
+    const gboolean was = g_variant_get_boolean(state);
+    g_variant_unref(state);
+    const gboolean now = !was;
+    g_simple_action_set_state(action, g_variant_new_boolean(now));
+    static_cast<MainWindow*>(self)->ToggleDuration(now);
+}
+void OnMethodTimingAction(GSimpleAction*, GVariant*, gpointer self) {
+    static_cast<MainWindow*>(self)->ShowMethodTiming();
+}
+void OnOpenAction(GSimpleAction*, GVariant*, gpointer self) {
+    static_cast<MainWindow*>(self)->OnOpenClicked();
+}
 
 } // namespace
 
@@ -107,6 +128,28 @@ MainWindow::MainWindow(GtkApplication* app) : app_(app) {
     GtkWidget* openBtn = gtk_button_new_with_label("Open…");
     g_signal_connect(openBtn, "clicked", G_CALLBACK(OnOpenButtonClicked), this);
     gtk_header_bar_pack_start(GTK_HEADER_BAR(header), openBtn);
+
+    // Hamburger menu — sits next to the Open button.
+    GMenu* mainMenu = g_menu_new();
+    GMenu* fileSec = g_menu_new();
+    g_menu_append(fileSec, "Open File…", "win.open");
+    g_menu_append_section(mainMenu, nullptr, G_MENU_MODEL(fileSec));
+    g_object_unref(fileSec);
+    GMenu* viewSec = g_menu_new();
+    g_menu_append(viewSec, "Show Duration",            "win.toggle-duration");
+    g_menu_append(viewSec, "Substitute SQL Parameters", "win.toggle-params");
+    g_menu_append(viewSec, "Method Timing…",            "win.method-timing");
+    g_menu_append_section(mainMenu, nullptr, G_MENU_MODEL(viewSec));
+    g_object_unref(viewSec);
+
+    GtkWidget* menuBtn = gtk_menu_button_new();
+    gtk_menu_button_set_icon_name(GTK_MENU_BUTTON(menuBtn),
+                                  "open-menu-symbolic");
+    gtk_menu_button_set_menu_model(GTK_MENU_BUTTON(menuBtn),
+                                   G_MENU_MODEL(mainMenu));
+    gtk_widget_set_tooltip_text(menuBtn, "Menu");
+    g_object_unref(mainMenu);
+    gtk_header_bar_pack_start(GTK_HEADER_BAR(header), menuBtn);
 
     // pack_end accumulates right-to-left; first call → rightmost.
     // Desired order (left → right):
@@ -133,15 +176,6 @@ MainWindow::MainWindow(GtkApplication* app) : app_(app) {
                      G_CALLBACK(::OnSearchChanged), this);
     gtk_header_bar_pack_end(GTK_HEADER_BAR(header), searchEntry_);
 
-    paramsToggle_ = gtk_toggle_button_new_with_label("Params");
-    gtk_widget_add_css_class(paramsToggle_, "flat");
-    gtk_widget_set_tooltip_text(paramsToggle_,
-                                "Substitute SQL bind parameters from the "
-                                "matching Cust1 line on the same thread");
-    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(paramsToggle_), TRUE);
-    g_signal_connect(paramsToggle_, "toggled",
-                     G_CALLBACK(::OnParamsToggled), this);
-    gtk_header_bar_pack_end(GTK_HEADER_BAR(header), paramsToggle_);
 
     sidebar_ = std::make_unique<FilterSidebar>();
     sidebar_->SetOnChanged([this]{ OnFiltersChanged(); });
@@ -186,34 +220,60 @@ MainWindow::~MainWindow() = default;
 
 void MainWindow::InstallActions() {
     static const GActionEntry kActions[] = {
-        {"find",       OnFindAction,      nullptr, nullptr, nullptr, {0, 0, 0}},
-        {"find-next",  OnFindNextAction,  nullptr, nullptr, nullptr, {0, 0, 0}},
-        {"find-prev",  OnFindPrevAction,  nullptr, nullptr, nullptr, {0, 0, 0}},
-        {"copy",       OnCopyAction,      nullptr, nullptr, nullptr, {0, 0, 0}},
-        {"jump-pair",  OnJumpPairAction,  nullptr, nullptr, nullptr, {0, 0, 0}},
-        {"focus-call", OnFocusCallAction, nullptr, nullptr, nullptr, {0, 0, 0}},
-        {"next-error", OnNextErrorAction, nullptr, nullptr, nullptr, {0, 0, 0}},
-        {"prev-error", OnPrevErrorAction, nullptr, nullptr, nullptr, {0, 0, 0}},
+        {"open",          OnOpenAction,         nullptr, nullptr, nullptr, {0, 0, 0}},
+        {"find",          OnFindAction,         nullptr, nullptr, nullptr, {0, 0, 0}},
+        {"find-next",     OnFindNextAction,     nullptr, nullptr, nullptr, {0, 0, 0}},
+        {"find-prev",     OnFindPrevAction,     nullptr, nullptr, nullptr, {0, 0, 0}},
+        {"copy",          OnCopyAction,         nullptr, nullptr, nullptr, {0, 0, 0}},
+        {"jump-pair",     OnJumpPairAction,     nullptr, nullptr, nullptr, {0, 0, 0}},
+        {"focus-call",    OnFocusCallAction,    nullptr, nullptr, nullptr, {0, 0, 0}},
+        {"next-error",    OnNextErrorAction,    nullptr, nullptr, nullptr, {0, 0, 0}},
+        {"prev-error",    OnPrevErrorAction,    nullptr, nullptr, nullptr, {0, 0, 0}},
+        {"method-timing", OnMethodTimingAction, nullptr, nullptr, nullptr, {0, 0, 0}},
     };
     g_action_map_add_action_entries(G_ACTION_MAP(window_),
                                     kActions, G_N_ELEMENTS(kActions), this);
 
-    const char* findAccels[]  = {"<Control>f",          nullptr};
-    const char* nextAccels[]  = {"F3",                  nullptr};
-    const char* prevAccels[]  = {"<Shift>F3",           nullptr};
-    const char* copyAccels[]  = {"<Control>c",          nullptr};
-    const char* jumpAccels[]  = {"<Control>j",          nullptr};
-    const char* focusAccels[] = {"<Control><Shift>e",   nullptr};
+    // Stateful boolean actions — bound to menu items via gtk's automatic
+    // checkmark rendering.
+    GSimpleAction* durAction = g_simple_action_new_stateful(
+        "toggle-duration", nullptr, g_variant_new_boolean(FALSE));
+    g_signal_connect(durAction, "activate",
+                     G_CALLBACK(OnToggleDurationAction), this);
+    g_action_map_add_action(G_ACTION_MAP(window_), G_ACTION(durAction));
+    g_object_unref(durAction);
+
+    GSimpleAction* paramsAction = g_simple_action_new_stateful(
+        "toggle-params", nullptr, g_variant_new_boolean(TRUE));
+    g_signal_connect(paramsAction, "activate",
+                     G_CALLBACK(OnToggleParamsAction), this);
+    g_action_map_add_action(G_ACTION_MAP(window_), G_ACTION(paramsAction));
+    g_object_unref(paramsAction);
+
+    const char* openAccels[]    = {"<Control>o",          nullptr};
+    const char* findAccels[]    = {"<Control>f",          nullptr};
+    const char* nextAccels[]    = {"F3",                  nullptr};
+    const char* prevAccels[]    = {"<Shift>F3",           nullptr};
+    const char* copyAccels[]    = {"<Control>c",          nullptr};
+    const char* jumpAccels[]    = {"<Control>j",          nullptr};
+    const char* focusAccels[]   = {"<Control><Shift>e",   nullptr};
     const char* nextErrAccels[] = {"<Control><Shift>Down", nullptr};
     const char* prevErrAccels[] = {"<Control><Shift>Up",   nullptr};
-    gtk_application_set_accels_for_action(app_, "win.find",       findAccels);
-    gtk_application_set_accels_for_action(app_, "win.find-next",  nextAccels);
-    gtk_application_set_accels_for_action(app_, "win.find-prev",  prevAccels);
-    gtk_application_set_accels_for_action(app_, "win.copy",       copyAccels);
-    gtk_application_set_accels_for_action(app_, "win.jump-pair",  jumpAccels);
-    gtk_application_set_accels_for_action(app_, "win.focus-call", focusAccels);
-    gtk_application_set_accels_for_action(app_, "win.next-error", nextErrAccels);
-    gtk_application_set_accels_for_action(app_, "win.prev-error", prevErrAccels);
+    const char* durAccels[]     = {"<Control>d",          nullptr};
+    const char* paramsAccels[]  = {"<Control>p",          nullptr};
+    const char* timingAccels[]  = {"<Control>m",          nullptr};
+    gtk_application_set_accels_for_action(app_, "win.open",            openAccels);
+    gtk_application_set_accels_for_action(app_, "win.find",            findAccels);
+    gtk_application_set_accels_for_action(app_, "win.find-next",       nextAccels);
+    gtk_application_set_accels_for_action(app_, "win.find-prev",       prevAccels);
+    gtk_application_set_accels_for_action(app_, "win.copy",            copyAccels);
+    gtk_application_set_accels_for_action(app_, "win.jump-pair",       jumpAccels);
+    gtk_application_set_accels_for_action(app_, "win.focus-call",      focusAccels);
+    gtk_application_set_accels_for_action(app_, "win.next-error",      nextErrAccels);
+    gtk_application_set_accels_for_action(app_, "win.prev-error",      prevErrAccels);
+    gtk_application_set_accels_for_action(app_, "win.toggle-duration", durAccels);
+    gtk_application_set_accels_for_action(app_, "win.toggle-params",   paramsAccels);
+    gtk_application_set_accels_for_action(app_, "win.method-timing",   timingAccels);
 }
 
 void MainWindow::OnOpenClicked() {
@@ -234,6 +294,7 @@ void MainWindow::LoadFile(const char* utf8Path) {
         return;
     }
     doc_ = std::move(doc);
+    timingsBuilt_ = false;
     sidebar_->SetDocument(doc_.get());
     table_->SetDocument(doc_.get());
     detail_->Clear();
@@ -388,6 +449,45 @@ void MainWindow::FocusSearch() {
 
 void MainWindow::SetParamsEnabled(bool enabled) {
     detail_->SetParamsEnabled(enabled);
+}
+
+void MainWindow::ToggleDuration(bool visible) {
+    if (!doc_) return;
+    if (visible && !timingsBuilt_) {
+        // Method-timing pairs feed the per-line durations of the matching
+        // `+`/`-` lines. Build once on first toggle, then reuse.
+        doc_->BuildMethodTimings();
+        timingsBuilt_ = true;
+    }
+    table_->SetDurationVisible(visible);
+    table_->Refresh();
+}
+
+void MainWindow::ShowMethodTiming() {
+    if (!doc_) {
+        gtk_widget_error_bell(window_);
+        return;
+    }
+    if (!timingsBuilt_) {
+        doc_->BuildMethodTimings();
+        timingsBuilt_ = true;
+    }
+    auto* dlg = new TimingDialog(GTK_WINDOW(window_), doc_.get(),
+        [this](int lineId) { GoToLineId(lineId); });
+    dlg->Show(); // dialog deletes itself on close-request.
+}
+
+void MainWindow::GoToLineId(int lineId) {
+    if (!doc_ || lineId < 0) return;
+    const auto& filtered = doc_->FilteredIndices();
+    for (size_t i = 0; i < filtered.size(); ++i) {
+        if (static_cast<int>(filtered[i]) == lineId) {
+            table_->ScrollToPosition(static_cast<unsigned>(i));
+            return;
+        }
+    }
+    // The target line is filtered out; don't silently fail.
+    gtk_widget_error_bell(window_);
 }
 
 void MainWindow::SearchNext() { DoSearch(true); }

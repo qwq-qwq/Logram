@@ -119,6 +119,25 @@ void FormatTimeCell(GtkLabel* label, LogDocument* doc, guint lineId, guint) {
     gtk_label_set_text(label, text.c_str());
 }
 
+void FormatDurationCell(GtkLabel* label, LogDocument* doc, guint lineId, guint) {
+    const int64_t us = doc->GetDuration(static_cast<uint32_t>(lineId));
+    if (us < 0) {
+        gtk_label_set_text(label, "");
+        return;
+    }
+    const std::string text = ::FormatDuration(us);
+    // Tier-based coloring matches macOS/Windows: dim under 1ms, ramp up.
+    const char* color = "#a9b1d6";
+    if      (us >= 10'000'000) color = "#f7768e"; // ≥10s — red
+    else if (us >=  1'000'000) color = "#e0af68"; // ≥1s  — amber
+    else if (us >=    100'000) color = "#7aa2f7"; // ≥100ms
+    else if (us <        1'000) color = "#565f89"; // <1ms — dim
+    char* markup = g_markup_printf_escaped(
+        "<span foreground=\"%s\">%s</span>", color, text.c_str());
+    gtk_label_set_markup(label, markup);
+    g_free(markup);
+}
+
 void FormatMessageCell(GtkLabel* label, LogDocument* doc, guint lineId, guint) {
     const auto& line = doc->AllLines()[lineId];
     const LogLevel level = static_cast<LogLevel>(line.level);
@@ -226,10 +245,13 @@ LogTableView::LogTableView() {
     gtk_column_view_set_show_column_separators(GTK_COLUMN_VIEW(columnView_), FALSE);
 
     GtkColumnView* cv = GTK_COLUMN_VIEW(columnView_);
-    gtk_column_view_append_column(cv, MakeColumn("Time",    FormatTimeCell,    96, false));
-    gtk_column_view_append_column(cv, MakeColumn("Thread",  FormatThreadCell,  32, false));
-    gtk_column_view_append_column(cv, MakeColumn("Level",   FormatLevelCell,   64, false));
-    gtk_column_view_append_column(cv, MakeColumn("Message", FormatMessageCell,  0, true));
+    gtk_column_view_append_column(cv, MakeColumn("Time",     FormatTimeCell,     96, false));
+    gtk_column_view_append_column(cv, MakeColumn("Thread",   FormatThreadCell,   32, false));
+    gtk_column_view_append_column(cv, MakeColumn("Level",    FormatLevelCell,    64, false));
+    durationColumn_ = MakeColumn("Duration", FormatDurationCell, 80, false);
+    gtk_column_view_column_set_visible(durationColumn_, FALSE);
+    gtk_column_view_append_column(cv, durationColumn_);
+    gtk_column_view_append_column(cv, MakeColumn("Message",  FormatMessageCell,   0, true));
 
     // Hide the column header row to match macOS/Windows look. GtkColumnView
     // exposes its header as the first child of its internal layout.
@@ -280,6 +302,14 @@ void LogTableView::SetDocument(LogDocument* doc) {
     rm->doc = doc;
     doc_ = doc;
     Refresh();
+}
+
+void LogTableView::SetDurationVisible(bool visible) {
+    durationVisible_ = visible;
+    if (durationColumn_) {
+        gtk_column_view_column_set_visible(durationColumn_,
+                                           visible ? TRUE : FALSE);
+    }
 }
 
 void LogTableView::Refresh() {
