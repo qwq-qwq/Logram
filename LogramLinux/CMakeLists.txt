@@ -65,8 +65,13 @@ add_custom_command(
             ${LOGRAM_GRESOURCE_XML}
     DEPENDS ${LOGRAM_GRESOURCE_XML} ${LOGRAM_GRESOURCE_DEPS}
     VERBATIM)
-# Mark explicitly as generated so add_executable picks it up correctly.
 set_source_files_properties(${LOGRAM_GRESOURCE_C} PROPERTIES GENERATED TRUE)
+
+# Wrap the generated C in its own static library — this guarantees CMake
+# emits the compile step regardless of how it folds GENERATED sources into
+# the main executable.
+add_library(logram_resources STATIC ${LOGRAM_GRESOURCE_C})
+target_link_libraries(logram_resources PUBLIC PkgConfig::GTK4)
 
 # --- Main executable ---
 add_executable(Logram
@@ -77,11 +82,14 @@ add_executable(Logram
     src/ui/FilterSidebar.cpp
     src/ui/DetailPanel.cpp
     src/ui/Theme.cpp
-    ${LOGRAM_GRESOURCE_C}
 )
 target_include_directories(Logram PRIVATE src)
+# logram_resources is wrapped in WHOLE_ARCHIVE so the linker keeps the
+# generated GResource constructor symbol — without this, --gc-sections /
+# no-as-needed can drop it because nothing references it from main code.
 target_link_libraries(Logram PRIVATE
     logram_core
+    "$<LINK_LIBRARY:WHOLE_ARCHIVE,logram_resources>"
     PkgConfig::GTK4
 )
 
