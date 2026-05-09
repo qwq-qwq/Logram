@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.24)
-project(Logram VERSION 1.0.0 LANGUAGES CXX)
+project(Logram VERSION 1.0.0 LANGUAGES CXX C)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -71,6 +71,11 @@ set_source_files_properties(${LOGRAM_GRESOURCE_C} PROPERTIES GENERATED TRUE)
 # emits the compile step regardless of how it folds GENERATED sources into
 # the main executable.
 add_library(logram_resources STATIC ${LOGRAM_GRESOURCE_C})
+# The source is GENERATED so CMake can't autodetect the language at
+# configure time; tell it.
+set_target_properties(logram_resources PROPERTIES
+    LINKER_LANGUAGE C
+    C_STANDARD 11)
 target_link_libraries(logram_resources PUBLIC PkgConfig::GTK4)
 
 # --- Main executable ---
