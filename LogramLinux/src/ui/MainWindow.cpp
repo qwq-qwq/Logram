@@ -3,10 +3,12 @@
 #include "ui/FilterSidebar.h"
 #include "ui/DetailPanel.h"
 #include "core/LogDocument.h"
+#include "core/LogLine.h"
 
 #include <cstdio>
 #include <cstring>
 #include <string>
+#include <string_view>
 
 namespace {
 
@@ -66,6 +68,12 @@ void OnFindNextAction(GSimpleAction*, GVariant*, gpointer self) {
 }
 void OnFindPrevAction(GSimpleAction*, GVariant*, gpointer self) {
     static_cast<MainWindow*>(self)->SearchPrev();
+}
+void OnCopyAction(GSimpleAction*, GVariant*, gpointer self) {
+    static_cast<MainWindow*>(self)->CopySelectedLine();
+}
+void OnJumpPairAction(GSimpleAction*, GVariant*, gpointer self) {
+    static_cast<MainWindow*>(self)->JumpToPair();
 }
 
 } // namespace
@@ -135,19 +143,25 @@ MainWindow::~MainWindow() = default;
 
 void MainWindow::InstallActions() {
     static const GActionEntry kActions[] = {
-        {"find",      OnFindAction,     nullptr, nullptr, nullptr, {0, 0, 0}},
-        {"find-next", OnFindNextAction, nullptr, nullptr, nullptr, {0, 0, 0}},
-        {"find-prev", OnFindPrevAction, nullptr, nullptr, nullptr, {0, 0, 0}},
+        {"find",       OnFindAction,     nullptr, nullptr, nullptr, {0, 0, 0}},
+        {"find-next",  OnFindNextAction, nullptr, nullptr, nullptr, {0, 0, 0}},
+        {"find-prev",  OnFindPrevAction, nullptr, nullptr, nullptr, {0, 0, 0}},
+        {"copy",       OnCopyAction,     nullptr, nullptr, nullptr, {0, 0, 0}},
+        {"jump-pair",  OnJumpPairAction, nullptr, nullptr, nullptr, {0, 0, 0}},
     };
     g_action_map_add_action_entries(G_ACTION_MAP(window_),
                                     kActions, G_N_ELEMENTS(kActions), this);
 
-    const char* findAccels[] = {"<Control>f", nullptr};
-    const char* nextAccels[] = {"F3", nullptr};
-    const char* prevAccels[] = {"<Shift>F3", nullptr};
-    gtk_application_set_accels_for_action(app_, "win.find",      findAccels);
-    gtk_application_set_accels_for_action(app_, "win.find-next", nextAccels);
-    gtk_application_set_accels_for_action(app_, "win.find-prev", prevAccels);
+    const char* findAccels[]  = {"<Control>f", nullptr};
+    const char* nextAccels[]  = {"F3", nullptr};
+    const char* prevAccels[]  = {"<Shift>F3", nullptr};
+    const char* copyAccels[]  = {"<Control>c", nullptr};
+    const char* jumpAccels[]  = {"<Control>j", nullptr};
+    gtk_application_set_accels_for_action(app_, "win.find",       findAccels);
+    gtk_application_set_accels_for_action(app_, "win.find-next",  nextAccels);
+    gtk_application_set_accels_for_action(app_, "win.find-prev",  prevAccels);
+    gtk_application_set_accels_for_action(app_, "win.copy",       copyAccels);
+    gtk_application_set_accels_for_action(app_, "win.jump-pair",  jumpAccels);
 }
 
 void MainWindow::OnOpenClicked() {
@@ -189,7 +203,42 @@ void MainWindow::OnFiltersChanged() {
 }
 
 void MainWindow::OnRowSelected(int lineId) {
+    selectedLineId_ = lineId;
     detail_->SetLine(doc_.get(), lineId);
+}
+
+void MainWindow::CopySelectedLine() {
+    if (!doc_ || selectedLineId_ < 0 ||
+        static_cast<size_t>(selectedLineId_) >= doc_->AllLines().size()) {
+        gtk_widget_error_bell(window_);
+        return;
+    }
+    const auto& line = doc_->AllLines()[selectedLineId_];
+    const std::string_view raw = GetRawLine(doc_->MappedBase(), line);
+    const std::string text(raw);
+    GdkClipboard* clip = gtk_widget_get_clipboard(window_);
+    gdk_clipboard_set_text(clip, text.c_str());
+}
+
+void MainWindow::JumpToPair() {
+    if (!doc_ || selectedLineId_ < 0) {
+        gtk_widget_error_bell(window_);
+        return;
+    }
+    const int pairLineId = doc_->FindMatchingPair(selectedLineId_);
+    if (pairLineId < 0) {
+        gtk_widget_error_bell(window_);
+        return;
+    }
+    const auto& filtered = doc_->FilteredIndices();
+    for (size_t i = 0; i < filtered.size(); ++i) {
+        if (static_cast<int>(filtered[i]) == pairLineId) {
+            table_->ScrollToPosition(static_cast<unsigned>(i));
+            return;
+        }
+    }
+    // Pair exists but is filtered out.
+    gtk_widget_error_bell(window_);
 }
 
 void MainWindow::FocusSearch() {
