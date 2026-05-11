@@ -70,6 +70,8 @@ jobs:
             -project Logram.xcodeproj \
             -scheme Logram \
             -configuration Release \
+            ARCHS="arm64 x86_64" \
+            ONLY_ACTIVE_ARCH=NO \
             CODE_SIGN_STYLE=Manual \
             CODE_SIGN_IDENTITY="$DEV_ID" \
             DEVELOPMENT_TEAM="$TEAM_ID" \
@@ -85,6 +87,8 @@ jobs:
             -project Logram.xcodeproj \
             -scheme Logram \
             -configuration Release \
+            ARCHS="arm64 x86_64" \
+            ONLY_ACTIVE_ARCH=NO \
             CODE_SIGN_IDENTITY="-" \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
