@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.24)
-project(Logram VERSION 1.2.0 LANGUAGES CXX C)
+project(Logram VERSION 1.2.2 LANGUAGES CXX C)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -147,6 +147,6 @@ set(CPACK_DEBIAN_PACKAGE_DESCRIPTION
 # manual list if shlibdeps fails (e.g. dpkg-shlibdeps not on PATH).
 set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS  ON)
 set(CPACK_DEBIAN_PACKAGE_DEPENDS    "libgtk-4-1 (>= 4.14), libglib2.0-0 (>= 2.80)")
-# logram_1.2.0_amd64.deb naming.
+# logram_<ver>_amd64.deb naming (driven by CPACK_PACKAGE_VERSION).
 set(CPACK_DEBIAN_FILE_NAME          "DEB-DEFAULT")
 include(CPack)
