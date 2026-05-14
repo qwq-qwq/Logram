@@ -401,6 +401,31 @@ void DetailPanel::ShowLine(int lineId) {
     std::string headerText;
     HighlightMode hlMode = HighlightMode::None;
 
+    // Line metadata prefix: "#N  HH:MM:SS.cc  Thread T  Level"
+    // (mirrors the mac/linux detail panel header).
+    {
+        char metaBuf[128];
+        const auto& info = GetLogLevelInfo(level);
+        const std::string timeStr = FormatTime(line.epochCS);
+        if (line.thread >= 0 && !timeStr.empty()) {
+            std::snprintf(metaBuf, sizeof(metaBuf),
+                          "#%d  %s  Thread %d  %s    ",
+                          lineId + 1, timeStr.c_str(), line.thread, info.label);
+        } else if (line.thread >= 0) {
+            std::snprintf(metaBuf, sizeof(metaBuf),
+                          "#%d  Thread %d  %s    ",
+                          lineId + 1, line.thread, info.label);
+        } else if (!timeStr.empty()) {
+            std::snprintf(metaBuf, sizeof(metaBuf),
+                          "#%d  %s  %s    ",
+                          lineId + 1, timeStr.c_str(), info.label);
+        } else {
+            std::snprintf(metaBuf, sizeof(metaBuf),
+                          "#%d  %s    ", lineId + 1, info.label);
+        }
+        headerText = metaBuf;
+    }
+
     // SQL lines: format SQL
     if (level == LogLevel::Sql || level == LogLevel::Cust2) {
         auto parsed = SqlStatsParse(msgStr);

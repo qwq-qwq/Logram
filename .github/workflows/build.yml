@@ -170,7 +170,7 @@ jobs:
             ## Linux
 
             ```bash
-            sudo apt install ./logram_1.2.0_amd64.deb
+            sudo apt install ./logram_1.2.2_amd64.deb
             ```
 
             Появляется в Activities, ассоциируется с `.log` файлами (правый клик → Open With Logram). Удаление — `sudo apt remove logram`. Требует Ubuntu 24.04+ или другой Debian-based дистрибутив с GTK 4.14+.

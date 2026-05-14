@@ -46,6 +46,10 @@ static void GoToSelected(HWND hwnd, TimingDlgData* data) {
     // Enable duration column so timings are visible
     Settings::Instance().SetShowDuration(true);
 
+    // Clear any active focus first - its narrowed range/thread would
+    // otherwise override the thread filter we set below.
+    if (data->doc->FocusActive()) data->doc->ClearFocus();
+
     // Filter to show only this thread (like Mac version)
     data->doc->SetEnabledThreadMask(uint64_t(1) << t->thread);
     data->doc->ApplyFilters();
