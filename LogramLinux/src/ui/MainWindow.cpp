@@ -591,7 +591,20 @@ void MainWindow::ShowMethodTiming() {
         timingsBuilt_ = true;
     }
     auto* dlg = new TimingDialog(GTK_WINDOW(window_), doc_.get(),
-        [this](int lineId) { GoToLineId(lineId); });
+        [this](int lineId) {
+            // Clear any active focus before jumping - the focus range/thread
+            // would otherwise hide the target line.
+            if (doc_ && doc_->FocusActive()) {
+                doc_->ClearFocus();
+                doc_->ApplyFilters();
+                sidebar_->Refresh();
+                table_->Refresh();
+                detail_->Clear();
+                ResetSearch();
+                UpdateStatus();
+            }
+            GoToLineId(lineId);
+        });
     dlg->Show(); // dialog deletes itself on close-request.
 }
 

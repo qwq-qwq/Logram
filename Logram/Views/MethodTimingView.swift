@@ -86,8 +86,11 @@ struct MethodTimingView: View {
 
     private func goToSelected() {
         guard let lineId = selected else { return }
-        // Filter to show only the thread of the selected method
+        // Filter to show only the thread of the selected method.
+        // Clear any active focus first so its narrowed range/thread doesn't
+        // hide the target line (focus would otherwise restore enabledThreads).
         if let timing = sortedItems.first(where: { $0.id == lineId }) {
+            document.clearFocus()
             document.enabledThreads = [timing.thread]
             document.applyFilters()
         }

@@ -169,6 +169,31 @@ struct ContentView: View {
                     .buttonStyle(.borderless)
                     .help("Next Error")
                 }
+
+                Divider().frame(height: 20)
+            }
+
+            HStack(spacing: 6) {
+                Button {
+                    showStats = true
+                } label: {
+                    Image(systemName: "chart.bar.xaxis")
+                        .font(.system(size: 14, weight: .semibold))
+                }
+                .buttonStyle(.borderless)
+                .disabled(document.allLines.isEmpty)
+                .help("Statistics (Cmd+I)")
+
+                Button {
+                    document.buildMethodTimings()
+                    showTimings = true
+                } label: {
+                    Image(systemName: "stopwatch")
+                        .font(.system(size: 14, weight: .semibold))
+                }
+                .buttonStyle(.borderless)
+                .disabled(document.allLines.isEmpty)
+                .help("Method Timing (Cmd+M)")
             }
 
             Spacer()
