@@ -494,10 +494,33 @@ final class LogDocument {
     }
 
     var durationFormatted: String {
-        guard let d = duration else { return "—" }
+        guard let d = duration else { return "-" }
         let h = Int(d) / 3600
         let m = (Int(d) % 3600) / 60
         let s = Int(d) % 60
         return String(format: "%d:%02d:%02d", h, m, s)
+    }
+
+    var startTimeFormatted: String? {
+        guard startEpochCS >= 0 else { return nil }
+        return Self.formatEpochCS(startEpochCS)
+    }
+
+    var endTimeFormatted: String? {
+        guard endEpochCS >= 0 else { return nil }
+        return Self.formatEpochCS(endEpochCS)
+    }
+
+    private static let epochFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd HH:mm:ss"
+        f.timeZone = TimeZone(secondsFromGMT: 0)
+        f.locale = Locale(identifier: "en_US_POSIX")
+        return f
+    }()
+
+    private static func formatEpochCS(_ cs: Int64) -> String {
+        let date = Date(timeIntervalSince1970: Double(cs) / 100.0)
+        return epochFormatter.string(from: date)
     }
 }

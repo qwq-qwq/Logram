@@ -116,6 +116,14 @@ static LRESULT CALLBACK StatsWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
             snprintf(buf, sizeof(buf), "%d", doc->ErrorCount());
             addRow(L"Errors", Utf8ToWide(buf));
 
+            {
+                auto startStr = doc->StartTimeFormatted();
+                if (!startStr.empty())
+                    addRow(L"Start", Utf8ToWide(startStr));
+                auto endStr = doc->EndTimeFormatted();
+                if (!endStr.empty())
+                    addRow(L"End", Utf8ToWide(endStr));
+            }
             addRow(L"Duration", Utf8ToWide(doc->DurationFormatted()));
 
             std::string threads;

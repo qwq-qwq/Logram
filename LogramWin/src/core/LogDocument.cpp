@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cstring>
 #include <cmath>
+#include <ctime>
 
 std::string LogDocument::FileName() const {
     auto& p = file_.Path();
@@ -37,6 +38,31 @@ std::string LogDocument::DurationFormatted() const {
     char buf[16];
     snprintf(buf, sizeof(buf), "%d:%02d:%02d", h, m, s);
     return buf;
+}
+
+static std::string FormatEpochCS(int64_t cs) {
+    if (cs < 0) return "";
+    std::time_t t = static_cast<std::time_t>(cs / 100);
+    std::tm tm{};
+#if defined(_WIN32)
+    if (gmtime_s(&tm, &t) != 0) return "";
+#else
+    if (gmtime_r(&t, &tm) == nullptr) return "";
+#endif
+    char buf[32];
+    std::snprintf(buf, sizeof(buf),
+                  "%04d-%02d-%02d %02d:%02d:%02d",
+                  tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
+                  tm.tm_hour, tm.tm_min, tm.tm_sec);
+    return buf;
+}
+
+std::string LogDocument::StartTimeFormatted() const {
+    return FormatEpochCS(startEpochCS_);
+}
+
+std::string LogDocument::EndTimeFormatted() const {
+    return FormatEpochCS(endEpochCS_);
 }
 
 int64_t LogDocument::GetDuration(uint32_t lineId) const {

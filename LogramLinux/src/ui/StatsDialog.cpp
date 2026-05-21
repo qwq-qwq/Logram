@@ -120,6 +120,14 @@ void StatsDialog::Show() {
         AppendKeyValue(g, row, "UB Version:", doc_->UBVersion());
     if (!doc_->HostInfo().empty())
         AppendKeyValue(g, row, "Host:",     doc_->HostInfo());
+    {
+        auto startStr = doc_->StartTimeFormatted();
+        if (!startStr.empty())
+            AppendKeyValue(g, row, "Start:", startStr);
+        auto endStr = doc_->EndTimeFormatted();
+        if (!endStr.empty())
+            AppendKeyValue(g, row, "End:", endStr);
+    }
     AppendKeyValue(g, row, "Duration:",     doc_->DurationFormatted());
     AppendKeyValue(g, row, "Total Events:", std::to_string(doc_->TotalEvents()));
     AppendKeyValue(g, row, "Threads:",      std::to_string(doc_->ActiveThreads().size()));
