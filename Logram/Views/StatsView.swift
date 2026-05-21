@@ -57,6 +57,22 @@ struct StatsView: View {
                         Text(host).lineLimit(1)
                     }
                 }
+                if let start = document.startTimeFormatted {
+                    GridRow {
+                        Text("Start:").foregroundStyle(.secondary)
+                        Text(start)
+                            .font(.system(.body, design: .monospaced))
+                            .textSelection(.enabled)
+                    }
+                }
+                if let end = document.endTimeFormatted {
+                    GridRow {
+                        Text("End:").foregroundStyle(.secondary)
+                        Text(end)
+                            .font(.system(.body, design: .monospaced))
+                            .textSelection(.enabled)
+                    }
+                }
                 GridRow {
                     Text("Duration:").foregroundStyle(.secondary)
                     Text(document.durationFormatted)

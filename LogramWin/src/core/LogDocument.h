@@ -53,6 +53,8 @@ public:
     int ErrorCount() const;
     double DurationSeconds() const;
     std::string DurationFormatted() const;
+    std::string StartTimeFormatted() const;
+    std::string EndTimeFormatted() const;
 
     // --- HTTP/Duration sparse data ---
     const std::vector<LogLineHttp>& HttpLines() const { return httpLines_; }
