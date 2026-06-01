@@ -175,16 +175,6 @@ struct ContentView: View {
 
             HStack(spacing: 6) {
                 Button {
-                    showStats = true
-                } label: {
-                    Image(systemName: "chart.bar.xaxis")
-                        .font(.system(size: 14, weight: .semibold))
-                }
-                .buttonStyle(.borderless)
-                .disabled(document.allLines.isEmpty)
-                .help("Statistics (Cmd+I)")
-
-                Button {
                     document.buildMethodTimings()
                     showTimings = true
                 } label: {
@@ -194,6 +184,16 @@ struct ContentView: View {
                 .buttonStyle(.borderless)
                 .disabled(document.allLines.isEmpty)
                 .help("Method Timing (Cmd+M)")
+
+                Button {
+                    showStats = true
+                } label: {
+                    Image(systemName: "chart.bar.xaxis")
+                        .font(.system(size: 14, weight: .semibold))
+                }
+                .buttonStyle(.borderless)
+                .disabled(document.allLines.isEmpty)
+                .help("Statistics (Cmd+I)")
             }
 
             Spacer()

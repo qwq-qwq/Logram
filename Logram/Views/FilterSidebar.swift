@@ -137,12 +137,14 @@ struct FilterSidebar: View {
 
     private func presetButton(_ title: String, levels: Set<LogLevel>) -> some View {
         Button(title) {
-            // Toggle: if all selected, deselect; otherwise select only these
-            let allEnabled = levels.isSubset(of: document.enabledLevels)
-            if allEnabled {
-                document.enabledLevels.subtract(levels)
+            // Toggle: if this preset is exactly what's active, restore all
+            // levels; otherwise narrow down to just the preset.
+            if document.enabledLevels == levels {
+                document.enabledLevels = Set(LogLevel.allCases)
+                showAllLevels = true
             } else {
                 document.enabledLevels = levels
+                showAllLevels = false
             }
             document.applyFilters()
         }
