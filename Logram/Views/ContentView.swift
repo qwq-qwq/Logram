@@ -101,7 +101,10 @@ struct ContentView: View {
             pendingURL = nil
         }
         .onAppear {
-            appDelegate.setOpenNew { url in openWindow(value: Optional(url)) }
+            // Taker must be registered before setOpenNew: setOpenNew flushes
+            // queued cold-start URLs, and this empty window has to catch them,
+            // otherwise dispatch falls through to openNew and spawns a second
+            // window while this one stays empty.
             appDelegate.registerTaker(takerID) { url in
                 guard document.allLines.isEmpty,
                       !document.isLoading,
@@ -109,6 +112,7 @@ struct ContentView: View {
                 pendingURL = url
                 return true
             }
+            appDelegate.setOpenNew { url in openWindow(value: Optional(url)) }
         }
         .onDisappear {
             appDelegate.unregisterTaker(takerID)
