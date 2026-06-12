@@ -16,6 +16,7 @@ struct _TimingRow {
     int thread;
     double durationMS;
     char* method;
+    gboolean isOpen;
 };
 
 #define LOGRAM_TYPE_TIMING_ROW (timing_row_get_type())
@@ -34,12 +35,13 @@ static void timing_row_class_init(TimingRowClass* klass) {
 }
 
 static TimingRow* timing_row_new(int lineId, int thread, double durMS,
-                                 const char* method) {
+                                 const char* method, gboolean isOpen) {
     auto* row = LOGRAM_TIMING_ROW(g_object_new(LOGRAM_TYPE_TIMING_ROW, nullptr));
     row->lineId = lineId;
     row->thread = thread;
     row->durationMS = durMS;
     row->method = g_strdup(method ? method : "");
+    row->isOpen = isOpen;
     return row;
 }
 
@@ -65,7 +67,8 @@ void FormatThreadCell(GtkLabel* l, TimingRow* r) {
 }
 void FormatDurationCell(GtkLabel* l, TimingRow* r) {
     const int64_t us = static_cast<int64_t>(r->durationMS * 1000.0);
-    const std::string text = FormatDuration(us);
+    // Незакрытые: точного "-" нет, длительность — прошедшее время, помечаем "≥".
+    const std::string text = (r->isOpen ? "≥ " : "") + FormatDuration(us);
     const char* color = "#a9b1d6";
     if      (us >= 10'000'000) color = "#f7768e";
     else if (us >=  1'000'000) color = "#e0af68";
@@ -122,24 +125,10 @@ TimingDialog::TimingDialog(GtkWindow* parent, LogDocument* doc,
 
 void TimingDialog::Show() {
     if (!doc_) return;
-    if (doc_->Timings().empty()) doc_->BuildMethodTimings();
-
-    // Sort by duration descending and take the top 1000.
-    std::vector<MethodTiming> sorted = doc_->Timings();
-    std::sort(sorted.begin(), sorted.end(),
-              [](const MethodTiming& a, const MethodTiming& b) {
-                  return a.durationMS > b.durationMS;
-              });
-    if (sorted.size() > 1000) sorted.resize(1000);
+    if (doc_->Timings().empty() && doc_->OpenCalls().empty())
+        doc_->BuildMethodTimings();
 
     store_ = g_list_store_new(LOGRAM_TYPE_TIMING_ROW);
-    for (const auto& t : sorted) {
-        TimingRow* r = timing_row_new(static_cast<int>(t.lineId),
-                                      t.thread, t.durationMS,
-                                      t.method.c_str());
-        g_list_store_append(store_, r);
-        g_object_unref(r);
-    }
 
     GtkSelectionModel* sel =
         GTK_SELECTION_MODEL(gtk_single_selection_new(G_LIST_MODEL(store_)));
@@ -172,23 +161,32 @@ void TimingDialog::Show() {
     GtkWidget* hb = gtk_header_bar_new();
     gtk_window_set_titlebar(GTK_WINDOW(window_), hb);
 
+    // Переключатель: завершённые пары ↔ незакрытые (зависшие/длинные) вызовы.
+    GtkWidget* openToggle = gtk_toggle_button_new_with_label("Open calls");
+    gtk_widget_set_tooltip_text(openToggle,
+        "Show calls with no matching '-' (still running or truncated)");
+    g_signal_connect(openToggle, "toggled",
+        G_CALLBACK(+[](GtkToggleButton* b, gpointer self) {
+            static_cast<TimingDialog*>(self)->SetShowOpen(
+                gtk_toggle_button_get_active(b));
+        }), this);
+    gtk_header_bar_pack_start(GTK_HEADER_BAR(hb), openToggle);
+
     GtkWidget* vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
     gtk_box_append(GTK_BOX(vbox), scroller);
 
-    char hint[128];
-    std::snprintf(hint, sizeof(hint),
-                  "%zu pair%s · double-click a row to jump to its line",
-                  sorted.size(), sorted.size() == 1 ? "" : "s");
-    GtkWidget* hintLbl = gtk_label_new(hint);
-    gtk_widget_set_halign(hintLbl, GTK_ALIGN_START);
-    gtk_widget_set_margin_start(hintLbl, 8);
-    gtk_widget_set_margin_end(hintLbl,   8);
-    gtk_widget_set_margin_top(hintLbl,   4);
-    gtk_widget_set_margin_bottom(hintLbl, 4);
-    gtk_widget_add_css_class(hintLbl, "dim-label");
-    gtk_box_append(GTK_BOX(vbox), hintLbl);
+    hintLbl_ = gtk_label_new("");
+    gtk_widget_set_halign(hintLbl_, GTK_ALIGN_START);
+    gtk_widget_set_margin_start(hintLbl_, 8);
+    gtk_widget_set_margin_end(hintLbl_,   8);
+    gtk_widget_set_margin_top(hintLbl_,   4);
+    gtk_widget_set_margin_bottom(hintLbl_, 4);
+    gtk_widget_add_css_class(hintLbl_, "dim-label");
+    gtk_box_append(GTK_BOX(vbox), hintLbl_);
 
     gtk_window_set_child(GTK_WINDOW(window_), vbox);
+
+    Populate();   // первичное заполнение (завершённые)
 
     // Self-destruct: free the wrapping object when the window closes.
     g_signal_connect_swapped(window_, "close-request",
@@ -207,4 +205,40 @@ void TimingDialog::ActivateRow(unsigned position) {
     if (!row) return;
     if (onGoTo_) onGoTo_(row->lineId);
     g_object_unref(row);
+}
+
+void TimingDialog::SetShowOpen(bool showOpen) {
+    showOpen_ = showOpen;
+    Populate();
+}
+
+void TimingDialog::Populate() {
+    if (!store_ || !doc_) return;
+    g_list_store_remove_all(store_);
+
+    std::vector<MethodTiming> sorted =
+        showOpen_ ? doc_->OpenCalls() : doc_->Timings();
+    std::sort(sorted.begin(), sorted.end(),
+              [](const MethodTiming& a, const MethodTiming& b) {
+                  return a.durationMS > b.durationMS;
+              });
+    if (sorted.size() > 1000) sorted.resize(1000);
+
+    for (const auto& t : sorted) {
+        TimingRow* r = timing_row_new(static_cast<int>(t.lineId),
+                                      t.thread, t.durationMS,
+                                      t.method.c_str(),
+                                      t.isOpen ? TRUE : FALSE);
+        g_list_store_append(store_, r);
+        g_object_unref(r);
+    }
+
+    if (hintLbl_) {
+        char hint[160];
+        std::snprintf(hint, sizeof(hint),
+                      "%zu %s · double-click a row to jump to its line",
+                      sorted.size(),
+                      showOpen_ ? "open call(s)" : (sorted.size() == 1 ? "pair" : "pairs"));
+        gtk_label_set_text(GTK_LABEL(hintLbl_), hint);
+    }
 }

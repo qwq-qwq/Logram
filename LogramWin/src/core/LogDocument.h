@@ -17,6 +17,7 @@ struct MethodTiming {
     int thread;
     double durationMS;
     std::string method;
+    bool isOpen = false; // незакрытый вызов (+ без парного -): ещё выполняется / лог обрезан
 };
 
 class LogDocument {
@@ -79,6 +80,8 @@ public:
 
     // --- Method timing ---
     const std::vector<MethodTiming>& Timings() const { return methodTimings_; }
+    // Незакрытые вызовы (+ без -): зависшие/длинные запросы, обрезанные логом.
+    const std::vector<MethodTiming>& OpenCalls() const { return openCalls_; }
     void BuildMethodTimings();
 
     // --- Navigation ---
@@ -136,6 +139,7 @@ private:
     uint64_t savedThreadMask_ = ~uint64_t(0);
 
     std::vector<MethodTiming> methodTimings_;
+    std::vector<MethodTiming> openCalls_;
 
     static inline const std::string emptyStr_;
 

@@ -430,6 +430,7 @@ void LogDocument::ClearFocus() {
 
 void LogDocument::BuildMethodTimings() {
     methodTimings_.clear();
+    openCalls_.clear();
     if (!parser_) return;
 
     const uint8_t* base = file_.Data();
@@ -470,13 +471,41 @@ void LogDocument::BuildMethodTimings() {
         }
     }
 
+    // Незакрытые вызовы: всё, что осталось в стеках (+ без парного -):
+    // ещё выполняется или лог обрезан. Длительность = от старта до конца лога.
+    if (endEpochCS_ >= 0) {
+        for (int th = 0; th < kMaxThreads; ++th) {
+            for (uint32_t enterIdx : stacks[th]) {
+                int64_t csStart = allLines_[enterIdx].epochCS;
+                if (csStart < 0 || endEpochCS_ < csStart) continue;
+                double durationMS = static_cast<double>(endEpochCS_ - csStart) * 10.0;
+                if (durationMS < 10.0) continue;
+                auto msg = GetMessage(base, allLines_[enterIdx]);
+                while (!msg.empty() && (msg.front() == ' ' || msg.front() == '\t'))
+                    msg.remove_prefix(1);
+                while (!msg.empty() && (msg.back() == ' ' || msg.back() == '\t' ||
+                                         msg.back() == '\r' || msg.back() == '\n'))
+                    msg.remove_suffix(1);
+                openCalls_.push_back({enterIdx, th, durationMS, std::string(msg), true});
+            }
+        }
+    }
+
     std::sort(methodTimings_.begin(), methodTimings_.end(),
+              [](const MethodTiming& a, const MethodTiming& b) {
+                  return a.durationMS > b.durationMS;
+              });
+    std::sort(openCalls_.begin(), openCalls_.end(),
               [](const MethodTiming& a, const MethodTiming& b) {
                   return a.durationMS > b.durationMS;
               });
 
     // Add duration to Enter lines so Duration column shows them in the log table.
     for (const auto& mt : methodTimings_) {
+        int64_t durUS = static_cast<int64_t>(mt.durationMS * 1000.0);
+        durationLines_.push_back({mt.lineId, durUS});
+    }
+    for (const auto& mt : openCalls_) {
         int64_t durUS = static_cast<int64_t>(mt.durationMS * 1000.0);
         durationLines_.push_back({mt.lineId, durUS});
     }
