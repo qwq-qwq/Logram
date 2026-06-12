@@ -15,7 +15,10 @@ public:
     Format GetFormat() const { return format_; }
     int GetThreadPos() const { return thPos_; }
     int64_t GetHiResFreq() const { return hiResFreq_; }
-    int64_t GetStartEpochCS() const { return startEpochCS_; }
+    // Log start, shifted to viewer-local time (matches per-line epochCS).
+    int64_t GetStartEpochCS() const {
+        return startEpochCS_ >= 0 ? startEpochCS_ + tzOffsetCS_ : -1;
+    }
     const std::string& GetUBVersion() const { return ubVersion_; }
     const std::string& GetHostInfo() const { return hostInfo_; }
 
@@ -50,7 +53,8 @@ private:
     Format format_ = Format::Mormot1;
     int thPos_ = 19;
     int64_t hiResFreq_ = 1000;
-    int64_t startEpochCS_ = -1;
+    int64_t startEpochCS_ = -1;   // unshifted UTC anchor (base for mORMot2 ticks)
+    int64_t tzOffsetCS_ = 0;      // viewer-local UTC offset, added to every timestamp
     std::string ubVersion_;
     std::string hostInfo_;
 };

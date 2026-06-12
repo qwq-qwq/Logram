@@ -15,7 +15,12 @@ final class LogParser: Sendable {
     let thPos: Int
     /// For mORMot2 HiRes: timer frequency in ms
     let hiResFreq: Int64
-    /// Log start timestamp (centiseconds since epoch)
+    /// Viewer-local UTC offset in centiseconds, added to every parsed timestamp
+    /// so the UI shows local wall-clock time instead of the UTC values in the file.
+    let tzOffsetCS: Int64
+    /// Unshifted log start (UTC anchor) — base for mORMot2 HiRes ticks.
+    private let rawStartEpochCS: Int64
+    /// Log start timestamp (centiseconds since epoch), shifted to viewer-local time
     let startEpochCS: Int64
     /// Log start timestamp as Date (for header display)
     let startedAt: Date?
@@ -81,10 +86,18 @@ final class LogParser: Sendable {
             }
         }
 
+        // Viewer-local UTC offset (centiseconds), anchored at the log start date
+        // so DST is resolved for the period the log covers. Falls back to "now"
+        // when the header has no start timestamp.
+        let anchorDate = startCS >= 0 ? Date(timeIntervalSince1970: Double(startCS) / 100.0) : Date()
+        let offsetCS = Int64(TimeZone.current.secondsFromGMT(for: anchorDate)) * 100
+
         self.format = fmt
         self.thPos = threadPos
         self.hiResFreq = freq
-        self.startEpochCS = startCS
+        self.tzOffsetCS = offsetCS
+        self.rawStartEpochCS = startCS
+        self.startEpochCS = startCS >= 0 ? startCS + offsetCS : -1
         self.startedAt = startDate
         self.ubVersion = version
         self.hostInfo = host
@@ -151,12 +164,14 @@ final class LogParser: Sendable {
     // MARK: - Timestamp Parsing
 
     private func parseTimestampBytes(_ buf: UnsafeBufferPointer<UInt8>) -> Int64 {
+        let raw: Int64
         switch format {
-        case .mormot1:  return parseMormot1Bytes(buf)
-        case .mormot2:  return parseMormot2Bytes(buf)
-        case .journald: return parseJournaldBytes(buf)
+        case .mormot1:  raw = parseMormot1Bytes(buf)
+        case .mormot2:  raw = parseMormot2Bytes(buf)
+        case .journald: raw = parseJournaldBytes(buf)
         case .console:  return -1
         }
+        return raw >= 0 ? raw + tzOffsetCS : raw
     }
 
     /// YYYYMMDD HHMMSSCC → epochCS (pure arithmetic, no Calendar)
@@ -187,9 +202,9 @@ final class LogParser: Sendable {
         return baseCS + Int64(minute) * 6_000 + Int64(sec) * 100 + Int64(cs)
     }
 
-    /// Hex HiRes timer → epochCS (offset from startEpochCS)
+    /// Hex HiRes timer → epochCS (offset from rawStartEpochCS, UTC anchor)
     private func parseMormot2Bytes(_ buf: UnsafeBufferPointer<UInt8>) -> Int64 {
-        guard startEpochCS >= 0, buf.count >= 16 else { return -1 }
+        guard rawStartEpochCS >= 0, buf.count >= 16 else { return -1 }
         var ticks: UInt64 = 0
         for i in 0..<16 {
             let c = buf[i]
@@ -201,7 +216,7 @@ final class LogParser: Sendable {
             ticks = ticks &* 16 &+ v
         }
         let ms = Double(ticks) / Double(hiResFreq)
-        return startEpochCS + Int64(ms / 10.0)
+        return rawStartEpochCS + Int64(ms / 10.0)
     }
 
     /// ISO8601 with timezone → epochCS

@@ -8,7 +8,9 @@
 
 #include <cstdint>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
+#include <ctime>
 #include <filesystem>
 #include <fstream>
 #include <sstream>
@@ -471,6 +473,16 @@ void Run() {
 } // namespace
 
 int main() {
+    // Pin the timezone to UTC so the parser's viewer-local shift is zero and the
+    // expected epochCS values below stay machine-independent.
+#if defined(_WIN32)
+    _putenv_s("TZ", "UTC");
+    _tzset();
+#else
+    setenv("TZ", "UTC", 1);
+    tzset();
+#endif
+
     TestDaysFromEpoch();
     TestLevelMap();
     TestMormot1();
