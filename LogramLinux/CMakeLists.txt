@@ -124,9 +124,9 @@ if(BUILD_TESTS)
 endif()
 
 # --- CPack: .deb package ---
-# `cpack -G DEB` from the build dir emits logram_<ver>_<arch>.deb that wraps
+# `cpack -G DEB` from the build dir emits Logram-linux.deb that wraps
 # the install rules above. Dependencies are auto-resolved via SHLIBDEPS, so
-# `apt install ./logram_*.deb` pulls in the right libgtk-4-1 / libglib etc.
+# `apt install ./Logram-linux.deb` pulls in the right libgtk-4-1 / libglib etc.
 set(CPACK_PACKAGE_NAME              "logram")
 set(CPACK_PACKAGE_VERSION           "${PROJECT_VERSION}")
 set(CPACK_PACKAGE_VENDOR            "Sergey Perekrestov")
@@ -147,6 +147,8 @@ set(CPACK_DEBIAN_PACKAGE_DESCRIPTION
 # manual list if shlibdeps fails (e.g. dpkg-shlibdeps not on PATH).
 set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS  ON)
 set(CPACK_DEBIAN_PACKAGE_DEPENDS    "libgtk-4-1 (>= 4.14), libglib2.0-0 (>= 2.80)")
-# logram_<ver>_amd64.deb naming (driven by CPACK_PACKAGE_VERSION).
-set(CPACK_DEBIAN_FILE_NAME          "DEB-DEFAULT")
+# Fixed filename without version, matching Logram-macos.zip / Logram-windows.zip.
+# The package version still lives in the control metadata (CPACK_PACKAGE_VERSION),
+# only the artifact name is pinned. apt installs by file path, not by name.
+set(CPACK_DEBIAN_FILE_NAME          "Logram-linux.deb")
 include(CPack)

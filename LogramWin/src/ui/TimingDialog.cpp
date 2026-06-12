@@ -135,22 +135,27 @@ static LRESULT CALLBACK TimingWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM
             if (d->hFont) SendMessageW(d->hwndStatus, WM_SETFONT,
                                        reinterpret_cast<WPARAM>(d->hFont), TRUE);
 
-            // Build timings and populate
+            // Build timings and populate. Незакрытые вызовы (+ без -, зависшие/
+            // длинные/обрезанные) добавляем в тот же список — помечены "≥" в колонке
+            // Duration и всплывают наверх при сортировке по длительности.
             doc->BuildMethodTimings();
             const auto& timings = doc->Timings();
-            d->sorted.reserve(timings.size());
+            const auto& opens = doc->OpenCalls();
+            d->sorted.reserve(timings.size() + opens.size());
             for (const auto& t : timings) d->sorted.push_back(&t);
+            for (const auto& t : opens)   d->sorted.push_back(&t);
             SortTimings(d);
 
             ListView_SetItemCountEx(d->hwndList, static_cast<int>(d->sorted.size()),
                                     LVSICF_NOSCROLL);
 
             wchar_t title[128];
-            swprintf(title, 128, L"Method Timing — %zu methods >= 10ms", timings.size());
+            swprintf(title, 128, L"Method Timing — %zu methods (%zu open) >= 10ms",
+                     timings.size(), opens.size());
             SetWindowTextW(hwnd, title);
 
             wchar_t status[64];
-            swprintf(status, 64, L"%zu methods", timings.size());
+            swprintf(status, 64, L"%zu methods", d->sorted.size());
             SetWindowTextW(d->hwndStatus, status);
 
             return 0;
@@ -235,13 +240,16 @@ static LRESULT CALLBACK TimingWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM
                             di->item.pszText = buf;
                             break;
                         }
-                        case 2:
+                        case 2: {
+                            // Незакрытые: точного "-" нет, перед длительностью "≥".
+                            const wchar_t* pfx = t->isOpen ? L"≥ " : L"";
                             if (t->durationMS >= 1000.0)
-                                swprintf(buf, 512, L"%.1f s", t->durationMS / 1000.0);
+                                swprintf(buf, 512, L"%s%.1f s", pfx, t->durationMS / 1000.0);
                             else
-                                swprintf(buf, 512, L"%.0f ms", t->durationMS);
+                                swprintf(buf, 512, L"%s%.0f ms", pfx, t->durationMS);
                             di->item.pszText = buf;
                             break;
+                        }
                         case 3: {
                             auto w = Utf8ToWide(t->method);
                             wcsncpy(buf, w.c_str(), 511);

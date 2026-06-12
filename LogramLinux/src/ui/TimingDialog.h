@@ -16,11 +16,17 @@ public:
 
     // Internal — called from a static callback.
     void ActivateRow(unsigned position);
+    // Switch between completed pairs and open (unfinished) calls.
+    void SetShowOpen(bool showOpen);
 
 private:
+    void Populate();   // (re)fill store_ from Timings() or OpenCalls()
+
     GtkWindow* parent_ = nullptr;
     LogDocument* doc_ = nullptr;
     std::function<void(int)> onGoTo_;
     GtkWidget* window_ = nullptr;
     GListStore* store_ = nullptr;
+    GtkWidget* hintLbl_ = nullptr;
+    bool showOpen_ = false;
 };

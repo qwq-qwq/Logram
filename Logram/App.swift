@@ -54,8 +54,12 @@ extension FocusedValues {
 }
 
 // Bridges system "open file" Apple Events into SwiftUI windows.
-// Empty windows register as "takers" — they get URLs first; if none accepts,
-// a new window is opened. Avoids the cold-start "empty + file" duplicate.
+// SwiftUI creates a fresh default (empty) window for every file-open event —
+// cold start, reopen with zero windows, or an open into a running app. The
+// URL must end up in that window, so empty windows register as "takers" and
+// adopt queued URLs as they appear. Opening our own window right away would
+// race the auto-created one and leave it behind, empty — which is exactly
+// where the stray empty windows came from.
 @MainActor
 final class LogramAppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
     private var pending: [URL] = []
@@ -71,13 +75,13 @@ final class LogramAppDelegate: NSObject, NSApplicationDelegate, ObservableObject
     func setOpenNew(_ handler: @escaping (URL) -> Void) {
         guard openNew == nil else { return }
         openNew = handler
-        let queued = pending
-        pending.removeAll()
-        for url in queued { dispatch(url) }
+        flushPendingToNewWindows()
     }
 
     func registerTaker(_ id: UUID, _ taker: @escaping (URL) -> Bool) {
         takers[id] = taker
+        // A freshly appeared empty window adopts URLs that were waiting for one.
+        pending.removeAll { url in taker(url) }
     }
 
     func unregisterTaker(_ id: UUID) {
@@ -86,11 +90,20 @@ final class LogramAppDelegate: NSObject, NSApplicationDelegate, ObservableObject
 
     private func dispatch(_ url: URL) {
         for taker in takers.values where taker(url) { return }
-        if let openNew {
-            openNew(url)
-        } else {
-            pending.append(url)
+        // No empty window right now: queue the URL for the default window
+        // SwiftUI is about to create for this event. If none materializes,
+        // fall back to opening our own.
+        pending.append(url)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+            self?.flushPendingToNewWindows()
         }
+    }
+
+    private func flushPendingToNewWindows() {
+        guard let openNew else { return }
+        let queued = pending
+        pending.removeAll()
+        for url in queued { openNew(url) }
     }
 }
 

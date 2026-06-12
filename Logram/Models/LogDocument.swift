@@ -47,8 +47,14 @@ final class LogDocument {
         let thread: Int
         let durationMS: Double
         let method: String
+        // Незакритий виклик: + без парного - (ще виконується або лог обірвано).
+        // Тривалість таких рахується від старту до кінця лога ("минулий час, ≥").
+        var isOpen: Bool = false
     }
     var methodTimings: [MethodTiming] = []
+    // Незакриті виклики (+ без -): завислі/довгі запити, обрізані логом.
+    // Не потрапляють у methodTimings (нема пари для тривалості), збираються окремо.
+    var openCalls: [MethodTiming] = []
 
     // MARK: - Loading
 
@@ -386,6 +392,7 @@ final class LogDocument {
     func buildMethodTimings() {
         guard parser != nil else { return }
         var timings = [MethodTiming]()
+        var opens = [MethodTiming]()
 
         let lines = allLines
         let count = lines.count
@@ -394,6 +401,7 @@ final class LogDocument {
             guard lines[i].level == .enter else { continue }
             let th = lines[i].thread
             var depth = 0
+            var matched = false
 
             for j in (i + 1)..<count {
                 guard lines[j].thread == th else { continue }
@@ -414,19 +422,43 @@ final class LogDocument {
                                 ))
                             }
                         }
+                        matched = true
                         break
                     } else {
                         depth -= 1
                     }
                 }
             }
+
+            // Незакритий виклик: + не отримав парного - (ще виконується / лог обірвано).
+            // Тривалість = від старту до кінця лога (endEpochCS), позначаємо як "≥".
+            if !matched && endEpochCS >= 0 {
+                let csStart = lines[i].epochCS
+                if csStart >= 0 && endEpochCS >= csStart {
+                    let durationMS = Double(endEpochCS - csStart) * 10.0
+                    if durationMS >= 10 {
+                        let method = lines[i].message.trimmingCharacters(in: .whitespaces)
+                        opens.append(MethodTiming(
+                            id: i, thread: th,
+                            durationMS: durationMS,
+                            method: method,
+                            isOpen: true
+                        ))
+                    }
+                }
+            }
         }
 
         timings.sort { $0.durationMS > $1.durationMS }
+        opens.sort { $0.durationMS > $1.durationMS }
         methodTimings = timings
+        openCalls = opens
 
         // Write duration to Enter lines so the Duration column shows them
         for timing in timings {
+            allLines[timing.id].durationUS = Int64(timing.durationMS * 1000)
+        }
+        for timing in opens {
             allLines[timing.id].durationUS = Int64(timing.durationMS * 1000)
         }
     }

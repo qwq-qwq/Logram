@@ -8,14 +8,21 @@ struct MethodTimingView: View {
     @State private var selected: Int?
     @State private var sortedItems: [LogDocument.MethodTiming] = []
     @State private var sortOrder = [KeyPathComparator(\LogDocument.MethodTiming.durationMS, order: .reverse)]
+    @State private var showOpen = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Text("Method Timing")
                     .font(.title2.bold())
+                Picker("", selection: $showOpen) {
+                    Text("Completed (\(document.methodTimings.count))").tag(false)
+                    Text("Open (\(document.openCalls.count))").tag(true)
+                }
+                .pickerStyle(.segmented)
+                .fixedSize()
                 Spacer()
-                Text("\(sortedItems.count) of \(document.methodTimings.count) methods >= 10ms")
+                Text("\(sortedItems.count) of \(showOpen ? document.openCalls.count : document.methodTimings.count) methods >= 10ms")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -25,7 +32,7 @@ struct MethodTimingView: View {
                     Image(systemName: "clock")
                         .font(.system(size: 32))
                         .foregroundStyle(.tertiary)
-                    Text("No slow methods found")
+                    Text(showOpen ? "No open calls" : "No slow methods found")
                         .foregroundStyle(.secondary)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -46,11 +53,11 @@ struct MethodTimingView: View {
                     .width(50)
 
                     TableColumn("Duration", sortUsing: KeyPathComparator(\LogDocument.MethodTiming.durationMS)) { timing in
-                        Text(formatDuration(timing.durationMS))
+                        Text(timing.isOpen ? "≥ " + formatDuration(timing.durationMS) : formatDuration(timing.durationMS))
                             .font(.system(size: 11, weight: .semibold, design: .monospaced))
                             .foregroundStyle(durationColor(timing.durationMS))
                     }
-                    .width(80)
+                    .width(90)
 
                     TableColumn("Method") { timing in
                         Text(timing.method)
@@ -60,6 +67,11 @@ struct MethodTimingView: View {
                     }
                 }
                 .tableStyle(.bordered)
+                // Double-click a row to jump to its line (primaryAction).
+                .contextMenu(forSelectionType: Int.self) { _ in
+                } primaryAction: { ids in
+                    if let id = ids.first { goTo(id) }
+                }
                 .onChange(of: sortOrder) { _, newOrder in
                     sortedItems.sort(using: newOrder)
                 }
@@ -78,14 +90,23 @@ struct MethodTimingView: View {
         }
         .padding(20)
         .frame(minWidth: 700, minHeight: 400)
-        .onAppear {
-            let all = document.methodTimings.sorted(using: sortOrder)
-            sortedItems = all.count > 1000 ? Array(all.prefix(1000)) : all
-        }
+        .onAppear { refresh() }
+        .onChange(of: showOpen) { _, _ in refresh() }
+    }
+
+    private func refresh() {
+        let src = showOpen ? document.openCalls : document.methodTimings
+        let all = src.sorted(using: sortOrder)
+        sortedItems = all.count > 1000 ? Array(all.prefix(1000)) : all
+        selected = nil
     }
 
     private func goToSelected() {
         guard let lineId = selected else { return }
+        goTo(lineId)
+    }
+
+    private func goTo(_ lineId: Int) {
         // Filter to show only the thread of the selected method.
         // Clear any active focus first so its narrowed range/thread doesn't
         // hide the target line (focus would otherwise restore enabledThreads).

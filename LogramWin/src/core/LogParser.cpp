@@ -2,6 +2,23 @@
 #include <cstring>
 #include <cstdlib>
 #include <algorithm>
+#include <ctime>
+
+// Viewer-local UTC offset in seconds at the given instant (DST-aware).
+// Portable: avoids tm_gmtoff (absent on MSVC). Interprets the UTC wall-clock
+// as local and measures how far that lands from the real instant.
+static int64_t LocalUtcOffsetSeconds(std::time_t anchor) {
+    std::tm utc{};
+#if defined(_WIN32)
+    if (gmtime_s(&utc, &anchor) != 0) return 0;
+#else
+    if (gmtime_r(&anchor, &utc) == nullptr) return 0;
+#endif
+    utc.tm_isdst = -1;
+    std::time_t utcAsLocal = std::mktime(&utc);
+    if (utcAsLocal == static_cast<std::time_t>(-1)) return 0;
+    return static_cast<int64_t>(anchor - utcAsLocal);
+}
 
 // ISO8601 date parsing (simplified for log header PRTL line)
 static int64_t ParseISO8601(std::string_view str) {
@@ -101,6 +118,14 @@ LogParser::LogParser(const std::vector<std::string_view>& headerLines) {
             thPos_ = 2;
         }
     }
+
+    // Viewer-local offset, anchored at the log start date (DST-aware), added to
+    // every timestamp so the UI shows local wall-clock time, not the UTC values
+    // stored in the file. Falls back to "now" when the header has no start time.
+    std::time_t anchor = startEpochCS_ >= 0
+        ? static_cast<std::time_t>(startEpochCS_ / 100)
+        : std::time(nullptr);
+    tzOffsetCS_ = LocalUtcOffsetSeconds(anchor) * 100;
 }
 
 LogParser::ParseResult LogParser::ParseLine(const uint8_t* buf, uint32_t len,
@@ -148,13 +173,15 @@ LogParser::ParseResult LogParser::ParseLine(const uint8_t* buf, uint32_t len,
 }
 
 int64_t LogParser::ParseTimestamp(const uint8_t* buf, uint32_t len) const {
+    int64_t cs;
     switch (format_) {
-        case Format::Mormot1:  return ParseMormot1(buf, len);
-        case Format::Mormot2:  return ParseMormot2(buf, len);
-        case Format::Journald: return ParseJournald(buf, len);
+        case Format::Mormot1:  cs = ParseMormot1(buf, len); break;
+        case Format::Mormot2:  cs = ParseMormot2(buf, len); break;
+        case Format::Journald: cs = ParseJournald(buf, len); break;
         case Format::Console:  return -1;
+        default:               return -1;
     }
-    return -1;
+    return cs >= 0 ? cs + tzOffsetCS_ : cs;
 }
 
 int64_t LogParser::ParseMormot1(const uint8_t* buf, uint32_t len) const {

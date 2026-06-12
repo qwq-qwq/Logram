@@ -1,4 +1,20 @@
 import SwiftUI
+import AppKit
+
+// Log windows are useless when restored (document content never survives a
+// relaunch), so opt every window out of macOS state restoration. Otherwise
+// stale empty windows from previous sessions reappear on every launch.
+private final class RestorationDisablingView: NSView {
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        window?.isRestorable = false
+    }
+}
+
+private struct DisableWindowRestoration: NSViewRepresentable {
+    func makeNSView(context: Context) -> NSView { RestorationDisablingView() }
+    func updateNSView(_ nsView: NSView, context: Context) {}
+}
 
 struct ContentView: View {
     @State private var document = LogDocument()
@@ -68,6 +84,7 @@ struct ContentView: View {
                 statusBar
             }
         }
+        .background(DisableWindowRestoration())
         .onDrop(of: [.fileURL], isTargeted: nil) { providers in
             handleDrop(providers)
         }
@@ -101,7 +118,9 @@ struct ContentView: View {
             pendingURL = nil
         }
         .onAppear {
-            appDelegate.setOpenNew { url in openWindow(value: Optional(url)) }
+            // Register the taker first: registerTaker drains queued URLs into
+            // this window if it is empty, and setOpenNew flushes the leftovers
+            // into new windows.
             appDelegate.registerTaker(takerID) { url in
                 guard document.allLines.isEmpty,
                       !document.isLoading,
@@ -109,6 +128,7 @@ struct ContentView: View {
                 pendingURL = url
                 return true
             }
+            appDelegate.setOpenNew { url in openWindow(value: Optional(url)) }
         }
         .onDisappear {
             appDelegate.unregisterTaker(takerID)
