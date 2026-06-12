@@ -67,6 +67,11 @@ struct MethodTimingView: View {
                     }
                 }
                 .tableStyle(.bordered)
+                // Double-click a row to jump to its line (primaryAction).
+                .contextMenu(forSelectionType: Int.self) { _ in
+                } primaryAction: { ids in
+                    if let id = ids.first { goTo(id) }
+                }
                 .onChange(of: sortOrder) { _, newOrder in
                     sortedItems.sort(using: newOrder)
                 }
@@ -98,6 +103,10 @@ struct MethodTimingView: View {
 
     private func goToSelected() {
         guard let lineId = selected else { return }
+        goTo(lineId)
+    }
+
+    private func goTo(_ lineId: Int) {
         // Filter to show only the thread of the selected method.
         // Clear any active focus first so its narrowed range/thread doesn't
         // hide the target line (focus would otherwise restore enabledThreads).
