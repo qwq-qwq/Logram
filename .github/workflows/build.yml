@@ -170,7 +170,7 @@ jobs:
             ## Linux
 
             ```bash
-            sudo apt install ./logram_1.2.2_amd64.deb
+            sudo apt install ./Logram-linux.deb
             ```
 
             Появляется в Activities, ассоциируется с `.log` файлами (правый клик → Open With Logram). Удаление — `sudo apt remove logram`. Требует Ubuntu 24.04+ или другой Debian-based дистрибутив с GTK 4.14+.
@@ -253,7 +253,7 @@ jobs:
 
       - name: Verify package
         run: |
-          DEB=$(ls "$GITHUB_WORKSPACE"/logram_*.deb)
+          DEB="$GITHUB_WORKSPACE/Logram-linux.deb"
           echo "::group::dpkg -I $DEB"
           dpkg -I "$DEB"
           echo "::endgroup::"
@@ -270,10 +270,10 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: Logram-linux
-          path: logram_*.deb
+          path: Logram-linux.deb
 
       - name: Attach to Release
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
-          files: logram_*.deb
+          files: Logram-linux.deb
