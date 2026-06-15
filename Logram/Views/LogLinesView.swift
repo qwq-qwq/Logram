@@ -10,6 +10,7 @@ struct LogLinesView: View {
     let theme: ColorTheme
     let showDuration: Bool
     @Binding var selectedId: Int?
+    var threadPos: Int = 19
     var onJumpToPair: (() -> Void)?
     var jumpEnabledProvider: (() -> Bool)?
     var onFocusOnCall: (() -> Void)?
@@ -20,6 +21,7 @@ struct LogLinesView: View {
         LogTableView(
             allLines: allLines, indices: indices, theme: theme,
             showDuration: showDuration, selectedId: $selectedId,
+            threadPos: threadPos,
             onJumpToPair: onJumpToPair,
             jumpEnabledProvider: jumpEnabledProvider,
             onFocusOnCall: onFocusOnCall,
@@ -101,6 +103,7 @@ struct LogTableView: NSViewRepresentable {
     let theme: ColorTheme
     let showDuration: Bool
     @Binding var selectedId: Int?
+    var threadPos: Int = 19
     var onJumpToPair: (() -> Void)?
     var jumpEnabledProvider: (() -> Bool)?
     var onFocusOnCall: (() -> Void)?
@@ -277,7 +280,7 @@ struct LogTableView: NSViewRepresentable {
                 guard row < indices.count else { continue }
                 let lineIdx = indices[row]
                 guard lineIdx < allLines.count else { continue }
-                lines.append(allLines[lineIdx].raw)
+                lines.append(allLines[lineIdx].clipboardText(threadPos: parent.threadPos))
             }
             let text = lines.joined(separator: "\n")
             NSPasteboard.general.clearContents()

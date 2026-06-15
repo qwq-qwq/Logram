@@ -400,13 +400,15 @@ void MainWindow::CopySelectedLine() {
         return;
     }
     const auto& lines = doc_->AllLines();
+    const int thPos = doc_->Parser() ? doc_->Parser()->GetThreadPos() : 19;
     std::string out;
     out.reserve(ids.size() * 128);
     for (size_t i = 0; i < ids.size(); ++i) {
         const int id = ids[i];
         if (id < 0 || static_cast<size_t>(id) >= lines.size()) continue;
-        const std::string_view raw = GetRawLine(doc_->MappedBase(), lines[id]);
-        out.append(raw.data(), raw.size());
+        const auto& line = lines[id];
+        const std::string_view raw = GetRawLine(doc_->MappedBase(), line);
+        out += BuildClipboardLine(raw, line.epochCS, thPos);
         if (i + 1 < ids.size()) out.push_back('\n');
     }
     GdkClipboard* clip = gtk_widget_get_clipboard(window_);

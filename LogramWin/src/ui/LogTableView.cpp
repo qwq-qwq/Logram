@@ -547,15 +547,17 @@ void LogTableView::OnKeyDown(WPARAM vk, LPARAM) {
             return;
         case 'C':
             if (GetKeyState(VK_CONTROL) & 0x8000) {
-                // Copy selected lines
+                // Copy selected lines (timestamp reformatted to local datetime)
                 std::string text;
                 const uint8_t* base = doc_->MappedBase();
+                const int thPos = doc_->Parser() ? doc_->Parser()->GetThreadPos() : 19;
                 for (auto idx : selectedRows_) {
                     if (idx < doc_->FilteredIndices().size()) {
                         auto lineId = doc_->FilteredIndices()[idx];
-                        auto raw = GetRawLine(base, doc_->AllLines()[lineId]);
+                        const auto& line = doc_->AllLines()[lineId];
+                        auto raw = GetRawLine(base, line);
                         if (!text.empty()) text += '\n';
-                        text.append(raw.data(), raw.size());
+                        text += BuildClipboardLine(raw, line.epochCS, thPos);
                     }
                 }
                 CopyToClipboard(hwnd_, text);
