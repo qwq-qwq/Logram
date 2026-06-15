@@ -60,6 +60,7 @@ struct ContentView: View {
                             theme: theme,
                             showDuration: showDuration,
                             selectedId: $document.selectedLineId,
+                            threadPos: document.parser?.thPos ?? 19,
                             onJumpToPair: jumpToPair,
                             jumpEnabledProvider: {
                                 guard let sel = selectedLine else { return false }
