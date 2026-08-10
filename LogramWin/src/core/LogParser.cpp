@@ -129,7 +129,7 @@ LogParser::LogParser(const std::vector<std::string_view>& headerLines) {
 }
 
 LogParser::ParseResult LogParser::ParseLine(const uint8_t* buf, uint32_t len,
-                                            uint32_t rawOffset, uint32_t index) const {
+                                            uint32_t rawOffset, uint32_t /*index*/) const {
     ParseResult result;
     auto& hot = result.hot;
     hot.rawOffset = rawOffset;

@@ -451,22 +451,29 @@ void LogDocument::BuildMethodTimings() {
             uint32_t enterIdx = stacks[th].back();
             stacks[th].pop_back();
 
-            int64_t csStart = allLines_[enterIdx].epochCS;
-            int64_t csEnd = allLines_[i].epochCS;
-            if (csStart >= 0 && csEnd >= 0) {
-                double durationMS = static_cast<double>(csEnd - csStart) * 10.0;
-                if (durationMS >= 10.0) {
-                    auto msg = GetMessage(base, allLines_[enterIdx]);
-                    while (!msg.empty() && (msg.front() == ' ' || msg.front() == '\t'))
-                        msg.remove_prefix(1);
-                    while (!msg.empty() && (msg.back() == ' ' || msg.back() == '\t' ||
-                                             msg.back() == '\r' || msg.back() == '\n'))
-                        msg.remove_suffix(1);
+            // Точная длительность из leave-строки (hi-res таймер UB);
+            // разность таймстампов (сантисекунды) - только fallback.
+            double durationMS = -1.0;
+            int64_t leaveUS = GetDuration(static_cast<uint32_t>(i));
+            if (leaveUS >= 0) {
+                durationMS = static_cast<double>(leaveUS) / 1000.0;
+            } else {
+                int64_t csStart = allLines_[enterIdx].epochCS;
+                int64_t csEnd = allLines_[i].epochCS;
+                if (csStart >= 0 && csEnd >= 0)
+                    durationMS = static_cast<double>(csEnd - csStart) * 10.0;
+            }
+            if (durationMS >= 10.0) {
+                auto msg = GetMessage(base, allLines_[enterIdx]);
+                while (!msg.empty() && (msg.front() == ' ' || msg.front() == '\t'))
+                    msg.remove_prefix(1);
+                while (!msg.empty() && (msg.back() == ' ' || msg.back() == '\t' ||
+                                         msg.back() == '\r' || msg.back() == '\n'))
+                    msg.remove_suffix(1);
 
-                    methodTimings_.push_back({
-                        enterIdx, th, durationMS, std::string(msg)
-                    });
-                }
+                methodTimings_.push_back({
+                    enterIdx, th, durationMS, std::string(msg)
+                });
             }
         }
     }

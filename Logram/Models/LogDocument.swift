@@ -409,18 +409,25 @@ final class LogDocument {
                     depth += 1
                 } else if lines[j].level == .leave {
                     if depth == 0 {
-                        let csStart = lines[i].epochCS
-                        let csEnd = lines[j].epochCS
-                        if csStart >= 0 && csEnd >= 0 {
-                            let durationMS = Double(csEnd - csStart) * 10.0
-                            if durationMS >= 10 {
-                                let method = lines[i].message.trimmingCharacters(in: .whitespaces)
-                                timings.append(MethodTiming(
-                                    id: i, thread: th,
-                                    durationMS: durationMS,
-                                    method: method
-                                ))
+                        // Точна тривалість з leave-рядка (hi-res таймер UB);
+                        // різниця таймстампів (сантисекунди) - лише fallback.
+                        var durationMS = -1.0
+                        if lines[j].durationUS >= 0 {
+                            durationMS = Double(lines[j].durationUS) / 1000.0
+                        } else {
+                            let csStart = lines[i].epochCS
+                            let csEnd = lines[j].epochCS
+                            if csStart >= 0 && csEnd >= 0 {
+                                durationMS = Double(csEnd - csStart) * 10.0
                             }
+                        }
+                        if durationMS >= 10 {
+                            let method = lines[i].message.trimmingCharacters(in: .whitespaces)
+                            timings.append(MethodTiming(
+                                id: i, thread: th,
+                                durationMS: durationMS,
+                                method: method
+                            ))
                         }
                         matched = true
                         break
