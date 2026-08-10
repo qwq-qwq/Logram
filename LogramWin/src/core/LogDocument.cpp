@@ -240,6 +240,7 @@ bool LogDocument::Load(const wchar_t* path, std::function<void(double)> onProgre
     allLines_ = std::move(parsed);
     httpLines_ = std::move(mergedHttp);
     durationLines_ = std::move(mergedDuration);
+    timingsBuilt_ = false;
     perThreadCount_ = mergedThreadCounts;
     perLevelCount_ = mergedLevelCounts;
     activeThreads_ = std::move(active);
@@ -429,6 +430,7 @@ void LogDocument::ClearFocus() {
 }
 
 void LogDocument::BuildMethodTimings() {
+    if (timingsBuilt_) return;
     methodTimings_.clear();
     openCalls_.clear();
     if (!parser_) return;
@@ -439,6 +441,10 @@ void LogDocument::BuildMethodTimings() {
     // Single-pass O(n) with per-thread stacks.
     // Each stack entry is the line index of an Enter.
     std::array<std::vector<uint32_t>, kMaxThreads> stacks;
+    // Длительность пары переносим на enter-строку: в колонке она видна в начале
+    // скобки, а на leave-строке значение и так есть в тексте самой строки.
+    std::vector<LogLineDuration> enterDurations;
+    std::vector<bool> movedLeave(count, false);
 
     for (size_t i = 0; i < count; ++i) {
         auto lv = static_cast<LogLevel>(allLines_[i].level);
@@ -453,16 +459,20 @@ void LogDocument::BuildMethodTimings() {
 
             // Точная длительность из leave-строки (hi-res таймер UB);
             // разность таймстампов (сантисекунды) - только fallback.
-            double durationMS = -1.0;
-            int64_t leaveUS = GetDuration(static_cast<uint32_t>(i));
-            if (leaveUS >= 0) {
-                durationMS = static_cast<double>(leaveUS) / 1000.0;
+            int64_t pairUS = GetDuration(static_cast<uint32_t>(i));
+            if (pairUS >= 0) {
+                movedLeave[i] = true;
             } else {
                 int64_t csStart = allLines_[enterIdx].epochCS;
                 int64_t csEnd = allLines_[i].epochCS;
-                if (csStart >= 0 && csEnd >= 0)
-                    durationMS = static_cast<double>(csEnd - csStart) * 10.0;
+                if (csStart >= 0 && csEnd > csStart)
+                    pairUS = (csEnd - csStart) * 10000;
             }
+            if (pairUS < 0) continue;
+
+            enterDurations.push_back({enterIdx, pairUS});
+
+            double durationMS = static_cast<double>(pairUS) / 1000.0;
             if (durationMS >= 10.0) {
                 auto msg = GetMessage(base, allLines_[enterIdx]);
                 while (!msg.empty() && (msg.front() == ' ' || msg.front() == '\t'))
@@ -507,19 +517,22 @@ void LogDocument::BuildMethodTimings() {
                   return a.durationMS > b.durationMS;
               });
 
-    // Add duration to Enter lines so Duration column shows them in the log table.
-    for (const auto& mt : methodTimings_) {
-        int64_t durUS = static_cast<int64_t>(mt.durationMS * 1000.0);
-        durationLines_.push_back({mt.lineId, durUS});
-    }
-    for (const auto& mt : openCalls_) {
-        int64_t durUS = static_cast<int64_t>(mt.durationMS * 1000.0);
-        durationLines_.push_back({mt.lineId, durUS});
-    }
+    // Пересобираем durationLines_: длительность сматченной пары показывается
+    // на её enter-строке, колонка такой leave-строки освобождается (в тексте
+    // строки значение остаётся). Несматченные leave-строки не трогаем.
+    std::vector<LogLineDuration> rebuilt;
+    rebuilt.reserve(durationLines_.size() + enterDurations.size() + openCalls_.size());
+    for (const auto& d : durationLines_)
+        if (!movedLeave[d.lineId]) rebuilt.push_back(d);
+    for (const auto& d : enterDurations) rebuilt.push_back(d);
+    for (const auto& mt : openCalls_)
+        rebuilt.push_back({mt.lineId, static_cast<int64_t>(mt.durationMS * 1000.0)});
+    durationLines_ = std::move(rebuilt);
     std::sort(durationLines_.begin(), durationLines_.end(),
               [](const LogLineDuration& a, const LogLineDuration& b) {
                   return a.lineId < b.lineId;
               });
+    timingsBuilt_ = true;
 }
 
 int LogDocument::FindNext(const std::string& pattern, SearchDirection dir, int from) const {

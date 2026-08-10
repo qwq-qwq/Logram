@@ -140,6 +140,9 @@ private:
 
     std::vector<MethodTiming> methodTimings_;
     std::vector<MethodTiming> openCalls_;
+    // BuildMethodTimings переносит длительности пар на enter-строки и потому
+    // не идемпотентен: повторные вызовы отсекаем, сброс - при загрузке файла.
+    bool timingsBuilt_ = false;
 
     static inline const std::string emptyStr_;
 

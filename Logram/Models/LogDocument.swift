@@ -55,6 +55,9 @@ final class LogDocument {
     // Незакриті виклики (+ без -): завислі/довгі запити, обрізані логом.
     // Не потрапляють у methodTimings (нема пари для тривалості), збираються окремо.
     var openCalls: [MethodTiming] = []
+    // buildMethodTimings переносить тривалості пар на enter-рядки і тому
+    // не ідемпотентний: повторні виклики відсікаємо, скидання - при load.
+    private var timingsBuilt = false
 
     // MARK: - Loading
 
@@ -222,6 +225,7 @@ final class LogDocument {
                 .map { $0.offset }
 
             allLines = parsed
+            timingsBuilt = false
             focusRange = nil
             focusThread = nil
             savedEnabledThreads = nil
@@ -390,9 +394,13 @@ final class LogDocument {
     // MARK: - Method Timing
 
     func buildMethodTimings() {
-        guard parser != nil else { return }
+        guard parser != nil, !timingsBuilt else { return }
         var timings = [MethodTiming]()
         var opens = [MethodTiming]()
+        // Тривалість пари переносимо на enter-рядок: у колонці її видно на
+        // початку дужки, а в leave-рядку значення і так є в тексті.
+        var enterDurations = [(line: Int, us: Int64)]()
+        var movedLeaves = [Int]()
 
         let lines = allLines
         let count = lines.count
@@ -411,23 +419,27 @@ final class LogDocument {
                     if depth == 0 {
                         // Точна тривалість з leave-рядка (hi-res таймер UB);
                         // різниця таймстампів (сантисекунди) - лише fallback.
-                        var durationMS = -1.0
-                        if lines[j].durationUS >= 0 {
-                            durationMS = Double(lines[j].durationUS) / 1000.0
+                        var pairUS = lines[j].durationUS
+                        if pairUS >= 0 {
+                            movedLeaves.append(j)
                         } else {
                             let csStart = lines[i].epochCS
                             let csEnd = lines[j].epochCS
-                            if csStart >= 0 && csEnd >= 0 {
-                                durationMS = Double(csEnd - csStart) * 10.0
+                            if csStart >= 0 && csEnd > csStart {
+                                pairUS = (csEnd - csStart) * 10_000
                             }
                         }
-                        if durationMS >= 10 {
-                            let method = lines[i].message.trimmingCharacters(in: .whitespaces)
-                            timings.append(MethodTiming(
-                                id: i, thread: th,
-                                durationMS: durationMS,
-                                method: method
-                            ))
+                        if pairUS >= 0 {
+                            enterDurations.append((i, pairUS))
+                            let durationMS = Double(pairUS) / 1000.0
+                            if durationMS >= 10 {
+                                let method = lines[i].message.trimmingCharacters(in: .whitespaces)
+                                timings.append(MethodTiming(
+                                    id: i, thread: th,
+                                    durationMS: durationMS,
+                                    method: method
+                                ))
+                            }
                         }
                         matched = true
                         break
@@ -461,13 +473,18 @@ final class LogDocument {
         methodTimings = timings
         openCalls = opens
 
-        // Write duration to Enter lines so the Duration column shows them
-        for timing in timings {
-            allLines[timing.id].durationUS = Int64(timing.durationMS * 1000)
+        // Тривалість сматченої пари показуємо на її enter-рядку, колонку
+        // такого leave-рядка звільняємо (у тексті рядка значення лишається).
+        for j in movedLeaves {
+            allLines[j].durationUS = -1
+        }
+        for pair in enterDurations {
+            allLines[pair.line].durationUS = pair.us
         }
         for timing in opens {
             allLines[timing.id].durationUS = Int64(timing.durationMS * 1000)
         }
+        timingsBuilt = true
     }
 
     // MARK: - Jump to matching +/-
