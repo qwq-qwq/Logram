@@ -271,9 +271,9 @@ final class LogParser: Sendable {
 
     /// Parse duration from leave line: "SS.MMM.UUU" → microseconds
     private func parseDurationBytes(_ buf: UnsafeBufferPointer<UInt8>, from start: Int) -> Int64 {
-        // Skip leading whitespace
+        // Skip leading whitespace — nested leave lines are indented with TABs
         var i = start
-        while i < buf.count && buf[i] == 0x20 { i += 1 }
+        while i < buf.count && (buf[i] == 0x20 || buf[i] == 0x09) { i += 1 }
 
         // Parse "SS.MMM.UUU" — three dot-separated groups
         var parts: [Int64] = []

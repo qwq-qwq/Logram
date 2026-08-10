@@ -19,7 +19,6 @@ public:
     int64_t GetStartEpochCS() const {
         return startEpochCS_ >= 0 ? startEpochCS_ + tzOffsetCS_ : -1;
     }
-    const std::string& GetUBVersion() const { return ubVersion_; }
     const std::string& GetHostInfo() const { return hostInfo_; }
 
     static constexpr uint8_t kThBase = 0x21; // '!'

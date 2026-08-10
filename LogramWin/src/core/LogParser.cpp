@@ -264,9 +264,9 @@ int64_t LogParser::ParseJournald(const uint8_t* buf, uint32_t len) const {
 }
 
 int64_t LogParser::ParseDuration(const uint8_t* buf, uint32_t len, int start) {
-    // Skip leading whitespace
+    // Skip leading whitespace — nested leave lines are indented with TABs
     int i = start;
-    while (i < static_cast<int>(len) && buf[i] == 0x20) ++i;
+    while (i < static_cast<int>(len) && (buf[i] == 0x20 || buf[i] == 0x09)) ++i;
 
     // Parse "SS.MMM.UUU" — three dot-separated groups
     int64_t parts[3];

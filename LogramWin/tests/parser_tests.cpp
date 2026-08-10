@@ -155,6 +155,13 @@ void TestMormot1LeaveDuration() {
     auto r = parser.ParseLine(reinterpret_cast<const uint8_t*>(line), len, 0, 0);
     CHECK_EQ(static_cast<int>(r.hot.level), static_cast<int>(LogLevel::Leave));
     CHECK_EQ(r.durationUS, 1'234'567LL);
+
+    // Nested leave: UB indents with TABs before the duration
+    const char* nested = "20210727 08260933  !  -    \t\t00.000.407";
+    len = static_cast<uint32_t>(std::strlen(nested));
+    r = parser.ParseLine(reinterpret_cast<const uint8_t*>(nested), len, 0, 0);
+    CHECK_EQ(static_cast<int>(r.hot.level), static_cast<int>(LogLevel::Leave));
+    CHECK_EQ(r.durationUS, 407LL);
 }
 
 // ---- mORMot2: hex HiRes ---------------------------------------------
