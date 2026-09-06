@@ -1,5 +1,6 @@
 import SwiftUI
 import AppKit
+import Sparkle
 
 // FocusedValue key so Cmd+O reaches the active window
 struct OpenLogFileKey: FocusedValueKey {
@@ -110,6 +111,10 @@ final class LogramAppDelegate: NSObject, NSApplicationDelegate, ObservableObject
 @main
 struct LogramApp: App {
     @NSApplicationDelegateAdaptor(LogramAppDelegate.self) private var appDelegate
+    // Sparkle auto-updates: feed URL and public key live in Info.plist
+    private let updaterController = SPUStandardUpdaterController(
+        startingUpdater: true, updaterDelegate: nil, userDriverDelegate: nil
+    )
     @FocusedValue(\.openLogFile) var openLogFile
     @FocusedValue(\.focusOnCall) var focusOnCall
     @FocusedValue(\.clearFocus) var clearFocus
@@ -171,7 +176,7 @@ struct LogramApp: App {
                 Button("About Logram") {
                     NSApplication.shared.orderFrontStandardAboutPanel(options: [
                         .applicationName: "Logram",
-                        .applicationVersion: "1.2",
+                        .applicationVersion: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "?",
                         .credits: NSAttributedString(
                             string: "UnityBase Log Analyzer\nhttps://logram.perek.rest",
                             attributes: [
@@ -180,6 +185,9 @@ struct LogramApp: App {
                             ]
                         )
                     ])
+                }
+                Button("Check for Updates…") {
+                    updaterController.checkForUpdates(nil)
                 }
             }
             CommandGroup(replacing: .help) {

@@ -18,5 +18,11 @@
 			</array>
 		</dict>
 	</array>
+	<key>SUFeedURL</key>
+	<string>https://logram.perek.rest/appcast.xml</string>
+	<key>SUPublicEDKey</key>
+	<string>QHZce4Bxejo2rOtwdG1VPM3rmNiR02jObdfwP0JZYHU=</string>
+	<key>SUEnableAutomaticChecks</key>
+	<true/>
 </dict>
 </plist>

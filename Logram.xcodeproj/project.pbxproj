@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		SP0003 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = SP0002 /* Sparkle */; };
 		A10001 /* App.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10001; };
 		A10002 /* LogLevel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10002; };
 		A10003 /* LogLine.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10003; };
@@ -45,6 +46,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				SP0003 /* Sparkle in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -120,6 +122,9 @@
 			dependencies = (
 			);
 			name = Logram;
+			packageProductDependencies = (
+				SP0002 /* Sparkle */,
+			);
 			productName = Logram;
 			productReference = C10001 /* Logram.app */;
 			productType = "com.apple.product-type.application";
@@ -143,6 +148,9 @@
 				Base,
 			);
 			mainGroup = E10001;
+			packageReferences = (
+				SP0001 /* XCRemoteSwiftPackageReference "Sparkle" */,
+			);
 			productRefGroup = E10005 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -319,6 +327,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		SP0001 /* XCRemoteSwiftPackageReference "Sparkle" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/sparkle-project/Sparkle";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.0.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		SP0002 /* Sparkle */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = SP0001 /* XCRemoteSwiftPackageReference "Sparkle" */;
+			productName = Sparkle;
+		};
+/* End XCSwiftPackageProductDependency section */
 
 	};
 	rootObject = F10003 /* Project object */;

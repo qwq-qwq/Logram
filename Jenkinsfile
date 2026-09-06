@@ -31,7 +31,7 @@ pipeline {
                                                   passwordVariable: 'AWS_SECRET_ACCESS_KEY')]) {
                     sh '''
                         echo "$GIT_COMMIT_SHORT" > "$SRC_DIR/.version"
-                        aws --endpoint-url "$S3_ENDPOINT" s3 sync "$SRC_DIR/" "s3://$BUCKET/" --delete
+                        aws --endpoint-url "$S3_ENDPOINT" s3 sync "$SRC_DIR/" "s3://$BUCKET/" --delete --exclude "appcast.xml" --exclude "downloads/*"
                     '''
                 }
             }

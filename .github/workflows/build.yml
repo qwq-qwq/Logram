@@ -37,6 +37,18 @@ jobs:
           xcodebuild -version
           xcrun --show-sdk-version
 
+      - name: Resolve version
+        id: version
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            VERSION="${GITHUB_REF_NAME#v}"
+          else
+            VERSION="0.0.0-dev"
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "build=${{ github.run_number }}" >> "$GITHUB_OUTPUT"
+          echo "Marketing version: $VERSION (build ${{ github.run_number }})"
+
       - name: Import Developer ID certificate
         if: env.HAS_SIGNING == 'true'
         env:
@@ -65,6 +77,8 @@ jobs:
         env:
           DEV_ID: ${{ secrets.MACOS_DEVELOPER_ID }}
           TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          VERSION: ${{ steps.version.outputs.version }}
+          BUILD: ${{ steps.version.outputs.build }}
         run: |
           xcodebuild \
             -project Logram.xcodeproj \
@@ -77,11 +91,16 @@ jobs:
             DEVELOPMENT_TEAM="$TEAM_ID" \
             CODE_SIGN_ENTITLEMENTS="Logram/Logram.entitlements" \
             OTHER_CODE_SIGN_FLAGS="--timestamp --options=runtime" \
+            MARKETING_VERSION="$VERSION" \
+            CURRENT_PROJECT_VERSION="$BUILD" \
             CONFIGURATION_BUILD_DIR="$PWD/build" \
             clean build
 
       - name: Build Logram.app (ad-hoc)
         if: env.HAS_SIGNING != 'true'
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          BUILD: ${{ steps.version.outputs.build }}
         run: |
           xcodebuild \
             -project Logram.xcodeproj \
@@ -92,6 +111,8 @@ jobs:
             CODE_SIGN_IDENTITY="-" \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
+            MARKETING_VERSION="$VERSION" \
+            CURRENT_PROJECT_VERSION="$BUILD" \
             CONFIGURATION_BUILD_DIR="$PWD/build" \
             clean build
 
@@ -138,6 +159,87 @@ jobs:
         run: |
           cd build
           ditto -c -k --sequesterRsrc --keepParent Logram.app ../Logram-macos.zip
+
+      - name: Publish Sparkle feed to logram.perek.rest
+        if: startsWith(github.ref, 'refs/tags/v') && env.HAS_SIGNING == 'true'
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          BUILD: ${{ steps.version.outputs.build }}
+          SPARKLE_ED25519_PRIVATE_KEY: ${{ secrets.SPARKLE_ED25519_PRIVATE_KEY }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.GARAGE_S3_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.GARAGE_S3_SECRET_KEY }}
+          AWS_DEFAULT_REGION: garage
+          # Garage 1.0.1 does not support the streaming checksum format newer
+          # awscli sends by default (same workaround as the Jenkins deploy).
+          AWS_REQUEST_CHECKSUM_CALCULATION: when_required
+          AWS_RESPONSE_CHECKSUM_VALIDATION: when_required
+          S3_ENDPOINT: https://s3.perek.rest
+        run: |
+          set -e
+          ARCHIVE="Logram-macos.zip"
+
+          # Sparkle CLI tools (sign_update); keep the version in sync with the SPM dependency
+          curl -sSL -o "$RUNNER_TEMP/sparkle.tar.xz" \
+            "https://github.com/sparkle-project/Sparkle/releases/download/2.9.6/Sparkle-2.9.6.tar.xz"
+          mkdir -p "$RUNNER_TEMP/sparkle"
+          tar -xJf "$RUNNER_TEMP/sparkle.tar.xz" -C "$RUNNER_TEMP/sparkle"
+
+          KEY_FILE="$RUNNER_TEMP/sparkle_ed25519"
+          printf '%s' "$SPARKLE_ED25519_PRIVATE_KEY" > "$KEY_FILE"
+          SIG_LINE=$("$RUNNER_TEMP/sparkle/bin/sign_update" --ed-key-file "$KEY_FILE" "$ARCHIVE")
+          rm -f "$KEY_FILE"
+          echo "sign_update: $SIG_LINE"
+          ED_SIG=$(echo "$SIG_LINE" | sed -n 's/.*sparkle:edSignature="\([^"]*\)".*/\1/p')
+          LENGTH=$(echo "$SIG_LINE" | sed -n 's/.*length="\([^"]*\)".*/\1/p')
+          test -n "$ED_SIG" && test -n "$LENGTH"
+
+          # Current feed, or a skeleton on the very first release
+          if ! curl -sSf -o appcast.xml "https://logram.perek.rest/appcast.xml"; then
+            cat > appcast.xml <<'XML'
+          <?xml version="1.0" encoding="utf-8"?>
+          <rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
+            <channel>
+              <title>Logram</title>
+              <link>https://logram.perek.rest/appcast.xml</link>
+              <description>Logram updates</description>
+              <language>en</language>
+            </channel>
+          </rss>
+          XML
+          fi
+
+          python3 - "$VERSION" "$BUILD" "$ED_SIG" "$LENGTH" <<'PY'
+          import re, sys
+          from datetime import datetime, timezone
+          version, build, sig, length = sys.argv[1:5]
+          with open("appcast.xml") as f:
+              s = f.read()
+          # A re-run of the same tag rebuilds the archive byte-differently and
+          # re-uploads it: replace the version's item instead of keeping a
+          # signature of a file no longer served.
+          item_re = re.compile(r"[ \t]*<item>.*?</item>\n", re.S)
+          s = item_re.sub(lambda m: "" if f"<sparkle:shortVersionString>{version}<" in m.group(0) else m.group(0), s)
+          pub = datetime.now(timezone.utc).strftime("%a, %d %b %Y %H:%M:%S +0000")
+          item = f"""    <item>
+                <title>Version {version}</title>
+                <pubDate>{pub}</pubDate>
+                <sparkle:version>{build}</sparkle:version>
+                <sparkle:shortVersionString>{version}</sparkle:shortVersionString>
+                <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+                <enclosure url="https://logram.perek.rest/downloads/Logram-{version}.zip" length="{length}" type="application/octet-stream" sparkle:edSignature="{sig}"/>
+              </item>
+          """
+          item = "\n".join(line[10:] if line.startswith(" " * 10) else line for line in item.splitlines()) + "\n"
+          s = s.replace("  </channel>", item + "  </channel>", 1)
+          with open("appcast.xml", "w") as f:
+              f.write(s)
+          print(f"appcast now carries {version} (build {build})")
+          PY
+
+          cat appcast.xml
+          aws --endpoint-url "$S3_ENDPOINT" s3 cp "$ARCHIVE" "s3://logram/downloads/Logram-$VERSION.zip"
+          aws --endpoint-url "$S3_ENDPOINT" s3 cp "$ARCHIVE" "s3://logram/downloads/Logram-latest.zip"
+          aws --endpoint-url "$S3_ENDPOINT" s3 cp appcast.xml "s3://logram/appcast.xml" --content-type "application/xml"
 
       - name: Cleanup keychain
         if: always() && env.HAS_SIGNING == 'true'
