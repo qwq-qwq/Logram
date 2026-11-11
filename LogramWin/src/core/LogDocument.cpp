@@ -25,6 +25,10 @@ int LogDocument::ErrorCount() const {
 
 double LogDocument::DurationSeconds() const {
     if (startEpochCS_ < 0 || endEpochCS_ < 0) return -1.0;
+    // Начало - из заголовка лога (настоящие сотые), конец - метка последней
+    // строки, её дробную часть приводим к настоящему времени.
+    if (parser_)
+        return static_cast<double>(parser_->TrueEpochMS(endEpochCS_) - startEpochCS_ * 10) / 1000.0;
     return static_cast<double>(endEpochCS_ - startEpochCS_) / 100.0;
 }
 
@@ -457,17 +461,15 @@ void LogDocument::BuildMethodTimings() {
             uint32_t enterIdx = stacks[th].back();
             stacks[th].pop_back();
 
-            // Точная длительность из leave-строки (hi-res таймер UB);
-            // разность таймстампов (сантисекунды) - только fallback.
-            int64_t pairUS = GetDuration(static_cast<uint32_t>(i));
-            if (pairUS >= 0) {
-                movedLeave[i] = true;
-            } else {
-                int64_t csStart = allLines_[enterIdx].epochCS;
-                int64_t csEnd = allLines_[i].epochCS;
-                if (csStart >= 0 && csEnd > csStart)
-                    pairUS = (csEnd - csStart) * 10000;
-            }
+            // Точная длительность из leave-строки (hi-res таймер UB), пока она
+            // согласуется с метками времени; иначе (значения нет, либо оно
+            // обрезано до 99 с) - разность меток. См. LogParser::PairDurationUS.
+            int64_t leaveUS = GetDuration(static_cast<uint32_t>(i));
+            if (leaveUS >= 0) movedLeave[i] = true;
+            int64_t pairUS = LogParser::PairDurationUS(
+                leaveUS,
+                parser_->TrueEpochMS(allLines_[enterIdx].epochCS),
+                parser_->TrueEpochMS(allLines_[i].epochCS));
             if (pairUS < 0) continue;
 
             enterDurations.push_back({enterIdx, pairUS});
@@ -495,7 +497,8 @@ void LogDocument::BuildMethodTimings() {
             for (uint32_t enterIdx : stacks[th]) {
                 int64_t csStart = allLines_[enterIdx].epochCS;
                 if (csStart < 0 || endEpochCS_ < csStart) continue;
-                double durationMS = static_cast<double>(endEpochCS_ - csStart) * 10.0;
+                double durationMS = static_cast<double>(
+                    parser_->TrueEpochMS(endEpochCS_) - parser_->TrueEpochMS(csStart));
                 if (durationMS < 10.0) continue;
                 auto msg = GetMessage(base, allLines_[enterIdx]);
                 while (!msg.empty() && (msg.front() == ' ' || msg.front() == '\t'))

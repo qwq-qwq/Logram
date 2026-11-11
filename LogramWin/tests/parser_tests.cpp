@@ -164,6 +164,71 @@ void TestMormot1LeaveDuration() {
     CHECK_EQ(r.durationUS, 407LL);
 }
 
+// ---- mORMot1: дробная часть метки = мс shr 4, длительность обрезана до 99 с ----
+
+void TestMormot1TrueTimeAndPairDuration() {
+    std::puts("== mORMot1 true time / pair duration ==");
+    std::string header =
+        "server.log 1.18\r\n"
+        "Host=x User=y CPU=8*3000 OS=Win64 Wow=0 Freq=10000000\r\n";
+    auto headerLines = SplitLines(header);
+    LogParser parser(headerLines);
+
+    auto parseCS = [&](const char* line) {
+        auto len = static_cast<uint32_t>(std::strlen(line));
+        return parser.ParseLine(reinterpret_cast<const uint8_t*>(line), len, 0, 0).hot.epochCS;
+    };
+
+    // epochCS хранит дробную часть как в логе (для показа): ".56"
+    int64_t cs56 = parseCS("20261104 09274756  \" info  x");
+    CHECK_EQ(cs56 % 100, 56LL);
+    CHECK_EQ(FormatTime(cs56), std::string("09:27:47.56"));
+    // Для расчётов 56 -> 896 мс, 62 -> 992 мс, 00 -> 0 мс
+    int64_t secMS = (cs56 / 100) * 1000;
+    CHECK_EQ(parser.TrueEpochMS(cs56), secMS + 896);
+    CHECK_EQ(parser.TrueEpochMS(parseCS("20261104 09274762  \" info  x")), secMS + 992);
+    CHECK_EQ(parser.TrueEpochMS(parseCS("20261104 09274800  \" info  x")), secMS + 1000);
+    CHECK_EQ(parser.TrueEpochMS(-1), -1LL);
+
+    // Запрос через границу секунды: метки .56 и .00 следующей секунды - это
+    // 104 мс, а не 440; точная длительность из leave (97.468 мс) остаётся.
+    int64_t enterMS = parser.TrueEpochMS(cs56);
+    int64_t leaveMS = parser.TrueEpochMS(parseCS("20261104 09274800  \"  -    00.097.468"));
+    CHECK_EQ(leaveMS - enterMS, 104LL);
+    CHECK_EQ(LogParser::PairDurationUS(97'468, enterMS, leaveMS), 97'468LL);
+
+    // Нет длительности в leave-строке: разность настоящих меток
+    CHECK_EQ(LogParser::PairDurationUS(-1, enterMS, leaveMS), 104'000LL);
+    CHECK_EQ(LogParser::PairDurationUS(-1, enterMS, enterMS), -1LL);
+    CHECK_EQ(LogParser::PairDurationUS(-1, -1, leaveMS), -1LL);
+
+    // Задача на 51 мин 19 с: ядро пишет "99.003.548" (секунды обрезаны до 99) -
+    // берём разность меток.
+    int64_t taskEnter = parser.TrueEpochMS(parseCS("20261104 02000042  \"  +    rest/x"));
+    int64_t taskLeave = parser.TrueEpochMS(parseCS("20261104 02511926  \"  -    99.003.548"));
+    int64_t pairUS = LogParser::PairDurationUS(99'003'548, taskEnter, taskLeave);
+    CHECK_EQ(pairUS, (taskLeave - taskEnter) * 1000);
+    CHECK(pairUS > 51LL * 60 * 1'000'000);
+
+    // Настоящие 99 с (метки с ней согласуются) не трогаем
+    int64_t e99 = parser.TrueEpochMS(parseCS("20261104 02000000  \"  +    x"));
+    int64_t l99 = parser.TrueEpochMS(parseCS("20261104 02013925  \"  -    99.400.000"));
+    CHECK_EQ(LogParser::PairDurationUS(99'400'000, e99, l99), 99'400'000LL);
+}
+
+// ---- Прочие форматы: дробная часть настоящая ---------------------------
+
+void TestTrueEpochMSOtherFormats() {
+    std::puts("== true time, non-mORMot1 ==");
+    std::string header =
+        "server.log 2.0\r\n"
+        "  \" info  console line\r\n";
+    auto headerLines = SplitLines(header);
+    LogParser parser(headerLines);
+    CHECK(static_cast<int>(parser.GetFormat()) != static_cast<int>(LogParser::Format::Mormot1));
+    CHECK_EQ(parser.TrueEpochMS(123'456'799), 1'234'567'990LL);
+}
+
 // ---- mORMot2: hex HiRes ---------------------------------------------
 
 void TestMormot2() {
@@ -494,6 +559,8 @@ int main() {
     TestLevelMap();
     TestMormot1();
     TestMormot1LeaveDuration();
+    TestMormot1TrueTimeAndPairDuration();
+    TestTrueEpochMSOtherFormats();
     TestMormot2();
     TestJournald();
     TestConsole();

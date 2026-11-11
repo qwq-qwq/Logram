@@ -184,6 +184,23 @@ int64_t LogParser::ParseTimestamp(const uint8_t* buf, uint32_t len) const {
     return cs >= 0 ? cs + tzOffsetCS_ : cs;
 }
 
+int64_t LogParser::TrueEpochMS(int64_t epochCS) const {
+    if (epochCS < 0) return -1;
+    if (format_ != Format::Mormot1) return epochCS * 10;
+    // Смещение часового пояса кратно секунде, дробная часть - как в логе.
+    int64_t zz = epochCS % 100;
+    int64_t ms = zz * 16;
+    if (ms > 999) ms = 999;   // zz > 62 в настоящем логе не бывает
+    return (epochCS / 100) * 1000 + ms;
+}
+
+int64_t LogParser::PairDurationUS(int64_t leaveUS, int64_t enterMS, int64_t leaveMS) {
+    int64_t elapsedUS = (enterMS >= 0 && leaveMS > enterMS) ? (leaveMS - enterMS) * 1000 : -1;
+    if (leaveUS < 0) return elapsedUS;
+    if (elapsedUS > leaveUS + kDurationSlackUS) return elapsedUS;
+    return leaveUS;
+}
+
 int64_t LogParser::ParseMormot1(const uint8_t* buf, uint32_t len) const {
     if (len < 17) return -1;
     if (buf[0] < 0x30 || buf[0] > 0x39) return -1;
@@ -200,6 +217,8 @@ int64_t LogParser::ParseMormot1(const uint8_t* buf, uint32_t len) const {
     int hour   = d2(9);
     int minute = d2(11);
     int sec    = d2(13);
+    // Не сотые доли секунды, а миллисекунды shr 4 (00..62). Храним как в логе:
+    // так время и показывается; для расчётов - TrueEpochMS().
     int cs     = d2(15);
 
     int64_t days = DaysFromEpoch(year, month, day);

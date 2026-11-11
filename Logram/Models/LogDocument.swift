@@ -394,7 +394,7 @@ final class LogDocument {
     // MARK: - Method Timing
 
     func buildMethodTimings() {
-        guard parser != nil, !timingsBuilt else { return }
+        guard let parser, !timingsBuilt else { return }
         var timings = [MethodTiming]()
         var opens = [MethodTiming]()
         // Тривалість пари переносимо на enter-рядок: у колонці її видно на
@@ -417,18 +417,19 @@ final class LogDocument {
                     depth += 1
                 } else if lines[j].level == .leave {
                     if depth == 0 {
-                        // Точна тривалість з leave-рядка (hi-res таймер UB);
-                        // різниця таймстампів (сантисекунди) - лише fallback.
-                        var pairUS = lines[j].durationUS
-                        if pairUS >= 0 {
+                        // Точна тривалість з leave-рядка (hi-res таймер UB), доки
+                        // вона узгоджується з мітками часу; інакше (значення немає
+                        // або воно обрізане до 99 с) - різниця міток.
+                        // Див. LogParser.pairDurationUS.
+                        let leaveUS = lines[j].durationUS
+                        if leaveUS >= 0 {
                             movedLeaves.append(j)
-                        } else {
-                            let csStart = lines[i].epochCS
-                            let csEnd = lines[j].epochCS
-                            if csStart >= 0 && csEnd > csStart {
-                                pairUS = (csEnd - csStart) * 10_000
-                            }
                         }
+                        let pairUS = LogParser.pairDurationUS(
+                            leaveUS: leaveUS,
+                            enterMS: parser.trueEpochMS(lines[i].epochCS),
+                            leaveMS: parser.trueEpochMS(lines[j].epochCS)
+                        )
                         if pairUS >= 0 {
                             enterDurations.append((i, pairUS))
                             let durationMS = Double(pairUS) / 1000.0
@@ -454,7 +455,7 @@ final class LogDocument {
             if !matched && endEpochCS >= 0 {
                 let csStart = lines[i].epochCS
                 if csStart >= 0 && endEpochCS >= csStart {
-                    let durationMS = Double(endEpochCS - csStart) * 10.0
+                    let durationMS = Double(parser.trueEpochMS(endEpochCS) - parser.trueEpochMS(csStart))
                     if durationMS >= 10 {
                         let method = lines[i].message.trimmingCharacters(in: .whitespaces)
                         opens.append(MethodTiming(
@@ -546,6 +547,11 @@ final class LogDocument {
 
     var duration: TimeInterval? {
         guard startEpochCS >= 0, endEpochCS >= 0 else { return nil }
+        // Початок - із заголовка лога (справжні соті), кінець - мітка останнього
+        // рядка, її дробову частину зводимо до справжнього часу.
+        if let parser {
+            return Double(parser.trueEpochMS(endEpochCS) - startEpochCS * 10) / 1000.0
+        }
         return Double(endEpochCS - startEpochCS) / 100.0
     }
 

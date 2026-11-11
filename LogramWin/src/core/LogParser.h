@@ -24,6 +24,28 @@ public:
 
     static constexpr uint8_t kThBase = 0x21; // '!'
 
+    // Время строки в миллисекундах от эпохи - ТОЛЬКО для расчётов.
+    // epochCS хранит дробную часть ровно так, как она записана в логе (и так
+    // же показывается). В формате mORMot1 последние две цифры метки
+    // "YYYYMMDD hhmmsszz" - это миллисекунды shr 4 (00..62, шаг 16 мс), а не
+    // сотые доли секунды (SynCommons.pas, TSynSystemTime.AddLogTime), поэтому
+    // для расчётов zz умножается на 16. В остальных форматах дробная часть
+    // настоящая. Возвращает -1 для неизвестного времени.
+    int64_t TrueEpochMS(int64_t epochCS) const;
+
+    // Длительность пары enter/leave в микросекундах.
+    // leaveUS - значение из leave-строки (-1, если его нет), enterMS/leaveMS -
+    // TrueEpochMS обеих строк. Значению из строки верим, пока оно согласуется
+    // с метками: mORMot пишет его как SS.mmm.uuu с двумя цифрами секунд и
+    // обрезает секунды до 99, а аргумент 32-битный и заворачивается по модулю
+    // ~4295 с (TTextWriter.AddMicroSec). Если между метками прошло больше, чем
+    // leaveUS плюс допуск, берётся разность меток. Возвращает -1, если
+    // длительность определить нельзя.
+    static int64_t PairDurationUS(int64_t leaveUS, int64_t enterMS, int64_t leaveMS);
+
+    // Допуск сверки длительности из leave-строки с метками времени, мкс.
+    static constexpr int64_t kDurationSlackUS = 1'000'000;
+
     // Parse a single log line from raw bytes.
     // Returns populated LogLineHot. HTTP/Duration stored in out params if present.
     struct ParseResult {

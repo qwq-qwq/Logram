@@ -1,7 +1,7 @@
 import Foundation
 
 /// Detects log format and parses UB log lines.
-/// Supports mORMot1 (YYYYMMDD HHMMSSCC), mORMot2 (hex HiRes), journald (ISO8601), console (no date).
+/// Supports mORMot1 (YYYYMMDD HHMMSSZZ, ZZ = ms shr 4), mORMot2 (hex HiRes), journald (ISO8601), console (no date).
 final class LogParser: Sendable {
     enum Format {
         case mormot1    // 20210727 08260933  $ SQL   ...
@@ -161,6 +161,41 @@ final class LogParser: Sendable {
         return result
     }
 
+    // MARK: - Time for calculations
+
+    /// Допуск звірки тривалості з leave-рядка з мітками часу, мкс.
+    static let durationSlackUS: Int64 = 1_000_000
+
+    /// Час рядка в мілісекундах від епохи - ЛИШЕ для розрахунків.
+    /// `epochCS` зберігає дробову частину рівно так, як вона записана в лозі
+    /// (так вона й показується). У форматі mORMot1 останні дві цифри мітки
+    /// "YYYYMMDD hhmmsszz" - це мілісекунди shr 4 (00..62, крок 16 мс), а не
+    /// соті частки секунди (SynCommons.pas, TSynSystemTime.AddLogTime), тому
+    /// для розрахунків zz множиться на 16. В інших форматах дробова частина
+    /// справжня. Повертає -1 для невідомого часу.
+    func trueEpochMS(_ epochCS: Int64) -> Int64 {
+        guard epochCS >= 0 else { return -1 }
+        guard format == .mormot1 else { return epochCS * 10 }
+        // Зсув часового поясу кратний секунді, дробова частина - як у лозі.
+        let ms = min((epochCS % 100) * 16, 999) // zz > 62 у справжньому лозі не буває
+        return (epochCS / 100) * 1000 + ms
+    }
+
+    /// Тривалість пари enter/leave в мікросекундах.
+    /// `leaveUS` - значення з leave-рядка (-1, якщо його немає), `enterMS` /
+    /// `leaveMS` - `trueEpochMS` обох рядків. Значенню з рядка віримо, доки воно
+    /// узгоджується з мітками: mORMot пише його як SS.mmm.uuu з двома цифрами
+    /// секунд і обрізає секунди до 99, а аргумент 32-бітний і загортається за
+    /// модулем ~4295 с (TTextWriter.AddMicroSec). Якщо між мітками минуло більше,
+    /// ніж `leaveUS` плюс допуск, береться різниця міток. Повертає -1, якщо
+    /// тривалість визначити не можна.
+    static func pairDurationUS(leaveUS: Int64, enterMS: Int64, leaveMS: Int64) -> Int64 {
+        let elapsedUS: Int64 = (enterMS >= 0 && leaveMS > enterMS) ? (leaveMS - enterMS) * 1000 : -1
+        if leaveUS < 0 { return elapsedUS }
+        if elapsedUS > leaveUS + durationSlackUS { return elapsedUS }
+        return leaveUS
+    }
+
     // MARK: - Timestamp Parsing
 
     private func parseTimestampBytes(_ buf: UnsafeBufferPointer<UInt8>) -> Int64 {
@@ -174,7 +209,7 @@ final class LogParser: Sendable {
         return raw >= 0 ? raw + tzOffsetCS : raw
     }
 
-    /// YYYYMMDD HHMMSSCC → epochCS (pure arithmetic, no Calendar)
+    /// YYYYMMDD HHMMSSZZ → epochCS (pure arithmetic, no Calendar); ZZ kept as written
     private func parseMormot1Bytes(_ buf: UnsafeBufferPointer<UInt8>) -> Int64 {
         guard buf.count >= 17 else { return -1 }
         let b = buf
@@ -195,6 +230,8 @@ final class LogParser: Sendable {
         let hour   = d2(9)
         let minute = d2(11)
         let sec    = d2(13)
+        // Не соті частки секунди, а мілісекунди shr 4 (00..62). Зберігаємо як у
+        // лозі: так час і показується; для розрахунків - trueEpochMS().
         let cs     = d2(15)
 
         let days = Self.daysFromEpoch(year: year, month: month, day: day)
