@@ -63,13 +63,15 @@
     <a href="#sql"><span class="num">06</span>SQL and cust1</a>
     <a href="#themes"><span class="num">07</span>Themes &amp; columns</a>
     <a href="#tabs"><span class="num">08</span>Tabs &amp; windows</a>
-    <a href="#shortcuts"><span class="num">09</span>Keyboard shortcuts</a>
+    <a href="#stats"><span class="num">09</span>Statistics</a>
+    <a href="#install"><span class="num">10</span>Install &amp; updates</a>
+    <a href="#shortcuts"><span class="num">11</span>Keyboard shortcuts</a>
   </nav>
 </header>
 
 <section class="doc" id="open">
   <h2>01 &middot; Opening a <em>log</em></h2>
-  <p>Logram works with <b>multi-gigabyte</b> files out of the box: Windows uses memory-mapped&nbsp;I/O, macOS&nbsp;&mdash; streaming read into <code>Data</code>. The format is auto-detected from the file header &mdash; no import wizards involved.</p>
+  <p>Logram works with <b>multi-gigabyte</b> files out of the box: on all three platforms the file is memory-mapped (<code>MapViewOfFile</code> on Windows, <code>mmap</code> on Linux, <code>Data(.mappedIfSafe)</code> on macOS), so nothing is copied into memory up front. The format is auto-detected from the file header, no import wizards involved.</p>
 
   <div class="doc-where">
     <div class="w-col">
@@ -80,13 +82,17 @@
       <span class="w-os">Windows</span>
       <span class="w-path"><code>File → Open</code> menu or <kbd>Ctrl</kbd><kbd>O</kbd></span>
     </div>
+    <div class="w-col">
+      <span class="w-os">Linux</span>
+      <span class="w-path"><b>Open…</b> button in the header bar or <kbd>Ctrl</kbd><kbd>O</kbd></span>
+    </div>
   </div>
 
   <p>These also work:</p>
   <ul>
-    <li><b>Drag and drop</b> a file onto the app window.</li>
-    <li><b>Command line</b> &mdash; path as the first argument: <code>Logram.exe path\app.log</code> or <code>open -a Logram ~/logs/app.log</code>.</li>
-    <li><b>File association</b> &mdash; in Finder/Explorer right-click a <code>.log</code> file and pick Logram from <em>Open With&hellip;</em>; or set Logram as the default handler for double-click.</li>
+    <li><b>Drag and drop</b> a file onto the app window (macOS and Windows).</li>
+    <li><b>Command line</b> &mdash; path as the first argument: <code>Logram.exe path\app.log</code> or <code>open -a Logram ~/logs/app.log</code>; on Linux <code>Logram ~/logs/app.log</code>.</li>
+    <li><b>File association</b> &mdash; in Finder / Explorer / Files right-click a <code>.log</code> file and pick Logram from <em>Open With&hellip;</em>; or set Logram as the default handler for double-click. On Linux the <code>.deb</code> package registers Logram for <code>.log</code> files.</li>
   </ul>
 </section>
 
@@ -96,7 +102,8 @@
 
   <h3>mORMot 1 &mdash; the main UB format</h3>
   <div class="doc-sample"><span class="d">20210727 08260933</span>  <span class="h">$</span> <span class="l">SQL   </span>	<span class="t">SELECT id FROM uba_user WHERE name=:name</span></div>
-  <p>Timestamp: <code>YYYYMMDD HHMMSSCC</code> (hundredths of a second at the end).</p>
+  <p>Timestamp: <code>YYYYMMDD HHMMSSZZ</code>. The last two digits are milliseconds shifted right by 4 bits (<code>ms shr 4</code>): values 00..62 in 16&nbsp;ms steps, not hundredths of a second.</p>
+  <p>The time column shows these two digits as written in the log: <code>08:26:09.33</code> means 09.528&nbsp;s. Durations and statistics use the real time. UB writes timestamps in UTC; Logram shows them in the viewer's local time zone.</p>
 
   <h3>mORMot 2 HiRes &mdash; high-resolution timer</h3>
   <div class="doc-sample"><span class="d">0000000000000C72</span>  <span class="h">!</span> <span class="l">info  </span>	<span class="t">UB server started on port 8881</span></div>
@@ -134,18 +141,23 @@
       <span class="w-os">Windows</span>
       <span class="w-path">Buttons <b>All · Errors · SQL · HTTP · +/-</b> in the filter panel</span>
     </div>
+    <div class="w-col">
+      <span class="w-os">Linux</span>
+      <span class="w-path">Buttons <b>All · Errors · SQL · HTTP · +/-</b> above the level list</span>
+    </div>
   </div>
 
   <p>What each preset enables:</p>
   <ul>
-    <li><b>All</b> (Windows only) &mdash; every level.</li>
-    <li><b>Errors</b> &mdash; <code>Error</code>, <code>EXC</code>, <code>EXC OS</code>, <code>OS ERR</code>, <code>Fail</code> (plus <code>DddER</code> on Windows). Quickly spot "what broke".</li>
-    <li><b>SQL</b> &mdash; <code>SQL</code>, <code>cust1</code>, <code>cust2</code>. DB query overview together with parameters.</li>
-    <li><b>HTTP</b> &mdash; <code>HTTP</code> (plus <code>Clnt</code>, <code>Srvr</code> on Windows). Tracing outbound requests.</li>
+    <li><b>All</b> (Windows and Linux) &mdash; every level.</li>
+    <li><b>Errors</b> &mdash; <code>Error</code>, <code>EXC</code>, <code>EXC OS</code>, <code>OS ERR</code>, <code>Fail</code> (plus <code>DddER</code> on Windows and Linux; on Linux also <code>Warn</code>). Quickly spot "what broke".</li>
+    <li><b>SQL</b> &mdash; <code>SQL</code>, <code>cust1</code>, <code>cust2</code> (on Linux also <code>Cache</code>, <code>Res</code>, <code>DB</code>). DB query overview together with parameters.</li>
+    <li><b>HTTP</b> &mdash; <code>HTTP</code> (plus <code>Clnt</code>, <code>Srvr</code> on Windows and Linux). Tracing outbound requests.</li>
     <li><b>+/-</b> &mdash; levels <code>+</code> (method enter) and <code>-</code> (exit). Useful before opening <a href="#timing">Method Timing</a>.</li>
   </ul>
   <p>A preset resets the current level checkboxes and enables only the listed ones. On macOS, clicking the same preset again (when all its levels are already active) disables them. The text filter and thread filter are not touched by presets.</p>
   <p>On macOS, <b>Reset</b> / <b>Apply</b> buttons sit below the list &mdash; <b>Reset</b> sets every checkbox back to "all on", <b>Apply</b> commits the change.</p>
+  <p>On Linux, clicking the active preset again switches back to <b>All</b>.</p>
 </section>
 
 <section class="doc" id="search">
@@ -161,12 +173,16 @@
       <span class="w-os">Windows</span>
       <span class="w-path"><b>Search</b> field in the toolbar · <kbd>Ctrl</kbd><kbd>F</kbd> focuses the field</span>
     </div>
+    <div class="w-col">
+      <span class="w-os">Linux</span>
+      <span class="w-path"><b>Search</b> field in the header bar · <kbd>Ctrl</kbd><kbd>F</kbd> focuses the field</span>
+    </div>
   </div>
 
   <p>Navigating between matches:</p>
   <ul>
     <li><b>macOS</b> &mdash; arrows <kbd>&uarr;</kbd>/<kbd>&darr;</kbd> in the toolbar (next to the search field) or <kbd>Enter</kbd> / <kbd>Shift</kbd>+<kbd>Enter</kbd>.</li>
-    <li><b>Windows</b> &mdash; <kbd>F3</kbd> / <kbd>Shift</kbd>+<kbd>F3</kbd>, or the <b>Find Next</b> / <b>Find Previous</b> buttons in the toolbar.</li>
+    <li><b>Windows, Linux</b> &mdash; <kbd>F3</kbd> / <kbd>Shift</kbd>+<kbd>F3</kbd>, or the <b>Find Next</b> / <b>Find Previous</b> buttons in the toolbar. On Linux the buttons are the arrows <kbd>&uarr;</kbd>/<kbd>&darr;</kbd> next to the search field.</li>
   </ul>
   <p>When the end is reached, search <b>wraps around</b> from the opposite side and plays a short beep. If there are no matches at all &mdash; a warning beep.</p>
   <p>Next to the match navigation there is another pair of arrows with an error indicator &mdash; they jump to the next/previous error (see <a href="#timing">Method Timing</a> regarding <code>Error</code>/<code>EXC</code> rows).</p>
@@ -175,6 +191,7 @@
 <section class="doc" id="timing">
   <h2>05 &middot; Method <em>Timing</em></h2>
   <p>UnityBase logs a method entry with a <code>+</code>-level line and the exit with a <code>-</code> line on the same thread. For every <code>+</code>, Logram finds its matching <code>-</code>, respecting nesting, and computes the duration.</p>
+  <p>The duration is taken from the <code>-</code> line itself, where UB writes it with microsecond precision. UB caps that value at 99 seconds, so for longer calls Logram uses the difference between the line timestamps.</p>
 
   <h3>Duration column</h3>
   <p>Hidden by default (building timings costs time on large files). The first time you enable it, Logram computes and caches the timings &mdash; subsequent toggles are instant. The setting resets on a new file.</p>
@@ -182,11 +199,15 @@
   <div class="doc-where">
     <div class="w-col">
       <span class="w-os">macOS</span>
-      <span class="w-path">Timer button <b>⏱</b> in the toolbar</span>
+      <span class="w-path">Timer button <b>⏱</b> in the toolbar · <kbd>&#8984;</kbd><kbd>D</kbd></span>
     </div>
     <div class="w-col">
       <span class="w-os">Windows</span>
       <span class="w-path"><code>View → Toggle Duration</code> menu</span>
+    </div>
+    <div class="w-col">
+      <span class="w-os">Linux</span>
+      <span class="w-path"><code>☰ → Show Duration</code> · <kbd>Ctrl</kbd><kbd>D</kbd></span>
     </div>
   </div>
 
@@ -196,16 +217,22 @@
   <div class="doc-where">
     <div class="w-col">
       <span class="w-os">macOS</span>
-      <span class="w-path"><b>Timing</b> button in the toolbar (right side)</span>
+      <span class="w-path"><b>Timing</b> button in the toolbar (right side) · <kbd>&#8984;</kbd><kbd>M</kbd></span>
     </div>
     <div class="w-col">
       <span class="w-os">Windows</span>
       <span class="w-path"><code>View → Method Timing...</code> menu</span>
     </div>
+    <div class="w-col">
+      <span class="w-os">Linux</span>
+      <span class="w-path"><code>☰ → Method Timing…</code> · <kbd>Ctrl</kbd><kbd>M</kbd></span>
+    </div>
   </div>
+  <p>The table lists calls of 10&nbsp;ms and longer; on macOS and Linux it is limited to the 1000 slowest.</p>
+  <p><b>Open calls</b> are <code>+</code> lines with no matching <code>-</code>: a request that hung, is still running, or was cut off by the end of the log. Their duration is counted up to the last line of the log and marked with <code>&ge;</code>. macOS: the <b>Completed / Open</b> switch; Linux: the <b>Open calls</b> button; Windows: open calls are listed in the same table.</p>
 
   <h3>Jump to pair</h3>
-  <p>If you're on a <code>+</code> or <code>-</code> row, <kbd>&#8984;</kbd><kbd>J</kbd> / <kbd>Ctrl</kbd><kbd>J</kbd> jumps to the paired line on the same thread. On macOS the same jump is available via an arrow button <b>↓</b>/<b>↑</b> in the toolbar (appears when a <code>+</code> or <code>-</code> row is selected).</p>
+  <p>If you're on a <code>+</code> or <code>-</code> row, <kbd>&#8984;</kbd><kbd>J</kbd> / <kbd>Ctrl</kbd><kbd>J</kbd> jumps to the paired line on the same thread. On macOS the same jump is available via an arrow button <b>↓</b>/<b>↑</b> in the toolbar (appears when a <code>+</code> or <code>-</code> row is selected). On Linux the jump is also in the right-click menu: <b>Jump to matching pair</b>.</p>
 
   <h3>Error navigation</h3>
   <p>Jump to the next/previous <code>Error</code>/<code>EXC</code> line:</p>
@@ -217,6 +244,10 @@
     <div class="w-col">
       <span class="w-os">Windows</span>
       <span class="w-path"><code>Navigate → Next/Prev Error</code> menu · <kbd>Ctrl</kbd><kbd>Shift</kbd><kbd>&darr;</kbd>/<kbd>&uarr;</kbd></span>
+    </div>
+    <div class="w-col">
+      <span class="w-os">Linux</span>
+      <span class="w-path">Red arrows <kbd>&uarr;</kbd>/<kbd>&darr;</kbd> in the header bar · <kbd>Ctrl</kbd><kbd>Shift</kbd><kbd>&darr;</kbd>/<kbd>&uarr;</kbd></span>
     </div>
   </div>
 
@@ -231,6 +262,10 @@
     <div class="w-col">
       <span class="w-os">Windows</span>
       <span class="w-path">Right-click the line &rarr; <b>Focus on Call</b> · <code>Navigate → Focus on Call</code> · <kbd>Ctrl</kbd><kbd>Shift</kbd><kbd>E</kbd></span>
+    </div>
+    <div class="w-col">
+      <span class="w-os">Linux</span>
+      <span class="w-path">Right-click the line &rarr; <b>Focus on call</b> · <kbd>Ctrl</kbd><kbd>Shift</kbd><kbd>E</kbd></span>
     </div>
   </div>
   <p>To clear focus and return to the full log: <kbd>Esc</kbd>, the <b>Clear Focus</b> menu item, or click the focus indicator in the status bar.</p>
@@ -247,7 +282,7 @@
     <li><code>P<i>N</i>d</code> &mdash; date/time in ISO format. Example: <code>P3d</code>: <code>"2025-01-01"</code> &rarr; <code>:3 = '2025-01-01'</code>.</li>
   </ul>
   <p>So <code>P2s8</code> means "parameter #2, an 8-character string". The suffix itself isn't used for substitution &mdash; Logram only looks at the number after the <code>P</code>.</p>
-  <p>The result is a copy-ready SQL you can run in psql/DBeaver. The <b>Show params / Hide params</b> toggle in the panel controls substitution.</p>
+  <p>The result is a copy-ready SQL you can run in psql/DBeaver. The <b>Show params / Hide params</b> toggle in the panel controls substitution. On Linux: <code>☰ → Substitute SQL Parameters</code> or <kbd>Ctrl</kbd><kbd>P</kbd>.</p>
   <p>JSON in details (e.g. HTTP body) is pretty-printed too.</p>
 </section>
 
@@ -258,11 +293,15 @@
   <div class="doc-where">
     <div class="w-col">
       <span class="w-os">macOS</span>
-      <span class="w-path">Palette icon in the toolbar (theme menu)</span>
+      <span class="w-path">Palette icon in the toolbar (theme menu) · <code>Tools → Theme</code></span>
     </div>
     <div class="w-col">
       <span class="w-os">Windows</span>
       <span class="w-path"><code>View → Theme → Tokyo Night / TTY</code> menu</span>
+    </div>
+    <div class="w-col">
+      <span class="w-os">Linux</span>
+      <span class="w-path"><code>☰ → Theme → Tokyo Night / TTY</code></span>
     </div>
   </div>
 
@@ -287,14 +326,53 @@
       <span class="w-os">Windows</span>
       <span class="w-path">Each <code>Logram.exe</code> is a separate window</span>
     </div>
+    <div class="w-col">
+      <span class="w-os">Linux</span>
+      <span class="w-path">Each file opens in its own window</span>
+    </div>
   </div>
 
   <p><b>macOS</b>: tabs work via <code>WindowGroup</code>. <kbd>&#8984;</kbd><kbd>O</kbd> opens a file in the <i>active</i> tab (focus is routed through <code>@FocusedValue</code>). Tabs can be dragged into standalone windows and back.</p>
   <p><b>Windows</b>: open as many in parallel as you need &mdash; thanks to memory-mapped&nbsp;I/O the cost of an extra log copy is low.</p>
+  <p><b>Linux</b>: every opened file gets its own window.</p>
+</section>
+
+<section class="doc" id="stats">
+  <h2>09 &middot; <em>Statistics</em></h2>
+  <p>A summary of the whole file in one window: file name and size, UB version and host from the log header, time of the first and last line, total duration, number of events, threads, HTTP requests, SQL queries and errors. macOS and Linux also show the average request rate per second and the number of events per level.</p>
+
+  <div class="doc-where">
+    <div class="w-col">
+      <span class="w-os">macOS</span>
+      <span class="w-path"><code>Tools → Statistics…</code> · <kbd>&#8984;</kbd><kbd>I</kbd></span>
+    </div>
+    <div class="w-col">
+      <span class="w-os">Windows</span>
+      <span class="w-path"><code>View → Statistics...</code></span>
+    </div>
+    <div class="w-col">
+      <span class="w-os">Linux</span>
+      <span class="w-path"><code>☰ → Statistics…</code> · <kbd>Ctrl</kbd><kbd>I</kbd></span>
+    </div>
+  </div>
+</section>
+
+<section class="doc" id="install">
+  <h2>10 &middot; Install &amp; <em>updates</em></h2>
+  <p>Builds for all three platforms are attached to the <a href="https://github.com/qwq-qwq/Logram/releases/latest" target="_blank" rel="noopener">latest release</a> on GitHub.</p>
+
+  <h3>macOS</h3>
+  <p>Unzip <code>Logram-macos.zip</code> and drag <code>Logram.app</code> to <code>/Applications</code>. The app is signed with a Developer ID and notarized by Apple, so it starts with a regular double-click. Updates arrive by themselves: Logram checks for a new version in the background and offers to install it. A manual check is in the menu <code>Logram → Check for Updates…</code>.</p>
+
+  <h3>Windows</h3>
+  <p>Unzip <code>Logram-windows.zip</code> and run <code>Logram.exe</code>: a portable executable, no installer and no runtime. SmartScreen may show a warning: <b>More info</b> &rarr; <b>Run anyway</b>. To update, replace the file with the one from a newer release.</p>
+
+  <h3>Linux</h3>
+  <p><code>sudo apt install ./Logram-linux.deb</code>. Logram appears in Activities and is offered for <code>.log</code> files (right-click &rarr; <em>Open With Logram</em>). Requires Ubuntu 24.04+ or another Debian-based distribution with GTK&nbsp;4.14+. To update, install the newer <code>.deb</code> the same way; to remove: <code>sudo apt remove logram</code>.</p>
 </section>
 
 <section class="doc" id="shortcuts">
-  <h2>09 &middot; Keyboard <em>shortcuts</em></h2>
+  <h2>11 &middot; Keyboard <em>shortcuts</em></h2>
 
   <table class="doc-table">
     <thead>
@@ -302,6 +380,7 @@
         <th>Action</th>
         <th>macOS</th>
         <th>Windows</th>
+        <th>Linux</th>
       </tr>
     </thead>
     <tbody>
@@ -309,39 +388,47 @@
         <td>Open file</td>
         <td class="k"><kbd>&#8984;</kbd><kbd>O</kbd></td>
         <td class="k"><kbd>Ctrl</kbd><kbd>O</kbd></td>
+        <td class="k"><kbd>Ctrl</kbd><kbd>O</kbd></td>
       </tr>
       <tr>
         <td>New tab</td>
         <td class="k"><kbd>&#8984;</kbd><kbd>N</kbd></td>
-        <td class="k">&mdash;</td>
+        <td class="k">&ndash;</td>
+        <td class="k">&ndash;</td>
       </tr>
       <tr>
         <td>Focus search field</td>
-        <td class="k">&mdash;</td>
+        <td class="k">&ndash;</td>
+        <td class="k"><kbd>Ctrl</kbd><kbd>F</kbd></td>
         <td class="k"><kbd>Ctrl</kbd><kbd>F</kbd></td>
       </tr>
       <tr>
         <td>Next match / previous</td>
         <td class="k"><kbd>Enter</kbd> / <kbd>Shift</kbd><kbd>Enter</kbd> in the search field</td>
         <td class="k"><kbd>F3</kbd> / <kbd>Shift</kbd><kbd>F3</kbd></td>
+        <td class="k"><kbd>F3</kbd> / <kbd>Shift</kbd><kbd>F3</kbd></td>
       </tr>
       <tr>
         <td>Jump to paired <code>+</code>/<code>-</code></td>
         <td class="k"><kbd>&#8984;</kbd><kbd>J</kbd></td>
         <td class="k"><kbd>Ctrl</kbd><kbd>J</kbd></td>
+        <td class="k"><kbd>Ctrl</kbd><kbd>J</kbd></td>
       </tr>
       <tr>
         <td>Next / previous error</td>
-        <td class="k">&mdash;</td>
+        <td class="k">&ndash;</td>
+        <td class="k"><kbd>Ctrl</kbd><kbd>Shift</kbd><kbd>&darr;</kbd> / <kbd>&uarr;</kbd></td>
         <td class="k"><kbd>Ctrl</kbd><kbd>Shift</kbd><kbd>&darr;</kbd> / <kbd>&uarr;</kbd></td>
       </tr>
       <tr>
         <td>Focus on Call</td>
         <td class="k"><kbd>&#8984;</kbd><kbd>Shift</kbd><kbd>E</kbd></td>
         <td class="k"><kbd>Ctrl</kbd><kbd>Shift</kbd><kbd>E</kbd></td>
+        <td class="k"><kbd>Ctrl</kbd><kbd>Shift</kbd><kbd>E</kbd></td>
       </tr>
       <tr>
         <td>Clear Focus</td>
+        <td class="k"><kbd>Esc</kbd></td>
         <td class="k"><kbd>Esc</kbd></td>
         <td class="k"><kbd>Esc</kbd></td>
       </tr>
@@ -349,11 +436,42 @@
         <td>Copy selection</td>
         <td class="k"><kbd>&#8984;</kbd><kbd>C</kbd></td>
         <td class="k"><kbd>Ctrl</kbd><kbd>C</kbd></td>
+        <td class="k"><kbd>Ctrl</kbd><kbd>C</kbd></td>
+      </tr>
+      <tr>
+        <td>Duration column</td>
+        <td class="k"><kbd>&#8984;</kbd><kbd>D</kbd></td>
+        <td class="k">&ndash;</td>
+        <td class="k"><kbd>Ctrl</kbd><kbd>D</kbd></td>
+      </tr>
+      <tr>
+        <td>Statistics</td>
+        <td class="k"><kbd>&#8984;</kbd><kbd>I</kbd></td>
+        <td class="k">&ndash;</td>
+        <td class="k"><kbd>Ctrl</kbd><kbd>I</kbd></td>
+      </tr>
+      <tr>
+        <td>Method Timing</td>
+        <td class="k"><kbd>&#8984;</kbd><kbd>M</kbd></td>
+        <td class="k">&ndash;</td>
+        <td class="k"><kbd>Ctrl</kbd><kbd>M</kbd></td>
+      </tr>
+      <tr>
+        <td>SQL parameter substitution</td>
+        <td class="k">&ndash;</td>
+        <td class="k">&ndash;</td>
+        <td class="k"><kbd>Ctrl</kbd><kbd>P</kbd></td>
+      </tr>
+      <tr>
+        <td>Documentation</td>
+        <td class="k"><kbd>&#8984;</kbd><kbd>?</kbd></td>
+        <td class="k">&ndash;</td>
+        <td class="k">&ndash;</td>
       </tr>
     </tbody>
   </table>
 
-  <p style="margin-top:32px">The rest of the actions are available from the main menu (<b>File / View / Navigate / Help</b>). Shortcuts are shown next to the items.</p>
+  <p style="margin-top:32px">The rest of the actions are in the menus: <b>File / View / Navigate / Help</b> on Windows, <b>Navigate / Tools</b> on macOS, the <b>☰</b> button in the header bar on Linux. Shortcuts are shown next to the items.</p>
 </section>
 
 <section class="final">

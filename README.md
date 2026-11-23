@@ -17,13 +17,24 @@ Opens multi-gigabyte UB server logs and turns them into a readable stream with f
 - **Filter by level and thread** with one-click presets (All, Errors, SQL, HTTP, +/-)
 - **Sticky focus** — the selected line stays selected and centered when filter checkboxes are toggled
 - **Focus on Call** — Ctrl/Cmd+Shift+E narrows the view to the enclosing `+/-` pair on the same thread
-- **Method timing** pairs `+` and `-` entries, sorted by duration (top 1000)
+- **Method timing** pairs `+` and `-` entries, sorted by duration (top 1000); the duration comes from the `-` line itself, and for calls longer than 99 s (UB caps the value) from the line timestamps; calls with no matching `-` (hung, still running, or cut off by the end of the log) are listed separately as open
 - **Statistics** events/sec, distribution by level, HTTP/SQL counts
 - **SQL highlighting** with cust1 parameter substitution
 - **Tabs** native macOS window tabs (Cmd+N)
 - **Themes** Tokyo Night and TTY
-- **Keyboard-driven** Cmd/Ctrl+J (jump to pair), Cmd/Ctrl+C (copy), F3 (find next), Ctrl+Shift+↓/↑ (next/prev error)
-- **Drag & drop** log files into the window
+- **Keyboard-driven** Cmd/Ctrl+J (jump to pair), Cmd/Ctrl+Shift+E (focus on call), Cmd/Ctrl+C (copy); on Windows and Linux also F3 (find next) and Ctrl+Shift+↓/↑ (next/prev error)
+- **Drag & drop** log files into the window (macOS and Windows)
+- **Auto-updates** on macOS via Sparkle
+
+## Install
+
+Builds for all three platforms are attached to the [latest release](https://github.com/qwq-qwq/Logram/releases/latest).
+
+- **macOS**: unzip `Logram-macos.zip` and drag `Logram.app` to `/Applications`. The app is signed and notarized; it updates itself (`Logram → Check for Updates…` for a manual check)
+- **Windows**: unzip `Logram-windows.zip` and run `Logram.exe` (portable, no installer)
+- **Linux**: `sudo apt install ./Logram-linux.deb` (Ubuntu 24.04+ or another Debian-based distro with GTK 4.14+); remove with `sudo apt remove logram`
+
+Full user guide: [logram.perek.rest/en/docs](https://logram.perek.rest/en/docs/).
 
 ## Architecture
 
@@ -77,10 +88,12 @@ Requires Ubuntu 24.04+ (or any distro with GTK 4.14+).
 ## UB Log Format
 
 ```
-YYYYMMDD HHMMSSCC  T level  <TAB>message
+YYYYMMDD HHMMSSZZ  T level  <TAB>message
 ```
 
-- `HHMMSSCC` hours, minutes, seconds, centiseconds
+- `HHMMSSZZ` hours, minutes, seconds; `ZZ` is milliseconds shifted right by 4 bits (`ms shr 4`): values 00..62 in 16 ms steps, not centiseconds
+- The time column shows `ZZ` as written in the log: `08:26:09.33` means 09.528 s. Durations and statistics use the real time
+- UB writes timestamps in UTC; Logram shows them in the viewer's local time zone
 - `T` thread char: `!`=0, `"`=1, `#`=2, `$`=3, ... (charCode - 0x21)
 - `level` 6-char code: `info  `, `SQL   `, `EXC   `, ` +    `, ` -    `, etc.
 

@@ -63,13 +63,15 @@
     <a href="#sql"><span class="num">06</span>SQL і cust1</a>
     <a href="#themes"><span class="num">07</span>Теми та колонки</a>
     <a href="#tabs"><span class="num">08</span>Вкладки й вікна</a>
-    <a href="#shortcuts"><span class="num">09</span>Гарячі клавіші</a>
+    <a href="#stats"><span class="num">09</span>Статистика</a>
+    <a href="#install"><span class="num">10</span>Встановлення й оновлення</a>
+    <a href="#shortcuts"><span class="num">11</span>Гарячі клавіші</a>
   </nav>
 </header>
 
 <section class="doc" id="open">
   <h2>01 &middot; Відкриття <em>логу</em></h2>
-  <p>Logram одразу працює з <b>багатогігабайтними</b> файлами: на Windows використовує memory-mapped&nbsp;I/O, на macOS&nbsp;&mdash; поточне читання в <code>Data</code>. Формат визначається автоматично за заголовком файлу &mdash; жодних майстрів імпорту не існує.</p>
+  <p>Logram одразу працює з <b>багатогігабайтними</b> файлами: на всіх трьох платформах файл відображається в пам&apos;ять (<code>MapViewOfFile</code> на Windows, <code>mmap</code> на Linux, <code>Data(.mappedIfSafe)</code> на macOS), заздалегідь у пам&apos;ять нічого не копіюється. Формат визначається автоматично за заголовком файлу, майстрів імпорту немає.</p>
 
   <div class="doc-where">
     <div class="w-col">
@@ -80,13 +82,17 @@
       <span class="w-os">Windows</span>
       <span class="w-path">Меню <code>File → Open</code> або <kbd>Ctrl</kbd><kbd>O</kbd></span>
     </div>
+    <div class="w-col">
+      <span class="w-os">Linux</span>
+      <span class="w-path">Кнопка <b>Open…</b> у заголовку вікна або <kbd>Ctrl</kbd><kbd>O</kbd></span>
+    </div>
   </div>
 
   <p>Також спрацює:</p>
   <ul>
-    <li><b>Перетягування</b> файлу у вікно застосунку.</li>
-    <li><b>Командний рядок</b> &mdash; шлях першим аргументом: <code>Logram.exe path\app.log</code> або <code>open -a Logram ~/logs/app.log</code>.</li>
-    <li><b>Асоціація з файлами</b> &mdash; у Finder/Explorer клікніть на <code>.log</code> правою кнопкою та оберіть Logram у меню <em>Відкрити за допомогою&hellip;</em>; або призначте Logram типовим застосунком для подвійного кліку.</li>
+    <li><b>Перетягування</b> файлу у вікно застосунку (macOS і Windows).</li>
+    <li><b>Командний рядок</b> &mdash; шлях першим аргументом: <code>Logram.exe path\app.log</code> або <code>open -a Logram ~/logs/app.log</code>; на Linux <code>Logram ~/logs/app.log</code>.</li>
+    <li><b>Асоціація з файлами</b> &mdash; у Finder / Explorer / Files клікніть на <code>.log</code> правою кнопкою та оберіть Logram у меню <em>Відкрити за допомогою&hellip;</em>; або призначте Logram типовим застосунком для подвійного кліку. На Linux пакет <code>.deb</code> сам реєструє Logram для файлів <code>.log</code>.</li>
   </ul>
 </section>
 
@@ -96,7 +102,8 @@
 
   <h3>mORMot 1 &mdash; основний формат UB</h3>
   <div class="doc-sample"><span class="d">20210727 08260933</span>  <span class="h">$</span> <span class="l">SQL   </span>	<span class="t">SELECT id FROM uba_user WHERE name=:name</span></div>
-  <p>Часова мітка: <code>YYYYMMDD HHMMSSCC</code> (сотні секунди в кінці).</p>
+  <p>Часова мітка: <code>YYYYMMDD HHMMSSZZ</code>. Останні дві цифри: мілісекунди, зсунуті праворуч на 4 біти (<code>ms shr 4</code>), значення 00..62 з кроком 16&nbsp;мс, а не соті частки секунди.</p>
+  <p>У колонці часу ці дві цифри показано як у лозі: <code>08:26:09.33</code> означає 09,528&nbsp;с. Тривалості та статистика рахуються за справжнім часом. UB пише мітки в UTC, Logram показує їх у місцевому часовому поясі.</p>
 
   <h3>mORMot 2 HiRes &mdash; високоточний таймер</h3>
   <div class="doc-sample"><span class="d">0000000000000C72</span>  <span class="h">!</span> <span class="l">info  </span>	<span class="t">UB server started on port 8881</span></div>
@@ -134,18 +141,23 @@
       <span class="w-os">Windows</span>
       <span class="w-path">Кнопки <b>All · Errors · SQL · HTTP · +/-</b> у панелі фільтрів</span>
     </div>
+    <div class="w-col">
+      <span class="w-os">Linux</span>
+      <span class="w-path">Кнопки <b>All · Errors · SQL · HTTP · +/-</b> над списком рівнів</span>
+    </div>
   </div>
 
   <p>Що вмикає кожен пресет:</p>
   <ul>
-    <li><b>All</b> (лише Windows) &mdash; усі рівні.</li>
-    <li><b>Errors</b> &mdash; <code>Error</code>, <code>EXC</code>, <code>EXC OS</code>, <code>OS ERR</code>, <code>Fail</code> (на Windows ще <code>DddER</code>). Швидко побачити «що зламалось».</li>
-    <li><b>SQL</b> &mdash; <code>SQL</code>, <code>cust1</code>, <code>cust2</code>. Огляд запитів до БД разом із параметрами.</li>
-    <li><b>HTTP</b> &mdash; <code>HTTP</code> (на Windows ще <code>Clnt</code>, <code>Srvr</code>). Трасування зовнішніх запитів.</li>
+    <li><b>All</b> (Windows і Linux) &mdash; усі рівні.</li>
+    <li><b>Errors</b> &mdash; <code>Error</code>, <code>EXC</code>, <code>EXC OS</code>, <code>OS ERR</code>, <code>Fail</code> (на Windows і Linux ще <code>DddER</code>, на Linux також <code>Warn</code>). Швидко побачити «що зламалось».</li>
+    <li><b>SQL</b> &mdash; <code>SQL</code>, <code>cust1</code>, <code>cust2</code> (на Linux також <code>Cache</code>, <code>Res</code>, <code>DB</code>). Огляд запитів до БД разом із параметрами.</li>
+    <li><b>HTTP</b> &mdash; <code>HTTP</code> (на Windows і Linux ще <code>Clnt</code>, <code>Srvr</code>). Трасування зовнішніх запитів.</li>
     <li><b>+/-</b> &mdash; рівні <code>+</code> (вхід у метод) та <code>-</code> (вихід). Корисно перед відкриттям <a href="#timing">Method Timing</a>.</li>
   </ul>
   <p>Пресет обнуляє поточні чекбокси рівнів і вмикає тільки зазначені. На macOS повторний клік (коли всі рівні пресета вже активні) &mdash; їх вимикає. Текстовий фільтр і фільтр за потоками пресети не чіпають.</p>
   <p>На macOS під списком є кнопки <b>Reset</b> / <b>Apply</b> &mdash; <b>Reset</b> повертає всі чекбокси до стану «увімкнено все», <b>Apply</b> застосовує зміни.</p>
+  <p>На Linux повторний клік по активному пресету повертає <b>All</b>.</p>
 </section>
 
 <section class="doc" id="search">
@@ -161,12 +173,16 @@
       <span class="w-os">Windows</span>
       <span class="w-path">Поле <b>Search</b> у тулбарі · <kbd>Ctrl</kbd><kbd>F</kbd> фокусує поле</span>
     </div>
+    <div class="w-col">
+      <span class="w-os">Linux</span>
+      <span class="w-path">Поле <b>Search</b> у заголовку вікна · <kbd>Ctrl</kbd><kbd>F</kbd> переводить фокус у поле</span>
+    </div>
   </div>
 
   <p>Навігація між збігами:</p>
   <ul>
     <li><b>macOS</b> &mdash; стрілки <kbd>&uarr;</kbd>/<kbd>&darr;</kbd> у тулбарі (поруч із полем пошуку) або <kbd>Enter</kbd> / <kbd>Shift</kbd>+<kbd>Enter</kbd>.</li>
-    <li><b>Windows</b> &mdash; <kbd>F3</kbd> / <kbd>Shift</kbd>+<kbd>F3</kbd>, або кнопки <b>Find Next</b> / <b>Find Previous</b> у тулбарі.</li>
+    <li><b>Windows, Linux</b> &mdash; <kbd>F3</kbd> / <kbd>Shift</kbd>+<kbd>F3</kbd>, або кнопки <b>Find Next</b> / <b>Find Previous</b> у тулбарі. На Linux це стрілки <kbd>&uarr;</kbd>/<kbd>&darr;</kbd> поруч із полем пошуку.</li>
   </ul>
   <p>При досягненні краю пошук <b>обертається</b> з протилежного боку й супроводжується коротким звуком. Якщо збігів немає взагалі &mdash; звук попередження.</p>
   <p>Поруч із навігацією збігів є ще пара стрілок з індикатором помилки &mdash; вони стрибають до наступної/попередньої помилки (див. <a href="#timing">Method Timing</a> про рядки <code>Error</code>/<code>EXC</code>).</p>
@@ -175,6 +191,7 @@
 <section class="doc" id="timing">
   <h2>05 &middot; Method <em>Timing</em></h2>
   <p>UnityBase логує вхід у метод рядком рівня <code>+</code> і вихід &mdash; рядком <code>-</code> на тому ж потоці. Logram для кожного <code>+</code> знаходить парний <code>-</code> з урахуванням вкладеності і рахує тривалість.</p>
+  <p>Тривалість береться із самого рядка <code>-</code>: UB пише її з точністю до мікросекунди. Це значення UB обрізає до 99 секунд, тому для довших викликів Logram бере різницю міток часу рядків.</p>
 
   <h3>Колонка Duration</h3>
   <p>За замовчуванням прихована (побудова таймінгів коштує часу на великих файлах). При першому ввімкненні Logram будує тайминги й кешує &mdash; наступні перемикання миттєві. На новому файлі налаштування скидається.</p>
@@ -182,11 +199,15 @@
   <div class="doc-where">
     <div class="w-col">
       <span class="w-os">macOS</span>
-      <span class="w-path">Кнопка-таймер <b>⏱</b> у тулбарі</span>
+      <span class="w-path">Кнопка-таймер <b>⏱</b> у тулбарі · <kbd>&#8984;</kbd><kbd>D</kbd></span>
     </div>
     <div class="w-col">
       <span class="w-os">Windows</span>
       <span class="w-path">Меню <code>View → Toggle Duration</code></span>
+    </div>
+    <div class="w-col">
+      <span class="w-os">Linux</span>
+      <span class="w-path"><code>☰ → Show Duration</code> · <kbd>Ctrl</kbd><kbd>D</kbd></span>
     </div>
   </div>
 
@@ -196,16 +217,22 @@
   <div class="doc-where">
     <div class="w-col">
       <span class="w-os">macOS</span>
-      <span class="w-path">Кнопка <b>Timing</b> у тулбарі (праворуч)</span>
+      <span class="w-path">Кнопка <b>Timing</b> у тулбарі (праворуч) · <kbd>&#8984;</kbd><kbd>M</kbd></span>
     </div>
     <div class="w-col">
       <span class="w-os">Windows</span>
       <span class="w-path">Меню <code>View → Method Timing...</code></span>
     </div>
+    <div class="w-col">
+      <span class="w-os">Linux</span>
+      <span class="w-path"><code>☰ → Method Timing…</code> · <kbd>Ctrl</kbd><kbd>M</kbd></span>
+    </div>
   </div>
+  <p>До таблиці потрапляють виклики від 10&nbsp;мс; на macOS і Linux вона обмежена 1000 найповільніших.</p>
+  <p><b>Незакриті виклики</b> це рядки <code>+</code> без парного <code>-</code>: запит завис, ще виконується або обрізаний кінцем логу. Їхня тривалість рахується до останнього рядка логу й позначається знаком <code>&ge;</code>. macOS: перемикач <b>Completed / Open</b>; Linux: кнопка <b>Open calls</b>; Windows: незакриті виклики показано в тій самій таблиці.</p>
 
   <h3>Стрибок до пари</h3>
-  <p>Якщо ви стоїте на рядку <code>+</code> або <code>-</code>, <kbd>&#8984;</kbd><kbd>J</kbd> / <kbd>Ctrl</kbd><kbd>J</kbd> переносить до парного рядка на тому ж потоці. На macOS той самий перехід доступний через кнопку зі стрілкою <b>↓</b>/<b>↑</b> у тулбарі (з'являється коли обрано рядок <code>+</code> або <code>-</code>).</p>
+  <p>Якщо ви стоїте на рядку <code>+</code> або <code>-</code>, <kbd>&#8984;</kbd><kbd>J</kbd> / <kbd>Ctrl</kbd><kbd>J</kbd> переносить до парного рядка на тому ж потоці. На macOS той самий перехід доступний через кнопку зі стрілкою <b>↓</b>/<b>↑</b> у тулбарі (з'являється коли обрано рядок <code>+</code> або <code>-</code>). На Linux перехід є й у контекстному меню: <b>Jump to matching pair</b>.</p>
 
   <h3>Навігація по помилках</h3>
   <p>Стрибок до наступного/попереднього рядка рівня <code>Error</code>/<code>EXC</code>:</p>
@@ -217,6 +244,10 @@
     <div class="w-col">
       <span class="w-os">Windows</span>
       <span class="w-path">Меню <code>Navigate → Next/Prev Error</code> · <kbd>Ctrl</kbd><kbd>Shift</kbd><kbd>&darr;</kbd>/<kbd>&uarr;</kbd></span>
+    </div>
+    <div class="w-col">
+      <span class="w-os">Linux</span>
+      <span class="w-path">Червоні стрілки <kbd>&uarr;</kbd>/<kbd>&darr;</kbd> у заголовку вікна · <kbd>Ctrl</kbd><kbd>Shift</kbd><kbd>&darr;</kbd>/<kbd>&uarr;</kbd></span>
     </div>
   </div>
 
@@ -231,6 +262,10 @@
     <div class="w-col">
       <span class="w-os">Windows</span>
       <span class="w-path">Правий клік по рядку &rarr; <b>Focus on Call</b> · <code>Navigate → Focus on Call</code> · <kbd>Ctrl</kbd><kbd>Shift</kbd><kbd>E</kbd></span>
+    </div>
+    <div class="w-col">
+      <span class="w-os">Linux</span>
+      <span class="w-path">Правий клік по рядку &rarr; <b>Focus on call</b> · <kbd>Ctrl</kbd><kbd>Shift</kbd><kbd>E</kbd></span>
     </div>
   </div>
   <p>Щоб зняти фокус і повернутись до повного лога: <kbd>Esc</kbd>, пункт <b>Clear Focus</b> у меню або клік по індикатору фокусу в статус-барі.</p>
@@ -247,7 +282,7 @@
     <li><code>P<i>N</i>d</code> &mdash; дата/час у ISO-форматі. Приклад: <code>P3d</code>: <code>"2025-01-01"</code> &rarr; <code>:3 = '2025-01-01'</code>.</li>
   </ul>
   <p>Тобто <code>P2s8</code> означає: «параметр №2, рядок з 8 символів». Сам суфікс у підстановці не бере участі &mdash; Logram дивиться лише на номер після літери <code>P</code>.</p>
-  <p>Результат &mdash; готовий для копіювання SQL, який можна виконати в psql/DBeaver. Перемикач <b>Show params / Hide params</b> у панелі керує підстановкою.</p>
+  <p>Результат &mdash; готовий для копіювання SQL, який можна виконати в psql/DBeaver. Перемикач <b>Show params / Hide params</b> у панелі керує підстановкою. На Linux: <code>☰ → Substitute SQL Parameters</code> або <kbd>Ctrl</kbd><kbd>P</kbd>.</p>
   <p>JSON у деталях (наприклад, тіло HTTP-запиту) теж форматується pretty-print.</p>
 </section>
 
@@ -258,11 +293,15 @@
   <div class="doc-where">
     <div class="w-col">
       <span class="w-os">macOS</span>
-      <span class="w-path">Іконка-палітра у тулбарі (меню з темами)</span>
+      <span class="w-path">Іконка-палітра у тулбарі (меню з темами) · <code>Tools → Theme</code></span>
     </div>
     <div class="w-col">
       <span class="w-os">Windows</span>
       <span class="w-path">Меню <code>View → Theme → Tokyo Night / TTY</code></span>
+    </div>
+    <div class="w-col">
+      <span class="w-os">Linux</span>
+      <span class="w-path"><code>☰ → Theme → Tokyo Night / TTY</code></span>
     </div>
   </div>
 
@@ -287,14 +326,53 @@
       <span class="w-os">Windows</span>
       <span class="w-path">Кожен <code>Logram.exe</code> &mdash; окреме вікно</span>
     </div>
+    <div class="w-col">
+      <span class="w-os">Linux</span>
+      <span class="w-path">Кожен файл відкривається в окремому вікні</span>
+    </div>
   </div>
 
   <p><b>macOS</b>: вкладки працюють через <code>WindowGroup</code>. <kbd>&#8984;</kbd><kbd>O</kbd> відкриває файл у <i>активній</i> вкладці (фокус маршрутизується через <code>@FocusedValue</code>). Вкладки перетягуються в окремі вікна й назад.</p>
   <p><b>Windows</b>: відкривайте паралельно скільки потрібно &mdash; завдяки memory-mapped&nbsp;I/O вартість додаткової копії логу мала.</p>
+  <p><b>Linux</b>: кожен відкритий файл отримує власне вікно.</p>
+</section>
+
+<section class="doc" id="stats">
+  <h2>09 &middot; <em>Статистика</em></h2>
+  <p>Зведення по всьому файлу в одному вікні: ім&apos;я та розмір файлу, версія UB і хост із заголовка логу, час першого й останнього рядка, загальна тривалість, кількість подій, потоків, HTTP-запитів, SQL-запитів і помилок. На macOS і Linux також показано середню частоту запитів за секунду та кількість подій за рівнями.</p>
+
+  <div class="doc-where">
+    <div class="w-col">
+      <span class="w-os">macOS</span>
+      <span class="w-path"><code>Tools → Statistics…</code> · <kbd>&#8984;</kbd><kbd>I</kbd></span>
+    </div>
+    <div class="w-col">
+      <span class="w-os">Windows</span>
+      <span class="w-path"><code>View → Statistics...</code></span>
+    </div>
+    <div class="w-col">
+      <span class="w-os">Linux</span>
+      <span class="w-path"><code>☰ → Statistics…</code> · <kbd>Ctrl</kbd><kbd>I</kbd></span>
+    </div>
+  </div>
+</section>
+
+<section class="doc" id="install">
+  <h2>10 &middot; Встановлення й <em>оновлення</em></h2>
+  <p>Збірки для всіх трьох платформ додано до <a href="https://github.com/qwq-qwq/Logram/releases/latest" target="_blank" rel="noopener">останнього релізу</a> на GitHub.</p>
+
+  <h3>macOS</h3>
+  <p>Розпакуйте <code>Logram-macos.zip</code> і перетягніть <code>Logram.app</code> у <code>/Applications</code>. Застосунок підписано Developer ID і нотаризовано Apple, тому він запускається звичайним подвійним кліком. Оновлення приходять самі: Logram у фоні перевіряє нову версію і пропонує її встановити. Ручна перевірка в меню <code>Logram → Check for Updates…</code>.</p>
+
+  <h3>Windows</h3>
+  <p>Розпакуйте <code>Logram-windows.zip</code> і запустіть <code>Logram.exe</code>: переносний виконуваний файл, без інсталятора й рантайму. SmartScreen може показати попередження: <b>More info</b> &rarr; <b>Run anyway</b>. Для оновлення замініть файл на файл із нового релізу.</p>
+
+  <h3>Linux</h3>
+  <p><code>sudo apt install ./Logram-linux.deb</code>. Logram з&apos;являється в Activities і пропонується для файлів <code>.log</code> (правий клік &rarr; <em>Open With Logram</em>). Потрібна Ubuntu 24.04+ або інший дистрибутив на базі Debian із GTK&nbsp;4.14+. Для оновлення встановіть новий <code>.deb</code> так само; видалення: <code>sudo apt remove logram</code>.</p>
 </section>
 
 <section class="doc" id="shortcuts">
-  <h2>09 &middot; Гарячі <em>клавіші</em></h2>
+  <h2>11 &middot; Гарячі <em>клавіші</em></h2>
 
   <table class="doc-table">
     <thead>
@@ -302,6 +380,7 @@
         <th>Дія</th>
         <th>macOS</th>
         <th>Windows</th>
+        <th>Linux</th>
       </tr>
     </thead>
     <tbody>
@@ -309,39 +388,47 @@
         <td>Відкрити файл</td>
         <td class="k"><kbd>&#8984;</kbd><kbd>O</kbd></td>
         <td class="k"><kbd>Ctrl</kbd><kbd>O</kbd></td>
+        <td class="k"><kbd>Ctrl</kbd><kbd>O</kbd></td>
       </tr>
       <tr>
         <td>Нова вкладка</td>
         <td class="k"><kbd>&#8984;</kbd><kbd>N</kbd></td>
-        <td class="k">&mdash;</td>
+        <td class="k">&ndash;</td>
+        <td class="k">&ndash;</td>
       </tr>
       <tr>
         <td>Фокус поля пошуку</td>
-        <td class="k">&mdash;</td>
+        <td class="k">&ndash;</td>
+        <td class="k"><kbd>Ctrl</kbd><kbd>F</kbd></td>
         <td class="k"><kbd>Ctrl</kbd><kbd>F</kbd></td>
       </tr>
       <tr>
         <td>Наступний збіг / попередній</td>
         <td class="k"><kbd>Enter</kbd> / <kbd>Shift</kbd><kbd>Enter</kbd> у полі пошуку</td>
         <td class="k"><kbd>F3</kbd> / <kbd>Shift</kbd><kbd>F3</kbd></td>
+        <td class="k"><kbd>F3</kbd> / <kbd>Shift</kbd><kbd>F3</kbd></td>
       </tr>
       <tr>
         <td>Стрибок до парного <code>+</code>/<code>-</code></td>
         <td class="k"><kbd>&#8984;</kbd><kbd>J</kbd></td>
         <td class="k"><kbd>Ctrl</kbd><kbd>J</kbd></td>
+        <td class="k"><kbd>Ctrl</kbd><kbd>J</kbd></td>
       </tr>
       <tr>
         <td>Наступна / попередня помилка</td>
-        <td class="k">&mdash;</td>
+        <td class="k">&ndash;</td>
+        <td class="k"><kbd>Ctrl</kbd><kbd>Shift</kbd><kbd>&darr;</kbd> / <kbd>&uarr;</kbd></td>
         <td class="k"><kbd>Ctrl</kbd><kbd>Shift</kbd><kbd>&darr;</kbd> / <kbd>&uarr;</kbd></td>
       </tr>
       <tr>
         <td>Focus on Call</td>
         <td class="k"><kbd>&#8984;</kbd><kbd>Shift</kbd><kbd>E</kbd></td>
         <td class="k"><kbd>Ctrl</kbd><kbd>Shift</kbd><kbd>E</kbd></td>
+        <td class="k"><kbd>Ctrl</kbd><kbd>Shift</kbd><kbd>E</kbd></td>
       </tr>
       <tr>
         <td>Зняти фокус</td>
+        <td class="k"><kbd>Esc</kbd></td>
         <td class="k"><kbd>Esc</kbd></td>
         <td class="k"><kbd>Esc</kbd></td>
       </tr>
@@ -349,11 +436,42 @@
         <td>Копіювати виділене</td>
         <td class="k"><kbd>&#8984;</kbd><kbd>C</kbd></td>
         <td class="k"><kbd>Ctrl</kbd><kbd>C</kbd></td>
+        <td class="k"><kbd>Ctrl</kbd><kbd>C</kbd></td>
+      </tr>
+      <tr>
+        <td>Колонка Duration</td>
+        <td class="k"><kbd>&#8984;</kbd><kbd>D</kbd></td>
+        <td class="k">&ndash;</td>
+        <td class="k"><kbd>Ctrl</kbd><kbd>D</kbd></td>
+      </tr>
+      <tr>
+        <td>Статистика</td>
+        <td class="k"><kbd>&#8984;</kbd><kbd>I</kbd></td>
+        <td class="k">&ndash;</td>
+        <td class="k"><kbd>Ctrl</kbd><kbd>I</kbd></td>
+      </tr>
+      <tr>
+        <td>Method Timing</td>
+        <td class="k"><kbd>&#8984;</kbd><kbd>M</kbd></td>
+        <td class="k">&ndash;</td>
+        <td class="k"><kbd>Ctrl</kbd><kbd>M</kbd></td>
+      </tr>
+      <tr>
+        <td>Підстановка параметрів SQL</td>
+        <td class="k">&ndash;</td>
+        <td class="k">&ndash;</td>
+        <td class="k"><kbd>Ctrl</kbd><kbd>P</kbd></td>
+      </tr>
+      <tr>
+        <td>Документація</td>
+        <td class="k"><kbd>&#8984;</kbd><kbd>?</kbd></td>
+        <td class="k">&ndash;</td>
+        <td class="k">&ndash;</td>
       </tr>
     </tbody>
   </table>
 
-  <p style="margin-top:32px">Решта дій доступна через головне меню (<b>File / View / Navigate / Help</b>). Шорткати показані поруч із пунктами.</p>
+  <p style="margin-top:32px">Решта дій доступна через меню: <b>File / View / Navigate / Help</b> на Windows, <b>Navigate / Tools</b> на macOS, кнопка <b>☰</b> у заголовку вікна на Linux. Шорткати показані поруч із пунктами.</p>
 </section>
 
 <section class="final">

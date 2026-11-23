@@ -11,7 +11,7 @@
 struct LogLineHot {
     uint32_t rawOffset;
     uint32_t rawLength;
-    int64_t  epochCS;       // centiseconds since Unix epoch, -1 if unknown
+    int64_t  epochCS;       // centiseconds since Unix epoch, -1 if unknown; mORMot1 keeps zz (ms shr 4) as written, see LogParser::TrueEpochMS
     uint8_t  level;         // LogLevel
     int8_t   thread;        // -1 = unknown
     uint16_t messageOffset; // byte offset where message starts in raw

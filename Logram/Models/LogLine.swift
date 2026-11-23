@@ -6,7 +6,7 @@ struct LogLine: Identifiable, Sendable {
     let raw: String      // original line text
     let level: LogLevel
     let thread: Int      // thread index (0-based), -1 if unknown
-    let epochCS: Int64   // centiseconds since Unix epoch, -1 if unknown
+    let epochCS: Int64   // centiseconds since Unix epoch, -1 if unknown; mORMot1 keeps zz (ms shr 4) as written, see LogParser.trueEpochMS
     let messageOffset: UInt16 // byte offset where message starts in raw
 
     // HTTP fields (parsed from http-level lines)

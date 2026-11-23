@@ -64,7 +64,7 @@
 
 <header class="hero">
   <div class="hero-meta">
-    <span>REL <b>2026.05</b></span>
+    <span>REL <b>2026.11</b></span>
     <span>TGT <b>MACOS 14+ / WIN10+ / UBUNTU 24+</b></span>
     <span>SWIFT <b>5.9</b></span>
     <span>C++ <b>20</b></span>
@@ -161,7 +161,7 @@
     <article class="feat reveal">
       <div class="feat-kicker"><span class="no">F.01</span> Method timing</div>
       <h3 class="feat-title">Парные <em>+</em> и <em>-</em> собираются<br>в таблицу медленных методов.</h3>
-      <p class="feat-body">Для каждой входящей операции Logram находит парный выход на том же потоке с учётом вложенности &mdash; и сортирует по длительности. Тайминги вычисляются лениво: только когда вы их включите.</p>
+      <p class="feat-body">Для каждой входящей операции Logram находит парный выход на том же потоке с учётом вложенности &mdash; и сортирует по длительности. Тайминги вычисляются лениво: только когда вы их включите. Длительность берётся из самого лога, а для вызовов дольше 99&nbsp;с, которые UB обрезает, из меток времени строк.</p>
       <div class="feat-visual">
         <div class="timing">
           <div class="timing-row slow"><span class="lbl"><b>runList</b></span><span class="timing-bar" style="width:98%"></span><span class="ms">1 842 ms</span></div>
@@ -192,7 +192,7 @@
     <article class="feat reveal">
       <div class="feat-kicker"><span class="no">F.03</span> Фильтры</div>
       <h3 class="feat-title"><em>Один</em> проход<br>по миллиону строк.</h3>
-      <p class="feat-body">Уровни, потоки, пресеты <b>Errors / SQL / HTTP</b> &mdash; O(n) фильтрация. На Windows&nbsp;&mdash; битовые маски, ещё быстрее.</p>
+      <p class="feat-body">Уровни, потоки, пресеты <b>Errors / SQL / HTTP</b> &mdash; O(n) фильтрация. На Windows и Linux&nbsp;&mdash; битовые маски, ещё быстрее.</p>
       <div class="feat-visual">
         <div style="display:flex;gap:6px;flex-wrap:wrap;">
           <span class="term-pill" style="color:var(--red);border-color:rgba(247,118,142,.3);background:rgba(247,118,142,.08)">EXC &middot; 14</span>
@@ -271,6 +271,7 @@
         <div class="arch-item"><span class="idx">03</span><span class="ti">@Observable + <em>MainActor</em></span><span class="det">безопасно</span></div>
         <div class="arch-item"><span class="idx">04</span><span class="ti">Ленивый <em>buildMethodTimings</em></span><span class="det">не при старте</span></div>
         <div class="arch-item"><span class="idx">05</span><span class="ti">Drag-and-drop <em>.fileURL</em></span><span class="det">в окно</span></div>
+        <div class="arch-item"><span class="idx">06</span><span class="ti">Автообновления <em>Sparkle</em></span><span class="det">с подписью</span></div>
       </div>
     </div>
     <div class="arch-platform">
