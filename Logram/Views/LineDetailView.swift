@@ -74,19 +74,22 @@ struct LineDetailView: View {
                 }
                 .padding(.horizontal, 10)
                 .padding(.vertical, 6)
-                .background(Color(nsColor: .controlBackgroundColor))
+                .background(theme.panelBackgroundColor())
 
                 Divider()
 
                 // Body: full message with optional SQL formatting + highlighting
                 if isSQLLine(line.level) {
-                    SQLTextView(message: line.message, paramsJSON: showSubstituted ? paramsJSON : nil)
+                    SQLTextView(message: line.message, paramsJSON: showSubstituted ? paramsJSON : nil,
+                                background: theme.background)
                 } else if containsSQL(line.message) {
-                    ErrorWithSQLTextView(message: line.message, paramsJSON: showSubstituted ? paramsJSON : nil)
+                    ErrorWithSQLTextView(message: line.message, paramsJSON: showSubstituted ? paramsJSON : nil,
+                                         background: theme.background)
                 } else if line.level == .cust1 || looksLikeJSON(line.message) {
-                    JSONTextView(text: formatJSON(line.message))
+                    JSONTextView(text: formatJSON(line.message), background: theme.background)
                 } else {
-                    PlainTextView(text: line.message, isError: line.level.isError)
+                    PlainTextView(text: line.message, isError: line.level.isError,
+                                  background: theme.background)
                 }
             }
         } else {
@@ -94,6 +97,7 @@ struct LineDetailView: View {
                 .font(.caption)
                 .foregroundStyle(.tertiary)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(theme.backgroundColor())
         }
     }
 
@@ -657,6 +661,7 @@ enum SQLFormatter {
 struct PlainTextView: NSViewRepresentable {
     let text: String
     let isError: Bool
+    let background: NSColor
 
     /// Format JS stack traces: space-separated `func@/path:line:col` entries → one per line.
     /// Handles: `Stack: func@...`, `stack: 'func@...'`, and `{ func@... }` formats.
@@ -701,7 +706,7 @@ struct PlainTextView: NSViewRepresentable {
         textView.isEditable = false
         textView.isSelectable = true
         textView.font = NSFont.monospacedSystemFont(ofSize: 12, weight: .regular)
-        textView.backgroundColor = .textBackgroundColor
+        textView.backgroundColor = background
         textView.textContainerInset = NSSize(width: 8, height: 6)
         textView.isAutomaticQuoteSubstitutionEnabled = false
         textView.isAutomaticDashSubstitutionEnabled = false
@@ -715,6 +720,7 @@ struct PlainTextView: NSViewRepresentable {
 
     func updateNSView(_ scrollView: NSScrollView, context: Context) {
         let textView = scrollView.documentView as! NSTextView
+        textView.backgroundColor = background
         let color: NSColor = isError ? .systemRed : .labelColor
         let attrs: [NSAttributedString.Key: Any] = [
             .font: NSFont.monospacedSystemFont(ofSize: 12, weight: .regular),
@@ -731,6 +737,7 @@ struct PlainTextView: NSViewRepresentable {
 struct SQLTextView: NSViewRepresentable {
     let message: String
     let paramsJSON: String?
+    let background: NSColor
 
     func makeNSView(context: Context) -> NSScrollView {
         let scrollView = NSTextView.scrollableTextView()
@@ -738,7 +745,7 @@ struct SQLTextView: NSViewRepresentable {
         textView.isEditable = false
         textView.isSelectable = true
         textView.font = NSFont.monospacedSystemFont(ofSize: 12, weight: .regular)
-        textView.backgroundColor = .textBackgroundColor
+        textView.backgroundColor = background
         textView.textContainerInset = NSSize(width: 8, height: 6)
         textView.isAutomaticQuoteSubstitutionEnabled = false
         textView.isAutomaticDashSubstitutionEnabled = false
@@ -748,6 +755,7 @@ struct SQLTextView: NSViewRepresentable {
 
     func updateNSView(_ scrollView: NSScrollView, context: Context) {
         let textView = scrollView.documentView as! NSTextView
+        textView.backgroundColor = background
         let parsed = SQLStats.parse(message)
         let result = NSMutableAttributedString()
 
@@ -776,6 +784,7 @@ struct SQLTextView: NSViewRepresentable {
 struct ErrorWithSQLTextView: NSViewRepresentable {
     let message: String
     let paramsJSON: String?
+    let background: NSColor
 
     func makeNSView(context: Context) -> NSScrollView {
         let scrollView = NSTextView.scrollableTextView()
@@ -783,7 +792,7 @@ struct ErrorWithSQLTextView: NSViewRepresentable {
         textView.isEditable = false
         textView.isSelectable = true
         textView.font = NSFont.monospacedSystemFont(ofSize: 12, weight: .regular)
-        textView.backgroundColor = .textBackgroundColor
+        textView.backgroundColor = background
         textView.textContainerInset = NSSize(width: 8, height: 6)
         textView.isAutomaticQuoteSubstitutionEnabled = false
         textView.isAutomaticDashSubstitutionEnabled = false
@@ -793,6 +802,7 @@ struct ErrorWithSQLTextView: NSViewRepresentable {
 
     func updateNSView(_ scrollView: NSScrollView, context: Context) {
         let textView = scrollView.documentView as! NSTextView
+        textView.backgroundColor = background
         let trimmed = message.trimmingCharacters(in: .whitespaces)
         let result = NSMutableAttributedString()
         let errorFont = NSFont.monospacedSystemFont(ofSize: 12, weight: .regular)
@@ -1010,6 +1020,7 @@ enum SQLHighlighter {
 
 struct JSONTextView: NSViewRepresentable {
     let text: String
+    let background: NSColor
 
     func makeNSView(context: Context) -> NSScrollView {
         let scrollView = NSTextView.scrollableTextView()
@@ -1017,7 +1028,7 @@ struct JSONTextView: NSViewRepresentable {
         textView.isEditable = false
         textView.isSelectable = true
         textView.font = NSFont.monospacedSystemFont(ofSize: 12, weight: .regular)
-        textView.backgroundColor = .textBackgroundColor
+        textView.backgroundColor = background
         textView.textContainerInset = NSSize(width: 8, height: 6)
         textView.isAutomaticQuoteSubstitutionEnabled = false
         textView.isAutomaticDashSubstitutionEnabled = false
@@ -1030,6 +1041,7 @@ struct JSONTextView: NSViewRepresentable {
 
     func updateNSView(_ scrollView: NSScrollView, context: Context) {
         let textView = scrollView.documentView as! NSTextView
+        textView.backgroundColor = background
         textView.textStorage?.setAttributedString(JSONHighlighter.highlight(text))
     }
 }

@@ -23,10 +23,6 @@ struct ShowStatsKey: FocusedValueKey {
     typealias Value = () -> Void
 }
 
-struct ToggleDurationKey: FocusedValueKey {
-    typealias Value = () -> Void
-}
-
 extension FocusedValues {
     var openLogFile: (() -> Void)? {
         get { self[OpenLogFileKey.self] }
@@ -47,10 +43,6 @@ extension FocusedValues {
     var showStats: (() -> Void)? {
         get { self[ShowStatsKey.self] }
         set { self[ShowStatsKey.self] = newValue }
-    }
-    var toggleDuration: (() -> Void)? {
-        get { self[ToggleDurationKey.self] }
-        set { self[ToggleDurationKey.self] = newValue }
     }
 }
 
@@ -120,9 +112,10 @@ struct LogramApp: App {
     @FocusedValue(\.clearFocus) var clearFocus
     @FocusedValue(\.showMethodTiming) var showMethodTiming
     @FocusedValue(\.showStats) var showStats
-    @FocusedValue(\.toggleDuration) var toggleDuration
-    // Same key as ContentView's @AppStorage — they share state automatically.
+    // Same keys as ContentView's @AppStorage: they share state automatically,
+    // so these View-menu items work even when no Logram window is active.
     @AppStorage("colorTheme") private var themeRaw = ColorTheme.tokyoNight.rawValue
+    @AppStorage("showDuration") private var showDuration = false
 
     var body: some Scene {
         WindowGroup(for: URL?.self) { $url in
@@ -147,24 +140,23 @@ struct LogramApp: App {
                     .keyboardShortcut(.escape, modifiers: [])
                     .disabled(clearFocus == nil)
             }
-            CommandMenu("Tools") {
-                Menu("Theme") {
+            CommandGroup(before: .toolbar) {
+                // Inline items, not a submenu: on macOS 27 SwiftUI submenus in
+                // the main menu (Menu / Picker) never highlight or open, so a
+                // nested Theme menu could not be used at all.
+                Section("Theme") {
                     ForEach(ColorTheme.allCases) { t in
-                        Button {
-                            themeRaw = t.rawValue
-                        } label: {
-                            if t.rawValue == themeRaw {
-                                Label(t.displayName, systemImage: "checkmark")
-                            } else {
-                                Text(t.displayName)
-                            }
-                        }
+                        Toggle(t.displayName, isOn: Binding(
+                            get: { themeRaw == t.rawValue },
+                            set: { if $0 { themeRaw = t.rawValue } }
+                        ))
                     }
                 }
-                Divider()
-                Button("Toggle Duration Column") { toggleDuration?() }
+                Toggle("Show Duration Column", isOn: $showDuration)
                     .keyboardShortcut("d", modifiers: .command)
-                    .disabled(toggleDuration == nil)
+                Divider()
+            }
+            CommandMenu("Tools") {
                 Button("Statistics…") { showStats?() }
                     .keyboardShortcut("i", modifiers: .command)
                     .disabled(showStats == nil)

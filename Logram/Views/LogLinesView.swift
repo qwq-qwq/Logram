@@ -127,6 +127,9 @@ struct LogTableView: NSViewRepresentable {
         tableView.headerView = nil
         tableView.allowsMultipleSelection = true
         tableView.gridStyleMask = []
+        tableView.backgroundColor = theme.background
+        scrollView.drawsBackground = true
+        scrollView.backgroundColor = theme.background
 
         // Single column — we draw everything in one row view
         let column = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("line"))
@@ -179,6 +182,10 @@ struct LogTableView: NSViewRepresentable {
         tableView.onClearFocus = onClearFocus
         tableView.focusActive = focusActive
 
+        if themeChanged {
+            tableView.backgroundColor = theme.background
+            scrollView.backgroundColor = theme.background
+        }
         if dataChanged || themeChanged || durationChanged {
             tableView.reloadData()
         }

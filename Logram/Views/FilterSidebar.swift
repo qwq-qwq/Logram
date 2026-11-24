@@ -48,7 +48,7 @@ struct FilterSidebar: View {
             }
             .padding(8)
         }
-        .background(Color(nsColor: .controlBackgroundColor))
+        .background(theme.panelBackgroundColor())
     }
 
     // MARK: - Log Levels
@@ -98,13 +98,10 @@ struct FilterSidebar: View {
                     document.applyFilters()
                 }
             )) {
-                HStack(spacing: 4) {
-                    Image(level.iconName)
-                        .renderingMode(.template)
-                        .resizable()
-                        .interpolation(.high)
-                        .frame(width: 14, height: 14)
-                        .foregroundStyle(theme.levelBadgeColor(for: level))
+                HStack(spacing: 6) {
+                    RoundedRectangle(cornerRadius: 2)
+                        .fill(theme.levelBadgeColor(for: level))
+                        .frame(width: 10, height: 10)
                     Text(level.label)
                         .font(.system(size: 11, design: .monospaced))
                     Spacer()

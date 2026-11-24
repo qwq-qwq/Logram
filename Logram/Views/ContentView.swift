@@ -46,6 +46,7 @@ struct ContentView: View {
             // Right: log lines + toolbar
             VStack(spacing: 0) {
                 toolbar
+                    .background(theme.panelBackgroundColor())
                 Divider()
 
                 if document.isLoading {
@@ -83,8 +84,13 @@ struct ContentView: View {
 
                 Divider()
                 statusBar
+                    .background(theme.panelBackgroundColor())
             }
+            .background(theme.backgroundColor())
         }
+        // Both themes are dark palettes: keep system controls and text in
+        // dark appearance so they stay legible when macOS itself is light.
+        .preferredColorScheme(.dark)
         .background(DisableWindowRestoration())
         .onDrop(of: [.fileURL], isTargeted: nil) { providers in
             handleDrop(providers)
@@ -106,12 +112,11 @@ struct ContentView: View {
             showTimings = true
         })
         .focusedSceneValue(\.showStats, { showStats = true })
-        .focusedSceneValue(\.toggleDuration, {
-            if !showDuration && document.methodTimings.isEmpty {
-                document.buildMethodTimings()
-            }
-            showDuration.toggle()
-        })
+        // showDuration is app-wide (View menu): every window computes its own
+        // timings when the column turns on. buildMethodTimings is idempotent.
+        .onChange(of: showDuration) { _, on in
+            if on { document.buildMethodTimings() }
+        }
         .task(id: pendingURL) {
             guard let url = pendingURL else { return }
             showDuration = false

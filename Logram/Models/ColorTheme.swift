@@ -14,6 +14,27 @@ enum ColorTheme: String, CaseIterable, Identifiable {
         }
     }
 
+    // MARK: - Surfaces (same values as LogramWin ThemeColors / LogramLinux Theme CSS)
+
+    /// Log table, detail text and main window background
+    var background: NSColor {
+        switch self {
+        case .tokyoNight: return NSColor(red: 0.102, green: 0.106, blue: 0.149, alpha: 1) // #1a1b26
+        case .tty:        return .black
+        }
+    }
+
+    /// Sidebar, toolbar, status bar and detail header background
+    var panelBackground: NSColor {
+        switch self {
+        case .tokyoNight: return NSColor(red: 0.086, green: 0.086, blue: 0.118, alpha: 1) // #16161e
+        case .tty:        return NSColor(red: 0.020, green: 0.020, blue: 0.020, alpha: 1) // #050505
+        }
+    }
+
+    func backgroundColor() -> Color { Color(nsColor: background) }
+    func panelBackgroundColor() -> Color { Color(nsColor: panelBackground) }
+
     // MARK: - Thread Colors
 
     var threadNSColors: [NSColor] {
