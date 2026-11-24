@@ -159,6 +159,10 @@ struct LogTableView: NSViewRepresentable {
     func updateNSView(_ scrollView: NSScrollView, context: Context) {
         let coord = context.coordinator
         let tableView = coord.tableView!
+        // Selection changes caused by this update (reloadData, re-select by ID)
+        // must not be published back into SwiftUI state while it is updating.
+        coord.isUpdatingView = true
+        defer { coord.isUpdatingView = false }
 
         // Check if data, theme, or display options changed
         let oldIndices = coord.currentIndices
@@ -194,13 +198,18 @@ struct LogTableView: NSViewRepresentable {
         // toggle), re-select via absolute ID and center the row so the user's
         // focus line doesn't jump around as HTTP/DB/etc. checkboxes flip.
         if let selectedId = selectedId, let rowIndex = indices.firstIndex(of: selectedId) {
-            let currentSelection = tableView.selectedRow
-            if currentSelection != rowIndex {
-                tableView.selectRowIndexes(IndexSet(integer: rowIndex), byExtendingSelection: false)
-            }
             if dataChanged {
+                // Row indexes are stale after a filter change: select by ID again.
+                if tableView.selectedRow != rowIndex {
+                    tableView.selectRowIndexes(IndexSet(integer: rowIndex), byExtendingSelection: false)
+                }
                 LogTableView.scrollRowToCenter(tableView: tableView, row: rowIndex)
-            } else if currentSelection != rowIndex {
+            } else if !tableView.selectedRowIndexes.contains(rowIndex) {
+                // External navigation (search, error/pair jumps). A selectedId
+                // that is already inside the selection came from the table
+                // itself (click, drag, Shift+arrows): collapsing to that row
+                // would throw away the user's multi-row selection.
+                tableView.selectRowIndexes(IndexSet(integer: rowIndex), byExtendingSelection: false)
                 tableView.scrollRowToVisible(rowIndex)
             }
         }
@@ -226,6 +235,7 @@ struct LogTableView: NSViewRepresentable {
         var currentIndices: [Int]?
         var currentTheme: ColorTheme = .tokyoNight
         var currentShowDuration: Bool = true
+        var isUpdatingView = false
 
         init(parent: LogTableView) {
             self.parent = parent
@@ -262,19 +272,18 @@ struct LogTableView: NSViewRepresentable {
         }
 
         func tableViewSelectionDidChange(_ notification: Notification) {
-            guard let tableView = tableView else { return }
+            guard let tableView = tableView, !isUpdatingView else { return }
+            // Publish synchronously: an async hop made selectedId lag behind a
+            // mouse drag, and updateNSView then collapsed the growing range to
+            // the stale row (flicker, drag-select did not work).
             let row = tableView.selectedRow
             if row >= 0 && row < parent.indices.count {
                 let lineIdx = parent.indices[row]
                 if lineIdx < parent.allLines.count {
-                    DispatchQueue.main.async {
-                        self.parent.selectedId = self.parent.allLines[lineIdx].id
-                    }
+                    parent.selectedId = parent.allLines[lineIdx].id
                 }
             } else {
-                DispatchQueue.main.async {
-                    self.parent.selectedId = nil
-                }
+                parent.selectedId = nil
             }
         }
 
