@@ -100,6 +100,16 @@ final class LogramAppDelegate: NSObject, NSApplicationDelegate, ObservableObject
     }
 }
 
+// Window root that SwiftUI compares by its only input. ContentView hands new
+// closures to focusedSceneValue on every render, which re-evaluates the App
+// body (its @FocusedValue properties). Without .equatable() that re-created
+// and re-rendered ContentView, which handed out new closures again: an endless
+// loop of ~200 renders per second (a full CPU core) while a window was focused.
+private struct LogWindowRoot: View, Equatable {
+    let initialURL: URL?
+    var body: some View { ContentView(initialURL: initialURL) }
+}
+
 @main
 struct LogramApp: App {
     @NSApplicationDelegateAdaptor(LogramAppDelegate.self) private var appDelegate
@@ -119,7 +129,8 @@ struct LogramApp: App {
 
     var body: some Scene {
         WindowGroup(for: URL?.self) { $url in
-            ContentView(initialURL: url ?? nil)
+            LogWindowRoot(initialURL: url ?? nil)
+                .equatable()
                 .environmentObject(appDelegate)
                 .frame(minWidth: 900, minHeight: 600)
         } defaultValue: {
@@ -141,15 +152,9 @@ struct LogramApp: App {
                     .disabled(clearFocus == nil)
             }
             CommandGroup(before: .toolbar) {
-                // Inline items, not a submenu: on macOS 27 SwiftUI submenus in
-                // the main menu (Menu / Picker) never highlight or open, so a
-                // nested Theme menu could not be used at all.
-                Section("Theme") {
+                Picker("Theme", selection: $themeRaw) {
                     ForEach(ColorTheme.allCases) { t in
-                        Toggle(t.displayName, isOn: Binding(
-                            get: { themeRaw == t.rawValue },
-                            set: { if $0 { themeRaw = t.rawValue } }
-                        ))
+                        Text(t.displayName).tag(t.rawValue)
                     }
                 }
                 Toggle("Show Duration Column", isOn: $showDuration)

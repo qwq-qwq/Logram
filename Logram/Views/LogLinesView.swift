@@ -271,7 +271,20 @@ struct LogTableView: NSViewRepresentable {
             20
         }
 
+        // Mouse tracking (click, drag) only posts "is changing" until mouseUp,
+        // "did change" comes once at the end. Publish on both: SwiftUI keeps
+        // calling updateNSView during the drag, and a selectedId still pointing
+        // at the previously clicked row made it snap the selection back there
+        // (flicker, the range grew from the old row instead of the pressed one).
+        func tableViewSelectionIsChanging(_ notification: Notification) {
+            publishSelection()
+        }
+
         func tableViewSelectionDidChange(_ notification: Notification) {
+            publishSelection()
+        }
+
+        private func publishSelection() {
             guard let tableView = tableView, !isUpdatingView else { return }
             // Publish synchronously: an async hop made selectedId lag behind a
             // mouse drag, and updateNSView then collapsed the growing range to
