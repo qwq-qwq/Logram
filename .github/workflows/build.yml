@@ -49,6 +49,12 @@ jobs:
           echo "build=${{ github.run_number }}" >> "$GITHUB_OUTPUT"
           echo "Marketing version: $VERSION (build ${{ github.run_number }})"
 
+      # The Sparkle update window shows this version's CHANGELOG.md section:
+      # fail now rather than after the build and notarization.
+      - name: Check changelog entry
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: python3 .github/scripts/changelog_html.py CHANGELOG.md "${{ steps.version.outputs.version }}" > /dev/null
+
       - name: Import Developer ID certificate
         if: env.HAS_SIGNING == 'true'
         env:
@@ -227,10 +233,17 @@ jobs:
           XML
           fi
 
-          python3 - "$VERSION" "$BUILD" "$ED_SIG" "$LENGTH" <<'PY'
+          # Release notes for the update window: this version's CHANGELOG.md section as HTML
+          NOTES="$RUNNER_TEMP/release-notes.html"
+          python3 .github/scripts/changelog_html.py CHANGELOG.md "$VERSION" > "$NOTES"
+
+          python3 - "$VERSION" "$BUILD" "$ED_SIG" "$LENGTH" "$NOTES" <<'PY'
           import re, sys
           from datetime import datetime, timezone
-          version, build, sig, length = sys.argv[1:5]
+          version, build, sig, length, notes_path = sys.argv[1:6]
+          with open(notes_path, encoding="utf-8") as f:
+              notes = f.read().strip()
+          assert "]]>" not in notes, "release notes would end the CDATA block"
           with open("appcast.xml") as f:
               s = f.read()
           # A re-run of the same tag rebuilds the archive byte-differently and
@@ -245,6 +258,8 @@ jobs:
                 <sparkle:version>{build}</sparkle:version>
                 <sparkle:shortVersionString>{version}</sparkle:shortVersionString>
                 <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+                <description><![CDATA[{notes}]]></description>
+                <sparkle:fullReleaseNotesLink>https://github.com/qwq-qwq/Logram/blob/main/CHANGELOG.md</sparkle:fullReleaseNotesLink>
                 <enclosure url="https://logram.perek.rest/downloads/Logram-{version}.zip" length="{length}" type="application/octet-stream" sparkle:edSignature="{sig}"/>
               </item>
           """
